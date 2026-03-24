@@ -33,6 +33,7 @@ func init() {
 	flags.String("branch", "", "branch to scan")
 	flags.Int("depth", 0, "clone depth (remote repos only, 0=all)")
 
+	addVerifyFlags(flags)
 	bindScanFlags(flags)
 }
 

@@ -1,12 +1,15 @@
 module github.com/cemililik/leakwatch
 
-go 1.24.0
+go 1.25.0
 
 require (
+	github.com/cloudflare/ahocorasick v0.0.0-20240916140611-054963ec9396
 	github.com/go-git/go-git/v5 v5.17.0
 	github.com/spf13/cobra v1.10.2
+	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
+	golang.org/x/time v0.15.0
 )
 
 require (
@@ -34,7 +37,6 @@ require (
 	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
-	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect

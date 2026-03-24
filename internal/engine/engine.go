@@ -11,7 +11,9 @@ import (
 
 	"github.com/cemililik/leakwatch/internal/detector"
 	"github.com/cemililik/leakwatch/internal/entropy"
+	"github.com/cemililik/leakwatch/internal/matcher"
 	"github.com/cemililik/leakwatch/internal/source"
+	"github.com/cemililik/leakwatch/internal/verifier"
 	"github.com/cemililik/leakwatch/pkg/finding"
 )
 
@@ -26,17 +28,20 @@ const (
 	hashTruncateLen = 8
 )
 
-// Config, tarama motoru yapılandırması.
+// Config holds the scan engine configuration.
 type Config struct {
 	Concurrency      int
 	Detectors        []detector.Detector
 	EnableEntropy    bool
 	EntropyThreshold float64
 	ShowRaw          bool
-	Clock            func() time.Time // Opsiyonel, nil ise time.Now kullanılır
+	Clock            func() time.Time // Optional; defaults to time.Now
+	VerifierConfig   verifier.Config
+	Verifiers        []verifier.Verifier
+	OnlyVerified     bool // If true, only return verified active findings
 }
 
-// ScanResult, tarama sonucunu temsil eder.
+// ScanResult represents the outcome of a scan.
 type ScanResult struct {
 	Findings      []finding.Finding
 	ScannedChunks int
@@ -44,12 +49,15 @@ type ScanResult struct {
 	Interrupted   bool
 }
 
-// Engine, tarama motorunu temsil eder.
+// Engine is the scan engine that orchestrates detection and verification.
 type Engine struct {
-	config Config
+	config   Config
+	matcher  *matcher.Matcher
+	verifyEn *verifier.Engine
 }
 
-// New, yeni bir tarama motoru oluşturur.
+// New creates a new scan engine.
+// The Aho-Corasick automaton is compiled from detector keywords.
 func New(cfg Config) *Engine {
 	if cfg.Concurrency < 1 {
 		cfg.Concurrency = 1
@@ -60,7 +68,11 @@ func New(cfg Config) *Engine {
 	if cfg.Clock == nil {
 		cfg.Clock = time.Now
 	}
-	return &Engine{config: cfg}
+	return &Engine{
+		config:   cfg,
+		matcher:  matcher.New(cfg.Detectors),
+		verifyEn: verifier.NewEngine(cfg.VerifierConfig, cfg.Verifiers),
+	}
 }
 
 // Scan, verilen kaynağı tarar ve sonuçları döndürür.
@@ -78,9 +90,9 @@ func (e *Engine) Scan(ctx context.Context, src source.Source) (*ScanResult, erro
 	)
 
 	jobs := make(chan source.Chunk, e.config.Concurrency*channelBufferMultiplier)
-	results := make(chan finding.Finding, e.config.Concurrency*channelBufferMultiplier)
+	results := make(chan verifier.VerifyPair, e.config.Concurrency*channelBufferMultiplier)
 
-	// Worker'ları başlat
+	// Start workers.
 	var wg sync.WaitGroup
 	for i := 0; i < e.config.Concurrency; i++ {
 		wg.Add(1)
@@ -90,14 +102,14 @@ func (e *Engine) Scan(ctx context.Context, src source.Source) (*ScanResult, erro
 		}()
 	}
 
-	// Sonuçları topla
-	var findings []finding.Finding
+	// Collect results (Finding + RawFinding pairs).
+	var pairs []verifier.VerifyPair
 	var collectWg sync.WaitGroup
 	collectWg.Add(1)
 	go func() {
 		defer collectWg.Done()
-		for f := range results {
-			findings = append(findings, f)
+		for p := range results {
+			pairs = append(pairs, p)
 		}
 	}()
 
@@ -121,6 +133,20 @@ loop:
 	// Toplamanın bitmesini bekle
 	collectWg.Wait()
 
+	// Run verification on collected pairs.
+	findings := e.verifyEn.VerifyAll(ctx, pairs)
+
+	// Apply --only-verified filter.
+	if e.config.OnlyVerified {
+		var filtered []finding.Finding
+		for _, f := range findings {
+			if f.Verification.Status == finding.StatusVerifiedActive {
+				filtered = append(filtered, f)
+			}
+		}
+		findings = filtered
+	}
+
 	result := &ScanResult{
 		Findings:      findings,
 		ScannedChunks: scannedChunks,
@@ -142,9 +168,9 @@ loop:
 	return result, nil
 }
 
-// worker, jobs kanalından chunk okuyup dedektörlere gönderen işçi goroutine'idir.
-// Channel kapatıldığında veya context iptal edildiğinde temiz bir şekilde çıkar.
-func (e *Engine) worker(ctx context.Context, jobs <-chan source.Chunk, results chan<- finding.Finding) {
+// worker reads chunks from the jobs channel, runs matched detectors, and sends
+// VerifyPair results. It exits cleanly when the channel is closed or context is cancelled.
+func (e *Engine) worker(ctx context.Context, jobs <-chan source.Chunk, results chan<- verifier.VerifyPair) {
 	for chunk := range jobs {
 		select {
 		case <-ctx.Done():
@@ -152,8 +178,10 @@ func (e *Engine) worker(ctx context.Context, jobs <-chan source.Chunk, results c
 		default:
 		}
 
-		for _, det := range e.config.Detectors {
-			// Dedektörler arası context kontrolü
+		// Aho-Corasick pre-filtering: only run matched detectors.
+		matchedDetectors := e.matcher.Match(chunk.Data)
+
+		for _, det := range matchedDetectors {
 			select {
 			case <-ctx.Done():
 				return
@@ -163,10 +191,11 @@ func (e *Engine) worker(ctx context.Context, jobs <-chan source.Chunk, results c
 			rawFindings := det.Scan(ctx, chunk.Data)
 			for _, raw := range rawFindings {
 				f := e.rawToFinding(raw, chunk, det)
+				pair := verifier.VerifyPair{Finding: f, Raw: raw}
 				select {
 				case <-ctx.Done():
 					return
-				case results <- f:
+				case results <- pair:
 				}
 			}
 		}

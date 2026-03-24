@@ -1,0 +1,123 @@
+package github
+
+import (
+	"context"
+	"strings"
+	"testing"
+
+	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestToken_Metadata(t *testing.T) {
+	d := &Token{}
+	assert.Equal(t, "github-token", d.ID())
+	assert.Equal(t, "GitHub Personal Access Token", d.Description())
+	assert.Equal(t, finding.SeverityCritical, d.Severity())
+	assert.NotEmpty(t, d.Keywords())
+}
+
+func TestToken_Scan_MatchesValidTokens(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected int
+		redacted string
+	}{
+		{
+			name:     "valid ghp token",
+			input:    "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij",
+			expected: 1,
+			redacted: "ghp_****ghij",
+		},
+		{
+			name:     "valid gho token",
+			input:    "gho_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij",
+			expected: 1,
+			redacted: "gho_****ghij",
+		},
+		{
+			name:     "valid ghu token",
+			input:    "ghu_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij",
+			expected: 1,
+			redacted: "ghu_****ghij",
+		},
+		{
+			name:     "valid ghs token",
+			input:    "ghs_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij",
+			expected: 1,
+			redacted: "ghs_****ghij",
+		},
+		{
+			name:     "valid ghr token",
+			input:    "ghr_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij",
+			expected: 1,
+			redacted: "ghr_****ghij",
+		},
+		{
+			name:     "token in config file",
+			input:    `GITHUB_TOKEN=ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij`,
+			expected: 1,
+		},
+		{
+			name:     "token in JSON",
+			input:    `{"token": "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij"}`,
+			expected: 1,
+		},
+		{
+			name:     "multiple tokens",
+			input:    "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij ghs_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij",
+			expected: 2,
+		},
+		{
+			name:     "token in large text",
+			input:    strings.Repeat("x", 10000) + "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij" + strings.Repeat("y", 10000),
+			expected: 1,
+		},
+	}
+
+	d := &Token{}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			findings := d.Scan(context.Background(), []byte(tt.input))
+			assert.Len(t, findings, tt.expected)
+			if tt.expected > 0 && tt.redacted != "" {
+				require.NotEmpty(t, findings)
+				assert.Equal(t, tt.redacted, findings[0].Redacted)
+			}
+		})
+	}
+}
+
+func TestToken_Scan_RejectsInvalidInput(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{
+			name:  "too short suffix",
+			input: "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefg",
+		},
+		{
+			name:  "wrong prefix",
+			input: "ghx_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij",
+		},
+		{
+			name:  "plain text",
+			input: "this is just normal text without tokens",
+		},
+		{
+			name:  "empty input",
+			input: "",
+		},
+	}
+
+	d := &Token{}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			findings := d.Scan(context.Background(), []byte(tt.input))
+			assert.Empty(t, findings)
+		})
+	}
+}

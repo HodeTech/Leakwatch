@@ -29,6 +29,7 @@ func init() {
 	flags.StringSlice("exclude", nil, "path patterns to exclude")
 	flags.Bool("show-raw", false, "show raw secret content in output")
 
+	addVerifyFlags(flags)
 	bindScanFlags(flags)
 }
 
