@@ -1,0 +1,36 @@
+# Binaries
+bin/
+leakwatch
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test
+coverage.out
+coverage.html
+*.test
+*.prof
+
+# Build
+dist/
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Code Reviews
+docs/code-reviews/
+
+# Environment
+.env
+.env.local
