@@ -10,7 +10,7 @@ import (
 	"github.com/cemililik/leakwatch/pkg/finding"
 )
 
-var apiKeyPattern = regexp.MustCompile(`(?i)(api[_\-]?key|api[_\-]?secret|secret[_\-]?key)\s*[:=]\s*['"]?([a-zA-Z0-9/+=\-_]{16,64})['"]?`)
+var apiKeyPattern = regexp.MustCompile(`(?i)(api[_\-]?key|api[_\-]?secret|secret[_\-]?key|x[_\-]?apisix[_\-]?key|apisix[_\-]?key|apisix[_\-]?admin[_\-]?key)\s*[:=]\s*['"]?([a-zA-Z0-9/+=\-_]{16,64})['"]?`)
 
 // APIKeyDetector detects generic API key assignments.
 type APIKeyDetector struct{}
@@ -23,6 +23,7 @@ func (d *APIKeyDetector) Keywords() []string {
 		"api_key", "api-key", "apikey",
 		"api_secret", "api-secret", "apisecret",
 		"secret_key", "secret-key", "secretkey",
+		"apisix-key", "apisix_key", "x-apisix-key", "x_apisix_key", "apisix-admin-key",
 	}
 }
 func (d *APIKeyDetector) Severity() finding.Severity { return finding.SeverityMedium }
