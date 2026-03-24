@@ -18,7 +18,6 @@ type mockSlackClient struct {
 	authErr     error
 	listErr     error
 	historyErr  error
-	nextCursors map[string]string // channelID -> nextCursor for pagination
 }
 
 func (m *mockSlackClient) AuthTestContext(_ context.Context) (*slack.AuthTestResponse, error) {
