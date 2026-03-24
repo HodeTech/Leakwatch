@@ -90,12 +90,20 @@ leakwatch scan fs . --remediation
 |----------|----------|--------------|
 | **AWS** | Access Key ID, Secret Access Key | Yes |
 | **GitHub** | Personal Access Token, OAuth | Yes |
-| **GCP** | Service Account Key, API Key | Planned |
-| **Azure** | Storage Key, Connection String | Planned |
+| **GitLab** | Personal Access Token (glpat-) | — |
 | **Slack** | Bot Token, Webhook URL | Yes |
-| **Stripe** | API Key (live/test) | Planned |
+| **Stripe** | API Key (live/test) | — |
+| **OpenAI** | API Key (sk-proj-) | — |
+| **Anthropic** | API Key (sk-ant-) | — |
+| **Discord** | Bot Token | — |
+| **Telegram** | Bot Token | — |
+| **Datadog** | API Key (DD_API_KEY) | — |
+| **SendGrid** | API Key (SG.) | — |
+| **NPM** | Access Token (npm_) | — |
+| **Database** | Connection String (Postgres, MySQL, MongoDB, Redis) | — |
+| **Snowflake** | JDBC Connection Credentials | — |
 | **Generic** | Private Key (RSA/SSH/PGP), JWT, Generic API Key | — |
-| **Database** | Connection String (Postgres, MySQL, MongoDB) | Planned |
+| **Custom** | YAML-defined rules | — |
 
 ---
 
