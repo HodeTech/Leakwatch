@@ -1,8 +1,33 @@
 # Leakwatch - Fazlandırılmış Geliştirme Yol Haritası
 
-> **Belge Versiyonu:** 1.0
+> **Belge Versiyonu:** 2.0
 > **Tarih:** 2026-03-24
-> **Durum:** Taslak
+> **Durum:** Aktif
+> **Son Güncelleme:** 2026-03-24
+
+---
+
+## 0. Mevcut Durum Özeti
+
+| Faz | Durum | Sürüm | Tamamlanma |
+|-----|-------|-------|------------|
+| Faz 1 — MVP | ✅ Tamamlandı | `v0.1.0` | 2026-03-24 |
+| Faz 2 — Git | ✅ Tamamlandı | `v0.2.0` | 2026-03-24 |
+| Faz 3 — Tespit & Doğrulama | ✅ Tamamlandı | `v0.3.0` | 2026-03-24 |
+| Faz 4 — Kurumsal | ✅ Tamamlandı | `v0.4.0` | 2026-03-24 |
+| Faz 5 — Genişleme | 🔲 Planlanıyor | `v1.x.x` | — |
+
+### Mevcut Yetenekler
+
+- **3 tarama kaynağı:** Dosya sistemi, Git geçmişi, Container imaj
+- **10 dedektör:** AWS, GitHub Token, Slack Token/Webhook, Stripe (live/test), JWT, DB Connection String, Private Key, Generic API Key
+- **YAML özel kural desteği**
+- **4 çıktı formatı:** JSON, SARIF, CSV, Table
+- **Aho-Corasick ön-filtreleme motoru**
+- **Verifier altyapısı** (rate-limited, concurrent)
+- **`.leakwatchignore`** ve satır içi yoksayma (`# leakwatch:ignore`)
+- **Pre-commit hook**
+- **`--min-severity`, `--only-verified`, `--no-verify` flag'leri**
 
 ---
 
@@ -47,11 +72,11 @@ gantt
 
 ---
 
-## 2. Faz 1: Minimum Uygulanabilir Ürün (MVP) — Çekirdek Motor ve Yerel Tarama
+## 2. Faz 1: Minimum Uygulanabilir Ürün (MVP) — ✅ TAMAMLANDI
 
 **Hedef:** Çekirdek tarama motorunu ve CLI yapısını oluşturmak. Yerel dosya sistemini tarayabilen işlevsel bir ilk sürüm.
 
-**Süre:** 4-6 Hafta
+**Süre:** 4-6 Hafta | **Durum:** ✅ Tamamlandı
 
 ### 2.1 Teslimatlar
 
@@ -86,11 +111,11 @@ gantt
 
 ---
 
-## 3. Faz 2: Git Entegrasyonu ve Geçmiş Taraması
+## 3. Faz 2: Git Entegrasyonu ve Geçmiş Taraması — ✅ TAMAMLANDI
 
 **Hedef:** Git depolarını ve tüm commit geçmişlerini tarama yeteneği eklemek.
 
-**Süre:** 3-4 Hafta
+**Süre:** 3-4 Hafta | **Durum:** ✅ Tamamlandı
 
 ### 3.1 Teslimatlar
 
@@ -120,11 +145,11 @@ gantt
 
 ---
 
-## 4. Faz 3: Gelişmiş Tespit ve Doğrulama Yetenekleri
+## 4. Faz 3: Gelişmiş Tespit ve Doğrulama Yetenekleri — ✅ TAMAMLANDI
 
 **Hedef:** Tespit doğruluğunu artırmak, yanlış pozitif oranını düşürmek, sır doğrulama eklemek.
 
-**Süre:** 5-7 Hafta
+**Süre:** 5-7 Hafta | **Durum:** ✅ Tamamlandı
 
 ### 4.1 Teslimatlar
 
@@ -158,11 +183,11 @@ gantt
 
 ---
 
-## 5. Faz 4: Kurumsal Yetenekler ve Yeni Tarama Yüzeyleri
+## 5. Faz 4: Kurumsal Yetenekler ve Yeni Tarama Yüzeyleri — ✅ TAMAMLANDI
 
 **Hedef:** Container imaj tarama, gelişmiş çıktı formatları, pre-commit entegrasyonu.
 
-**Süre:** 4-6 Hafta
+**Süre:** 4-6 Hafta | **Durum:** ✅ Tamamlandı
 
 ### 5.1 Teslimatlar
 
