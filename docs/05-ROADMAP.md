@@ -1,6 +1,6 @@
 # Leakwatch - Phased Development Roadmap
 
-> **Document Version:** 2.0
+> **Document Version:** 3.0
 > **Date:** 2026-03-24
 > **Status:** Active
 > **Last Updated:** 2026-03-24
@@ -18,18 +18,20 @@
 | Phase 5 — Expansion (Short Term) | Completed | `v1.0.0` | 2026-03-24 |
 | Phase 5 — Expansion (Mid/Long Term) | Planned | `v1.x.x` | — |
 
-### Current Capabilities
+### v1.0.0 Released (2026-03-24)
 
 - **5 scan sources:** Filesystem, Git history, Container image, AWS S3, Google Cloud Storage
-- **10 detectors:** AWS, GitHub Token, Slack Token/Webhook, Stripe (live/test), JWT, DB Connection String, Private Key, Generic API Key
-- **YAML custom rule support**
+- **10+ detectors:** AWS, GitHub Token, Slack Token/Webhook, Stripe (live/test), JWT, DB Connection String, Private Key, Generic API Key + YAML custom rules
 - **4 output formats:** JSON, SARIF, CSV, Table
-- **Aho-Corasick pre-filtering engine**
+- **Aho-Corasick hybrid detection engine** with Shannon entropy analysis
 - **Verifier infrastructure:** AWS STS and GitHub API verifiers (rate-limited, concurrent)
 - **`.leakwatchignore`** and inline ignore (`# leakwatch:ignore`)
-- **Pre-commit hook**, **GitHub Action**, **Docker image**, **Homebrew formula**
-- **Parallel repo scanning** (`scan repos` command)
-- **`--min-severity`, `--only-verified`, `--no-verify` flags**
+- **CI/CD:** Pre-commit hook, GitHub Action, Docker image, Homebrew formula
+- **Parallel repo scanning** (`scan repos --parallel`)
+- **Filtering:** `--min-severity`, `--only-verified`, `--no-verify`
+- **Distribution:** GoReleaser cross-platform builds, CHANGELOG.md, example YAML rules
+- **Documentation:** 6 guides, 8 ADRs, 4 standards documents, architecture design
+- **2 full code reviews** completed (136 findings identified and resolved)
 
 ---
 
