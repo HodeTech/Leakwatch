@@ -194,4 +194,95 @@ func init() {
 			"Consider using a secrets manager to avoid embedding keys in source code.",
 		},
 	})
+
+	Register("openai-api-key", finding.Remediation{
+		Title: "Rotate OpenAI API Key",
+		Steps: []string{
+			"Go to platform.openai.com/api-keys.",
+			"Create a new API key.",
+			"Update all integrations with the new key.",
+			"Delete the old API key.",
+			"Check usage logs for unauthorized activity.",
+		},
+		DocURL:     "https://platform.openai.com/docs/guides/safety-best-practices",
+		ConsoleURL: "https://platform.openai.com/api-keys",
+		Urgency:    "immediate",
+		Checklist: []string{
+			"Check billing for unauthorized usage.",
+			"Review API logs for suspicious activity.",
+			"Notify the team about the exposure.",
+		},
+	})
+
+	Register("anthropic-api-key", finding.Remediation{
+		Title: "Rotate Anthropic API Key",
+		Steps: []string{
+			"Go to console.anthropic.com/settings/keys.",
+			"Create a new API key.",
+			"Update all integrations with the new key.",
+			"Delete the old API key.",
+		},
+		DocURL:     "https://docs.anthropic.com/en/docs/initial-setup",
+		ConsoleURL: "https://console.anthropic.com/settings/keys",
+		Urgency:    "immediate",
+		Checklist: []string{
+			"Check usage logs for unauthorized activity.",
+			"Review billing for unexpected charges.",
+			"Notify the team about the exposure.",
+		},
+	})
+
+	Register("gitlab-pat", finding.Remediation{
+		Title: "Revoke GitLab Personal Access Token",
+		Steps: []string{
+			"Go to GitLab Settings > Access Tokens.",
+			"Revoke the compromised token.",
+			"Create a new token with minimal scopes.",
+			"Update CI/CD pipelines with the new token.",
+		},
+		DocURL:     "https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html",
+		ConsoleURL: "https://gitlab.com/-/user_settings/personal_access_tokens",
+		Urgency:    "immediate",
+		Checklist: []string{
+			"Check repository activity for unauthorized changes.",
+			"Review CI/CD jobs for suspicious runs.",
+			"Audit access logs for unauthorized access.",
+		},
+	})
+
+	Register("sendgrid-api-key", finding.Remediation{
+		Title: "Rotate SendGrid API Key",
+		Steps: []string{
+			"Go to SendGrid Settings > API Keys.",
+			"Create a new key with minimal permissions.",
+			"Update email service configuration with the new key.",
+			"Delete the old API key.",
+		},
+		DocURL:     "https://docs.sendgrid.com/ui/account-and-settings/api-keys",
+		ConsoleURL: "https://app.sendgrid.com/settings/api_keys",
+		Urgency:    "immediate",
+		Checklist: []string{
+			"Check sent email logs for abuse.",
+			"Monitor bounce and spam rates for anomalies.",
+			"Notify the team about the exposure.",
+		},
+	})
+
+	Register("npm-token", finding.Remediation{
+		Title: "Revoke NPM Access Token",
+		Steps: []string{
+			"Run `npm token revoke <token>` or go to npmjs.com > Access Tokens.",
+			"Create a new token.",
+			"Update CI/CD pipelines with the new token.",
+			"Check for unauthorized package publishes.",
+		},
+		DocURL:     "https://docs.npmjs.com/about-access-tokens",
+		ConsoleURL: "https://www.npmjs.com/settings/~/tokens",
+		Urgency:    "immediate",
+		Checklist: []string{
+			"Check for unauthorized package publishes.",
+			"Review download stats for anomalies.",
+			"Run npm audit on affected packages.",
+		},
+	})
 }
