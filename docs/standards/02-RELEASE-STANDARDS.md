@@ -2,7 +2,7 @@
 
 > **Document Version:** 1.0
 > **Date:** 2026-03-24
-> **Status:** Draft
+> **Status:** Approved
 
 ---
 
@@ -253,10 +253,13 @@ git push origin v0.2.0
 
 ```bash
 # Go install
-go install github.com/cemililik/leakwatch@v0.2.0
+go install github.com/cemililik/leakwatch@latest
 
-# Homebrew (planned)
+# Homebrew (macOS/Linux)
 brew install cemililik/tap/leakwatch
+
+# Docker
+docker run --rm -v $(pwd):/scan ghcr.io/cemililik/leakwatch:latest scan fs /scan
 
 # Binary download
 curl -sSfL https://github.com/cemililik/Leakwatch/releases/latest/download/leakwatch_$(uname -s)_$(uname -m).tar.gz | tar xz

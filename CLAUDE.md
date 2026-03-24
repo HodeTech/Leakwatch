@@ -18,19 +18,42 @@ leakwatch/
 ├── internal/               # Internal packages — all business logic lives here
 │   ├── engine/             # Scan engine (worker pool, pipeline)
 │   ├── detector/           # Secret detectors (Detector interface)
+│   │   ├── aws/            # AWS Access Key detector
+│   │   ├── github/         # GitHub Token detector
+│   │   ├── slack/          # Slack Token/Webhook detectors
+│   │   ├── stripe/         # Stripe API Key detectors (live/test)
+│   │   ├── jwt/            # JWT detector
+│   │   ├── dbconn/         # Database Connection String detector
+│   │   ├── privatekey/     # Private Key detector
+│   │   ├── generic/        # Generic API Key detector
+│   │   └── custom/         # YAML custom rule support
 │   ├── source/             # Scan sources (Source interface)
+│   │   ├── filesystem/     # Local filesystem source
+│   │   ├── git/            # Git repository source (go-git)
+│   │   ├── container/      # Container image source (go-containerregistry)
+│   │   ├── s3/             # AWS S3 bucket source
+│   │   └── gcs/            # Google Cloud Storage source
 │   ├── verifier/           # Secret verification (Verifier interface)
+│   │   ├── aws/            # AWS STS verifier
+│   │   └── github/         # GitHub API verifier
 │   ├── entropy/            # Shannon entropy calculation
-│   ├── matcher/            # Aho-Corasick + regex engine
+│   ├── matcher/            # Aho-Corasick keyword pre-filtering
 │   ├── output/             # Output formatters (Formatter interface)
+│   │   ├── json/           # JSON formatter
+│   │   ├── sarif/          # SARIF v2.1.0 formatter
+│   │   ├── csv/            # CSV formatter
+│   │   └── table/          # Terminal table formatter
 │   ├── config/             # Viper-based configuration
 │   └── filter/             # .leakwatchignore, inline ignore
 ├── pkg/                    # Public packages (finding model)
-├── rules/                  # YAML secret rule definitions
+├── action/                 # GitHub Action definition
+├── Formula/                # Homebrew formula
+├── Dockerfile              # Multi-stage Docker build
 ├── docs/                   # Documentation
 │   ├── architecture/       # Architecture and technical design documents
 │   ├── standards/          # Development and documentation standards
 │   ├── decisions/          # ADR (Architecture Decision Records)
+│   ├── guides/             # Usage guides (getting started, config, CI/CD, etc.)
 │   └── 05-ROADMAP.md       # Roadmap
 └── main.go                 # Entry point
 ```
@@ -117,14 +140,16 @@ test(entropy): add Shannon entropy edge case tests
 | `go-git/go-git/v5` | Git operations |
 | `google/go-containerregistry` | Container image analysis |
 | `cloudflare/ahocorasick` | Multi-pattern matching |
-| `owenrumney/go-sarif` | SARIF output |
 | `aws/aws-sdk-go-v2` | AWS verification |
+| `cloud.google.com/go/storage` | GCS scanning |
 | `stretchr/testify` | Test assertions |
+| `golang.org/x/time` | Rate limiting |
 
 ## Documentation Standards
 
 Full standards: [docs/standards/00-DOCUMENTATION-STANDARDS.md](docs/standards/00-DOCUMENTATION-STANDARDS.md)
 
+- **Language:** All documentation, code comments, error messages, and log messages MUST be in **English**
 - All diagrams must be in **Mermaid** format (DO NOT use ASCII art)
 - Code blocks must include a language tag: ` ```go `, ` ```yaml `
 - Internal links use relative paths

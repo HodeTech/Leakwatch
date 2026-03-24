@@ -34,10 +34,13 @@ docs/
 │   ├── 02-RELEASE-STANDARDS.md
 │   └── 04-DEVELOPMENT-STANDARDS.md
 ├── 05-ROADMAP.md       # Roadmap (under root docs/)
-└── guides/             # Usage guides (future)
+└── guides/             # Usage guides
     ├── getting-started.md
+    ├── configuration.md
+    ├── ci-cd-integration.md
     ├── custom-rules.md
-    └── ci-cd-integration.md
+    ├── container-scanning.md
+    └── cloud-scanning.md
 ```
 
 ### 2.1 Directory Responsibilities
