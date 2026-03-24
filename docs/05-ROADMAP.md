@@ -17,7 +17,7 @@
 | Phase 4 — Enterprise Capabilities | Completed | `v0.4.0` | 2026-03-24 |
 | Phase 5 — Platform Expansion | Completed (8/8) | `v1.0.0` | 2026-03-24 |
 | Phase 6 — Remediation Guidance | Completed | `v1.1.0` | 2026-03-24 |
-| Phase 7 — Slack Scanning | Planned | `v1.2.0` | — |
+| Phase 7 — Slack Scanning | Completed | `v1.2.0` | 2026-03-24 |
 | Phase 8 — Confluence/Jira | Planned | `v1.3.0` | — |
 | Phase 9 — Secrets Inventory | Planned | `v1.4.0` | — |
 | Phase 10 — Honeytokens | Planned | `v1.5.0` | — |
@@ -283,11 +283,11 @@ GitHub Release published with `v1.0.0` tag.
 
 ---
 
-## Phase 7: Slack Workspace Scanning — PLANNED
+## Phase 7: Slack Workspace Scanning — COMPLETED
 
 **Goal:** Scan Slack messages, channels, and files for leaked secrets.
 
-**Duration:** 3-4 weeks | **Version:** `v1.2.0` | **Status:** Planned
+**Duration:** 3-4 weeks | **Version:** `v1.2.0` | **Status:** Completed
 
 ### Deliverables
 
@@ -302,10 +302,10 @@ GitHub Release published with `v1.0.0` tag.
 
 ### Acceptance Criteria
 
-- [ ] `leakwatch scan slack --token xoxb-...` scans workspace
-- [ ] Channel filtering works with `--channels`
-- [ ] Date filtering works with `--since`
-- [ ] Rate limiting respects Slack API tiers
+- [x] `leakwatch scan slack --token xoxb-...` scans workspace
+- [x] Channel filtering works with `--channels`
+- [x] Date filtering works with `--since`
+- [x] Rate limiting respects Slack API tiers
 
 ---
 

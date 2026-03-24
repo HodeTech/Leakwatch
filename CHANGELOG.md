@@ -5,6 +5,18 @@ All notable changes to Leakwatch will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [v1.2.0] - 2026-03-24
+
+### Added
+- **Slack Workspace Scanning** — scan Slack messages, channels, and files for secrets
+- `scan slack` command with Bot Token authentication (`--token` or `LEAKWATCH_SLACK_TOKEN`)
+- Channel filtering (`--channels`, `--exclude-channels`), date filtering (`--since`)
+- DM scanning opt-in (`--include-dms`), file scanning (`--include-files`)
+- Rate-limited Slack API pagination (configurable with `--rate-limit`)
+- `SourceMetadata` extended with Slack fields (Channel, ChannelName, MessageUser, MessageTS, ThreadTS)
+
+---
+
 ## [v1.1.0] - 2026-03-24
 
 ### Added
