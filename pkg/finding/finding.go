@@ -149,6 +149,13 @@ type SourceMetadata struct {
 	Image    string `json:"image,omitempty"`
 	Layer    string `json:"layer,omitempty"`
 	LayerIdx int    `json:"layer_idx,omitempty"`
+
+	// Slack-specific fields
+	Channel     string `json:"channel,omitempty"`
+	ChannelName string `json:"channel_name,omitempty"`
+	MessageUser string `json:"message_user,omitempty"`
+	MessageTS   string `json:"message_ts,omitempty"`
+	ThreadTS    string `json:"thread_ts,omitempty"`
 }
 
 // Remediation provides actionable guidance for rotating or revoking a detected secret.
