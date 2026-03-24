@@ -16,7 +16,11 @@
 | Phase 3 — Detection & Verification | Completed | `v0.3.0` | 2026-03-24 |
 | Phase 4 — Enterprise Capabilities | Completed | `v0.4.0` | 2026-03-24 |
 | Phase 5 — Platform Expansion | Completed (8/8) | `v1.0.0` | 2026-03-24 |
-| Future — Mid/Long Term | Planned | `v1.x.x` | — |
+| Phase 6 — Remediation Guidance | Planned | `v1.1.0` | — |
+| Phase 7 — Slack Scanning | Planned | `v1.2.0` | — |
+| Phase 8 — Confluence/Jira | Planned | `v1.3.0` | — |
+| Phase 9 — Secrets Inventory | Planned | `v1.4.0` | — |
+| Phase 10 — Honeytokens | Planned | `v1.5.0` | — |
 
 ### v1.0.0 Highlights
 
@@ -255,20 +259,146 @@ GitHub Release published with `v1.0.0` tag.
 
 ---
 
-## Future: Mid/Long Term Vision
+## Phase 6: Remediation Guidance — PLANNED
 
-### Mid Term
+**Goal:** Actionable remediation instructions for every detected secret type.
 
-| Task | Description |
-|------|-------------|
-| Slack scanning | Slack workspace messages |
-| Confluence scanning | Atlassian Confluence pages |
-| Jira scanning | Jira issues |
-| Remediation guidance | Secret rotation instructions |
-| Secrets inventory | Centralized secret inventory |
-| Honeytokens | Decoy credentials |
+**Duration:** 2 weeks | **Version:** `v1.1.0` | **Status:** Planned
 
-### Long Term
+### Deliverables
+
+| Task | Priority | Description |
+|------|----------|-------------|
+| Remediation type | Critical | `Remediation` struct in `pkg/finding/finding.go` |
+| Remediation registry | Critical | Per-detector remediation data with rotation steps, doc URLs |
+| Formatter updates | High | JSON, SARIF, CSV, Table all display remediation |
+| CLI flags | High | `--remediation`, `--remediation-format brief\|full` |
+| Tests | High | Registry and enrichment tests |
+
+### Acceptance Criteria
+
+- [ ] `leakwatch scan fs /path --remediation` includes rotation steps
+- [ ] SARIF output includes remediation in rule `help` property
+- [ ] All 10+ detectors have remediation guidance
+
+---
+
+## Phase 7: Slack Workspace Scanning — PLANNED
+
+**Goal:** Scan Slack messages, channels, and files for leaked secrets.
+
+**Duration:** 3-4 weeks | **Version:** `v1.2.0` | **Status:** Planned
+
+### Deliverables
+
+| Task | Priority | Description |
+|------|----------|-------------|
+| SlackSource | Critical | `source.Source` implementation with rate-limited pagination |
+| Slack client interface | Critical | Testable `slackClient` abstraction |
+| `scan slack` command | Critical | Channel/date filtering, DM opt-in |
+| SourceMetadata fields | High | Channel, user, timestamp in findings |
+| Tests | High | Mocked client tests |
+| Guide | Medium | `docs/guides/slack-scanning.md` |
+
+### Acceptance Criteria
+
+- [ ] `leakwatch scan slack --token xoxb-...` scans workspace
+- [ ] Channel filtering works with `--channels`
+- [ ] Date filtering works with `--since`
+- [ ] Rate limiting respects Slack API tiers
+
+---
+
+## Phase 8: Confluence/Jira Scanning — PLANNED
+
+**Goal:** Scan Atlassian Confluence pages and Jira issues for leaked secrets.
+
+**Duration:** 4-5 weeks | **Version:** `v1.3.0` | **Status:** Planned
+
+### Deliverables
+
+| Task | Priority | Description |
+|------|----------|-------------|
+| Atlassian shared client | Critical | HTTP client with Cloud + Server/DC auth |
+| ConfluenceSource | Critical | Space/page pagination, HTML extraction |
+| JiraSource | Critical | JQL query, issue/comment scanning |
+| `scan confluence` command | Critical | Space filtering, attachment scanning |
+| `scan jira` command | Critical | Project filtering, JQL support |
+| SourceMetadata fields | High | Space, page, issue key in findings |
+| Tests | High | `httptest.NewServer` mocks |
+| Guide | Medium | `docs/guides/atlassian-scanning.md` |
+
+### Acceptance Criteria
+
+- [ ] `leakwatch scan confluence --url URL --api-token TOKEN` scans pages
+- [ ] `leakwatch scan jira --url URL --jql "project=SEC"` scans issues
+- [ ] Both Cloud and Server editions supported
+- [ ] HTML content properly extracted from Confluence storage format
+
+---
+
+## Phase 9: Secrets Inventory — PLANNED
+
+**Goal:** Persistent SQLite-based inventory tracking secrets across scans.
+
+**Duration:** 4-5 weeks | **Version:** `v1.4.0` | **Status:** Planned
+
+### Deliverables
+
+| Task | Priority | Description |
+|------|----------|-------------|
+| SQLite store | Critical | Pure Go `modernc.org/sqlite`, WAL mode |
+| Inventory service | Critical | Upsert, dedup, status tracking |
+| `inventory list` | Critical | Filter by status, severity, source |
+| `inventory stats` | High | Aggregate statistics |
+| `inventory show/update` | High | Detail view, status changes |
+| `inventory export` | Medium | JSON/CSV export |
+| `inventory reverify` | Medium | Re-verify active secrets |
+| Scan integration | Critical | `--inventory` flag on all scan commands |
+| Tests | High | In-memory SQLite tests |
+| Guide | Medium | `docs/guides/secrets-inventory.md` |
+
+### Acceptance Criteria
+
+- [ ] `leakwatch scan fs /path --inventory` persists findings
+- [ ] `leakwatch inventory list --status active` shows tracked secrets
+- [ ] `leakwatch inventory stats` shows aggregate counts
+- [ ] Deduplication across multiple scan runs
+- [ ] Only redacted values stored (never raw secrets)
+
+---
+
+## Phase 10: Honeytokens — PLANNED
+
+**Goal:** Generate and deploy decoy credentials that alert on unauthorized use.
+
+**Duration:** 3-4 weeks | **Version:** `v1.5.0` | **Status:** Planned
+
+### Deliverables
+
+| Task | Priority | Description |
+|------|----------|-------------|
+| Generator framework | Critical | AWS, GitHub, generic key generators |
+| Honeytoken store | Critical | SQLite persistence (shares inventory DB) |
+| Webhook alerter | Critical | HTTP POST on trigger detection |
+| `honeytoken generate` | Critical | Create fake credentials |
+| `honeytoken deploy` | High | Inject into .env/yaml/json files |
+| `honeytoken list/revoke` | High | Management commands |
+| `honeytoken check` | High | Check for triggered tokens |
+| Scan integration | Medium | `--detect-honeytokens` flag |
+| Tests | High | Generator, store, alerter tests |
+| Guide | Medium | `docs/guides/honeytokens.md` |
+
+### Acceptance Criteria
+
+- [ ] `leakwatch honeytoken generate --type aws` produces realistic fake key
+- [ ] `leakwatch honeytoken deploy <id> .env` injects into file
+- [ ] Webhook fires when honeytoken is detected in unexpected location
+- [ ] Value shown once during generation, only hash persisted
+
+---
+
+## Future: Long Term Vision
 
 | Task | Description |
 |------|-------------|
@@ -289,7 +419,12 @@ GitHub Release published with `v1.0.0` tag.
 | `v0.3.0` | Phase 3 | Verification, Aho-Corasick, entropy | 2026-03-24 |
 | `v0.4.0` | Phase 4 | Container scanning, SARIF, pre-commit | 2026-03-24 |
 | `v1.0.0` | Phase 5 | S3/GCS, verifiers, GitHub Action, Docker | 2026-03-24 |
-| `v1.x.x` | Future | New sources, SaaS platform, ML detection | Ongoing |
+| `v1.1.0` | Phase 6 | Remediation guidance for all detectors | — |
+| `v1.2.0` | Phase 7 | Slack workspace scanning | — |
+| `v1.3.0` | Phase 8 | Confluence/Jira scanning | — |
+| `v1.4.0` | Phase 9 | Secrets inventory (SQLite) | — |
+| `v1.5.0` | Phase 10 | Honeytokens | — |
+| `v2.x.x` | Future | ML detection, SaaS platform, Vault | Ongoing |
 
 ---
 
