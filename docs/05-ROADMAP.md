@@ -18,9 +18,10 @@
 | Phase 5 — Platform Expansion | Completed (8/8) | `v1.0.0` | 2026-03-24 |
 | Phase 6 — Remediation Guidance | Completed | `v1.1.0` | 2026-03-24 |
 | Phase 7 — Slack Scanning | Completed | `v1.2.0` | 2026-03-24 |
-| Phase 8 — Confluence/Jira | Planned | `v1.3.0` | — |
-| Phase 9 — Secrets Inventory | Planned | `v1.4.0` | — |
-| Phase 10 — Honeytokens | Planned | `v1.5.0` | — |
+| Phase 8 — Verifier Expansion | Planned | `v1.3.0` | — |
+| Phase 9 — Confluence/Jira | Planned | `v1.4.0` | — |
+| Phase 10 — Secrets Inventory | Planned | `v1.5.0` | — |
+| Phase 11 — Honeytokens | Planned | `v1.6.0` | — |
 
 ### v1.0.0 Highlights
 
@@ -309,7 +310,36 @@ GitHub Release published with `v1.0.0` tag.
 
 ---
 
-## Phase 8: Confluence/Jira Scanning — PLANNED
+## Phase 8: Verifier Expansion — PLANNED
+
+**Goal:** Increase verification coverage from 4.8% (3/63) to 84% (53/63). Verified secrets are the key differentiator.
+
+**Duration:** 5 sprints | **Version:** `v1.3.0` | **Status:** Planned
+
+**Analysis:** [docs/architecture/05-VERIFIER-ANALYSIS.md](architecture/05-VERIFIER-ANALYSIS.md)
+
+### Deliverables
+
+| Sprint | Verifiers | Coverage |
+|--------|-----------|----------|
+| V-1 (Tier 1 P0) | OpenAI, Anthropic, GitLab, SendGrid, DigitalOcean, Cloudflare, Heroku, New Relic, Telegram, Discord, Notion | 14/63 (22%) |
+| V-2 (Tier 1 P1) | Sentry, Vercel, NPM, PyPI, Grafana, PagerDuty, Databricks, Linear, Figma, Airtable, HuggingFace, CircleCI | 26/63 (41%) |
+| V-3 (Tier 1 P2) | DockerHub, Doppler, Snyk, SonarCloud, Postmark, Terraform, LaunchDarkly, Mailgun, Coinbase, Infura | 36/63 (57%) |
+| V-4 (Tier 2) | Okta, Shopify, Stripe, Twilio, Bitbucket, Auth0, Datadog, RubyGems, DeepSeek, Supabase | 46/63 (73%) |
+| V-5 (Tier 2+3) | GitHub OAuth, Teams Webhook, Azure Storage, Azure Entra, GCP, Snowflake, RabbitMQ | 53/63 (84%) |
+
+### Acceptance Criteria
+
+- [ ] Verification coverage reaches 84%+ (53/63)
+- [ ] All Tier 1 verifiers use simple HTTP GET/POST pattern
+- [ ] Rate limiting per provider (configurable)
+- [ ] `--only-verified` returns results for 53 detector types
+- [ ] Never log raw credentials during verification
+
+---
+
+## Phase 9: Confluence/Jira Scanning — PLANNED
+
 
 **Goal:** Scan Atlassian Confluence pages and Jira issues for leaked secrets.
 
@@ -421,9 +451,10 @@ GitHub Release published with `v1.0.0` tag.
 | `v1.0.0` | Phase 5 | S3/GCS, verifiers, GitHub Action, Docker | 2026-03-24 |
 | `v1.1.0` | Phase 6 | Remediation guidance for all detectors | — |
 | `v1.2.0` | Phase 7 | Slack workspace scanning | — |
-| `v1.3.0` | Phase 8 | Confluence/Jira scanning | — |
-| `v1.4.0` | Phase 9 | Secrets inventory (SQLite) | — |
-| `v1.5.0` | Phase 10 | Honeytokens | — |
+| `v1.3.0` | Phase 8 | Verifier expansion (4.8% → 84% coverage) | — |
+| `v1.4.0` | Phase 9 | Confluence/Jira scanning | — |
+| `v1.5.0` | Phase 10 | Secrets inventory (SQLite) | — |
+| `v1.6.0` | Phase 11 | Honeytokens | — |
 | `v2.x.x` | Future | ML detection, SaaS platform, Vault | Ongoing |
 
 ---
