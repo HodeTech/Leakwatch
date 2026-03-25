@@ -27,6 +27,17 @@ archives:
 checksum:
   name_template: 'checksums.txt'
 
+brews:
+  - repository:
+      owner: cemililik
+      name: homebrew-tap
+    directory: Formula
+    homepage: https://github.com/cemililik/Leakwatch
+    description: High-performance secret scanner for codebases, Git histories, and container images
+    license: MIT
+    test: |
+      system "#{bin}/leakwatch", "version"
+
 changelog:
   sort: asc
   filters:
