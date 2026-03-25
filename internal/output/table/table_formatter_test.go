@@ -208,3 +208,140 @@ func TestFormatter_Format_WriterError_ReturnsError(t *testing.T) {
 	err := f.Format(&errWriter{}, findings)
 	assert.Error(t, err)
 }
+
+func TestFormatter_Format_ColorEnabled_CriticalSeverityHasRedBoldANSI(t *testing.T) {
+	f := &Formatter{ColorEnabled: true}
+	var buf bytes.Buffer
+
+	findings := []finding.Finding{
+		{
+			DetectorID: "aws-access-key-id",
+			Severity:   finding.SeverityCritical,
+			Redacted:   "AKIA****MPLE",
+		},
+	}
+
+	err := f.Format(&buf, findings)
+	require.NoError(t, err)
+
+	output := buf.String()
+	assert.Contains(t, output, colorRedBold+"CRITICAL"+colorReset,
+		"CRITICAL severity should be wrapped in red bold ANSI codes")
+}
+
+func TestFormatter_Format_ColorEnabled_HighSeverityHasRedANSI(t *testing.T) {
+	f := &Formatter{ColorEnabled: true}
+	var buf bytes.Buffer
+
+	findings := []finding.Finding{
+		{
+			DetectorID: "github-token",
+			Severity:   finding.SeverityHigh,
+			Redacted:   "ghp_****",
+		},
+	}
+
+	err := f.Format(&buf, findings)
+	require.NoError(t, err)
+
+	output := buf.String()
+	assert.Contains(t, output, colorRed+"HIGH"+colorReset,
+		"HIGH severity should be wrapped in red ANSI codes")
+}
+
+func TestFormatter_Format_ColorEnabled_MediumSeverityHasYellowANSI(t *testing.T) {
+	f := &Formatter{ColorEnabled: true}
+	var buf bytes.Buffer
+
+	findings := []finding.Finding{
+		{
+			DetectorID: "generic-secret",
+			Severity:   finding.SeverityMedium,
+			Redacted:   "****",
+		},
+	}
+
+	err := f.Format(&buf, findings)
+	require.NoError(t, err)
+
+	output := buf.String()
+	assert.Contains(t, output, colorYellow+"MEDIUM"+colorReset,
+		"MEDIUM severity should be wrapped in yellow ANSI codes")
+}
+
+func TestFormatter_Format_ColorEnabled_LowSeverityHasBlueANSI(t *testing.T) {
+	f := &Formatter{ColorEnabled: true}
+	var buf bytes.Buffer
+
+	findings := []finding.Finding{
+		{
+			DetectorID: "generic-secret",
+			Severity:   finding.SeverityLow,
+			Redacted:   "****",
+		},
+	}
+
+	err := f.Format(&buf, findings)
+	require.NoError(t, err)
+
+	output := buf.String()
+	assert.Contains(t, output, colorBlue+"LOW"+colorReset,
+		"LOW severity should be wrapped in blue ANSI codes")
+}
+
+func TestFormatter_Format_ColorDisabled_NoANSICodesInOutput(t *testing.T) {
+	f := &Formatter{ColorEnabled: false}
+	var buf bytes.Buffer
+
+	findings := []finding.Finding{
+		{
+			DetectorID: "aws-access-key-id",
+			Severity:   finding.SeverityCritical,
+			Redacted:   "AKIA****MPLE",
+		},
+	}
+
+	err := f.Format(&buf, findings)
+	require.NoError(t, err)
+
+	output := buf.String()
+	assert.NotContains(t, output, "\033[",
+		"color-disabled output must not contain ANSI escape codes")
+}
+
+func TestFormatter_Format_ColorEnabled_SummaryCountsAreColorized(t *testing.T) {
+	f := &Formatter{ColorEnabled: true}
+	var buf bytes.Buffer
+
+	findings := []finding.Finding{
+		{DetectorID: "det-a", Severity: finding.SeverityCritical, Redacted: "****"},
+		{DetectorID: "det-b", Severity: finding.SeverityHigh, Redacted: "****"},
+	}
+
+	err := f.Format(&buf, findings)
+	require.NoError(t, err)
+
+	output := buf.String()
+	assert.Contains(t, output, colorRedBold+"1 critical"+colorReset,
+		"summary critical count should be colorized")
+	assert.Contains(t, output, colorRed+"1 high"+colorReset,
+		"summary high count should be colorized")
+}
+
+func TestFormatter_Format_ColorDisabled_SummaryHasNoANSI(t *testing.T) {
+	f := &Formatter{ColorEnabled: false}
+	var buf bytes.Buffer
+
+	findings := []finding.Finding{
+		{DetectorID: "det-a", Severity: finding.SeverityCritical, Redacted: "****"},
+		{DetectorID: "det-b", Severity: finding.SeverityHigh, Redacted: "****"},
+	}
+
+	err := f.Format(&buf, findings)
+	require.NoError(t, err)
+
+	output := buf.String()
+	assert.Contains(t, output, "Found 2 secrets (1 critical, 1 high).")
+	assert.NotContains(t, output, "\033[",
+		"color-disabled summary must not contain ANSI escape codes")
+}

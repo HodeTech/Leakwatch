@@ -24,6 +24,19 @@ var scanReposCmd = &cobra.Command{
 	Short: "Scans multiple Git repositories in parallel",
 	Long: `Scans multiple Git repositories concurrently. Each repository is cloned
 and scanned independently. Results are combined into a single output.`,
+	Example: `  # Scan two repositories
+  leakwatch scan repos https://github.com/org/repo1.git https://github.com/org/repo2.git
+
+  # Scan multiple repos with higher parallelism
+  leakwatch scan repos --parallel 5 \
+    https://github.com/org/api.git \
+    https://github.com/org/web.git \
+    https://github.com/org/infra.git
+
+  # Output combined results as table
+  leakwatch scan repos --format table \
+    https://github.com/org/repo1.git \
+    https://github.com/org/repo2.git`,
 	Args: cobra.MinimumNArgs(2),
 	RunE: runScanRepos,
 }
@@ -134,7 +147,8 @@ func runScanRepos(cmd *cobra.Command, args []string) error {
 	}
 
 	// Write output.
-	formatter := selectFormatter(cfg.format, cfg.showRaw)
+	colorEnabled := cfg.format == "table" && cfg.outputFile == ""
+	formatter := selectFormatter(cfg.format, cfg.showRaw, colorEnabled)
 
 	var w *os.File
 	if cfg.outputFile != "" {

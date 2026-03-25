@@ -21,6 +21,24 @@ leaked secrets such as API keys, passwords, and certificates.
 Requires a Slack Bot Token with appropriate scopes (channels:history,
 groups:history, im:history, mpim:history, files:read). The token can be
 provided via the --token flag or the LEAKWATCH_SLACK_TOKEN environment variable.`,
+	Example: `  # Scan all channels using environment variable for token
+  export LEAKWATCH_SLACK_TOKEN=xoxb-your-token
+  leakwatch scan slack
+
+  # Scan specific channels
+  leakwatch scan slack --token xoxb-... --channels general,engineering
+
+  # Scan messages from the last 90 days
+  leakwatch scan slack --since 2025-12-25
+
+  # Exclude noisy channels
+  leakwatch scan slack --exclude-channels random,social
+
+  # Include direct messages and uploaded files
+  leakwatch scan slack --include-dms --include-files
+
+  # Reduce API rate to avoid throttling
+  leakwatch scan slack --rate-limit 10`,
 	Args: cobra.NoArgs,
 	RunE: runScanSlack,
 }

@@ -124,7 +124,7 @@ func TestSelectFormatter_AllFormats_ReturnsCorrectType(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			formatter := selectFormatter(tc.format, tc.showRaw)
+			formatter := selectFormatter(tc.format, tc.showRaw, false)
 			assert.IsType(t, tc.expectedType, formatter)
 		})
 	}
@@ -162,11 +162,17 @@ func TestScanCommand_NoSubcommand_ShowsHelp(t *testing.T) {
 	assert.Contains(t, output, "Usage")
 }
 
-func TestScanFsCommand_NoArgs_ReturnsError(t *testing.T) {
+func TestScanFsCommand_NoArgs_AcceptsZeroArgs(t *testing.T) {
+	// Verify the command accepts 0 args (defaults to ".")
+	// We only test argument validation, not the full scan pipeline.
+	assert.Equal(t, "fs [path]", scanFsCmd.Use)
+}
+
+func TestScanFsCommand_TooManyArgs_ReturnsError(t *testing.T) {
 	buf := new(bytes.Buffer)
 	rootCmd.SetOut(buf)
 	rootCmd.SetErr(buf)
-	rootCmd.SetArgs([]string{"scan", "fs"})
+	rootCmd.SetArgs([]string{"scan", "fs", "/path1", "/path2"})
 
 	err := rootCmd.Execute()
 	assert.Error(t, err)

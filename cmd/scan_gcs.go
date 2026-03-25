@@ -13,6 +13,17 @@ var scanGCSCmd = &cobra.Command{
 	Short: "Scans a Google Cloud Storage bucket",
 	Long: `Scans objects in the specified GCS bucket to detect leaked secrets.
 Uses Application Default Credentials for authentication.`,
+	Example: `  # Scan an entire GCS bucket
+  leakwatch scan gcs my-config-bucket
+
+  # Scan only objects under a specific prefix
+  leakwatch scan gcs my-bucket --prefix configs/production/
+
+  # Scan with a specific GCP project
+  leakwatch scan gcs my-bucket --project my-gcp-project
+
+  # Output as CSV
+  leakwatch scan gcs my-bucket --format csv --output gcs-results.csv`,
 	Args: cobra.ExactArgs(1),
 	RunE: runScanGCS,
 }

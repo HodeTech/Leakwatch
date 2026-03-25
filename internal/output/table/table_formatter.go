@@ -10,11 +10,24 @@ import (
 	"github.com/cemililik/leakwatch/pkg/finding"
 )
 
+// ANSI color codes for terminal output.
+const (
+	colorReset   = "\033[0m"
+	colorRedBold = "\033[1;31m"
+	colorRed     = "\033[31m"
+	colorYellow  = "\033[33m"
+	colorBlue    = "\033[34m"
+)
+
 // Formatter outputs findings as a human-readable table for terminal display.
 type Formatter struct {
 	// ShowRaw, when true, includes the Raw field in output.
 	// When false, the Raw field is stripped for defense in depth.
 	ShowRaw bool
+
+	// ColorEnabled, when true, wraps severity text with ANSI color codes.
+	// Should be enabled only when writing to a terminal, not to files.
+	ColorEnabled bool
 }
 
 // Format writes findings as a formatted table to the given writer.
@@ -50,8 +63,13 @@ func (f *Formatter) Format(w io.Writer, findings []finding.Finding) error {
 			remediation = fd.Remediation.Title
 		}
 
+		sevText := strings.ToUpper(fd.Severity.String())
+		if f.ColorEnabled {
+			sevText = f.colorizeSeverity(fd.Severity, sevText)
+		}
+
 		line := fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t%s",
-			strings.ToUpper(fd.Severity.String()),
+			sevText,
 			fd.DetectorID,
 			fd.SourceMetadata.FilePath,
 			fd.Redacted,
@@ -68,7 +86,7 @@ func (f *Formatter) Format(w io.Writer, findings []finding.Finding) error {
 	}
 
 	// Write summary line.
-	summary := buildSummary(output)
+	summary := f.buildSummary(output)
 	if _, err := fmt.Fprintln(w, ""); err != nil {
 		return fmt.Errorf("failed to write table summary: %w", err)
 	}
@@ -79,8 +97,27 @@ func (f *Formatter) Format(w io.Writer, findings []finding.Finding) error {
 	return nil
 }
 
+// colorizeSeverity wraps the severity text with the appropriate ANSI color code.
+func (f *Formatter) colorizeSeverity(sev finding.Severity, text string) string {
+	var color string
+	switch sev {
+	case finding.SeverityCritical:
+		color = colorRedBold
+	case finding.SeverityHigh:
+		color = colorRed
+	case finding.SeverityMedium:
+		color = colorYellow
+	case finding.SeverityLow:
+		color = colorBlue
+	default:
+		return text
+	}
+	return color + text + colorReset
+}
+
 // buildSummary generates the summary line: "Found X secrets (Y critical, Z high, ...)"
-func buildSummary(findings []finding.Finding) string {
+// When ColorEnabled is true, the severity counts are colorized.
+func (f *Formatter) buildSummary(findings []finding.Finding) string {
 	counts := map[finding.Severity]int{}
 	for _, fd := range findings {
 		counts[fd.Severity]++
@@ -100,7 +137,11 @@ func buildSummary(findings []finding.Finding) string {
 		finding.SeverityLow,
 	} {
 		if c, ok := counts[sev]; ok && c > 0 {
-			parts = append(parts, fmt.Sprintf("%d %s", c, sev.String()))
+			part := fmt.Sprintf("%d %s", c, sev.String())
+			if f.ColorEnabled {
+				part = f.colorizeSeverity(sev, part)
+			}
+			parts = append(parts, part)
 		}
 	}
 

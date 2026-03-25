@@ -4,6 +4,7 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 
@@ -39,8 +40,33 @@ func (e *FindingsExitError) Error() string {
 var rootCmd = &cobra.Command{
 	Use:   "leakwatch",
 	Short: "Detects leaked secrets in codebases",
-	Long: `Leakwatch detects, verifies, and reports leaked secrets (API keys, passwords,
-certificates) in codebases, Git histories, and container images.`,
+	Long: `Leakwatch is a high-performance security tool that detects, verifies, and reports
+leaked secrets (API keys, passwords, certificates) in codebases, Git histories,
+container images, cloud storage buckets, and Slack workspaces.
+
+Features:
+  - 63 built-in secret detectors covering AWS, GitHub, Slack, Stripe, JWT, and more
+  - 53 verification checks to confirm whether discovered secrets are active
+  - Scans filesystems, Git repos, container images, S3, GCS, and Slack
+  - Multiple output formats: JSON, SARIF, CSV, and terminal table
+  - Aho-Corasick pre-filtering for fast multi-pattern matching
+  - Concurrent worker pool architecture for high throughput
+  - Custom rules via YAML configuration
+  - .leakwatchignore and inline ignore support`,
+	Example: `  # Quick scan of current directory
+  leakwatch scan fs .
+
+  # Scan a Git repository with verification
+  leakwatch scan git https://github.com/org/repo.git
+
+  # Scan and output SARIF for GitHub Code Scanning
+  leakwatch scan fs . --format sarif --output results.sarif
+
+  # Scan with remediation guidance
+  leakwatch scan fs . --remediation --format table
+
+  # Show only verified active secrets
+  leakwatch scan git . --only-verified`,
 	SilenceUsage:  true,
 	SilenceErrors: true,
 }
@@ -52,7 +78,10 @@ func Execute() int {
 		if errors.As(err, &fErr) {
 			return 1
 		}
-		slog.Error("command failed", "error", err)
+		// Print user-friendly error with suggestion.
+		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+		fmt.Fprintf(os.Stderr, "\nRun 'leakwatch --help' for usage information.\n")
+		slog.Debug("command failed", "error", err)
 		return 2
 	}
 	return 0

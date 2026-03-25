@@ -13,6 +13,17 @@ var scanS3Cmd = &cobra.Command{
 	Short: "Scans an AWS S3 bucket",
 	Long: `Scans objects in the specified AWS S3 bucket to detect leaked secrets.
 Uses the default AWS credential chain (env vars, shared config, IAM role).`,
+	Example: `  # Scan an entire S3 bucket
+  leakwatch scan s3 my-config-bucket
+
+  # Scan only objects under a specific prefix
+  leakwatch scan s3 my-bucket --prefix configs/
+
+  # Scan a bucket in a specific region
+  leakwatch scan s3 my-bucket --region eu-west-1
+
+  # Output as SARIF
+  leakwatch scan s3 my-bucket --format sarif --output s3-results.sarif`,
 	Args: cobra.ExactArgs(1),
 	RunE: runScanS3,
 }

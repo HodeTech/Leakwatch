@@ -14,7 +14,31 @@ var scanGitCmd = &cobra.Command{
 	Use:   "git <url_or_path>",
 	Short: "Scans a Git repository",
 	Long: `Scans the entire commit history of the specified Git repository to detect
-leaked secrets. Both local and remote (HTTP/SSH) repositories are supported.`,
+leaked secrets. Both local and remote (HTTP/SSH) repositories are supported.
+
+The scanner examines every commit diff for secrets that may have been introduced
+and later removed. Use --since or --since-commit to limit the scan range,
+and --branch to target a specific branch.`,
+	Example: `  # Scan a local Git repository
+  leakwatch scan git .
+
+  # Scan a remote repository
+  leakwatch scan git https://github.com/org/repo.git
+
+  # Scan only commits from the last 30 days
+  leakwatch scan git . --since 2026-02-23
+
+  # Scan a specific branch
+  leakwatch scan git . --branch develop
+
+  # Scan changes since a specific commit
+  leakwatch scan git . --since-commit abc1234
+
+  # Shallow clone scan (faster for large repos)
+  leakwatch scan git https://github.com/org/repo.git --depth 50
+
+  # Show only verified secrets in table format
+  leakwatch scan git . --only-verified --format table`,
 	Args: cobra.ExactArgs(1),
 	RunE: runScanGit,
 }

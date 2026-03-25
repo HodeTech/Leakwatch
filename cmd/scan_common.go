@@ -133,14 +133,15 @@ func loadScanConfig(cmd *cobra.Command) (*scanConfig, error) {
 }
 
 // selectFormatter returns the appropriate formatter based on the format string.
-func selectFormatter(format string, showRaw bool) output.Formatter {
+// When format is "table" and colorEnabled is true, ANSI color codes are used for severity.
+func selectFormatter(format string, showRaw bool, colorEnabled bool) output.Formatter {
 	switch format {
 	case "sarif":
 		return &sarifout.Formatter{ShowRaw: showRaw}
 	case "csv":
 		return &csvout.Formatter{ShowRaw: showRaw}
 	case "table":
-		return &tableout.Formatter{ShowRaw: showRaw}
+		return &tableout.Formatter{ShowRaw: showRaw, ColorEnabled: colorEnabled}
 	default:
 		return &jsonout.Formatter{ShowRaw: showRaw}
 	}
@@ -215,7 +216,9 @@ func executeScan(parent context.Context, cfg *scanConfig, src source.Source, cl 
 	}
 
 	// Write output.
-	formatter := selectFormatter(cfg.format, cfg.showRaw)
+	// Enable color for table format only when writing to stdout (terminal).
+	colorEnabled := cfg.format == "table" && cfg.outputFile == ""
+	formatter := selectFormatter(cfg.format, cfg.showRaw, colorEnabled)
 
 	var w io.WriteCloser
 	if cfg.outputFile != "" {

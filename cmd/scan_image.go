@@ -14,6 +14,20 @@ var scanImageCmd = &cobra.Command{
 	Long: `Scans a container image layer by layer to detect leaked secrets.
 Supports Docker Hub, GHCR, ECR, GCR and other OCI-compatible registries.
 Does not require a running Docker daemon.`,
+	Example: `  # Scan a Docker Hub image
+  leakwatch scan image nginx:latest
+
+  # Scan a private registry image
+  leakwatch scan image ghcr.io/org/myapp:v1.2.0
+
+  # Scan an AWS ECR image
+  leakwatch scan image 123456789.dkr.ecr.us-east-1.amazonaws.com/myapp:latest
+
+  # Output results as JSON to a file
+  leakwatch scan image myapp:latest --format json --output results.json
+
+  # Verify discovered secrets
+  leakwatch scan image myapp:latest --verify`,
 	Args: cobra.ExactArgs(1),
 	RunE: runScanImage,
 }
