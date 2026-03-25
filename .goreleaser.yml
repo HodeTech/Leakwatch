@@ -1,7 +1,10 @@
 version: 2
 
+project_name: leakwatch
+
 builds:
-  - env:
+  - binary: leakwatch
+    env:
       - CGO_ENABLED=0
     goos:
       - linux
