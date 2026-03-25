@@ -1,0 +1,98 @@
+name: Bug Report
+description: Report a bug or unexpected behavior
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Please fill out the sections below to help us fix it faster.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear description of what the bug is.
+      placeholder: When I run `leakwatch scan fs /path`, it crashes with...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Minimal steps to reproduce the behavior.
+      value: |
+        1. Run: `leakwatch scan ...`
+        2. With flags: `...`
+        3. See error: `...`
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration (YAML)
+      description: Your .leakwatch.yaml config (remove any tokens/secrets).
+      render: yaml
+      placeholder: |
+        scan:
+          concurrency: 8
+        detection:
+          entropy:
+            enabled: true
+        custom-rules:
+          - id: "my-rule"
+            regex: "..."
+
+  - type: textarea
+    id: error
+    attributes:
+      label: Error Output
+      description: Full error message or log output. Use --log-level debug for more detail.
+      render: shell
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of Leakwatch is affected?
+      options:
+        - Scan engine (detection pipeline)
+        - Detectors (false positive/negative)
+        - Verification (verifier results)
+        - Source — Filesystem
+        - Source — Git
+        - Source — Container image
+        - Source — S3/GCS
+        - Source — Slack
+        - Output format (JSON/SARIF/CSV/Table)
+        - CLI (flags, commands)
+        - Configuration (.leakwatch.yaml)
+        - Custom rules (YAML)
+        - Remediation guidance
+        - CI/CD (GitHub Action, pre-commit)
+        - Docker
+        - VS Code extension
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: System details.
+      value: |
+        - Leakwatch version: (run `leakwatch version`)
+        - Go version:
+        - OS:
+        - Installation method: go install / brew / docker / binary
+    validations:
+      required: true

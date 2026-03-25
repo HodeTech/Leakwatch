@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/cemililik/Leakwatch/tree/main/docs/guides
+    about: Check the guides before opening an issue
+  - name: Discussions (Q&A)
+    url: https://github.com/cemililik/Leakwatch/discussions
+    about: Ask questions and get help from the community
+  - name: Custom Rules Guide
+    url: https://github.com/cemililik/Leakwatch/blob/main/docs/guides/custom-rules.md
+    about: Need a new detector? You can add it with 5 lines of YAML
