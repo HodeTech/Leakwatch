@@ -29,7 +29,7 @@
 - **Scan summary** — printed to stderr after every scan, showing source, duration, files scanned, findings count, and verification stats
 - **`leakwatch init`** — new command that generates a starter `.leakwatch.yaml` configuration file with sensible defaults
 - **Colored table output** — ANSI colors for severity levels in terminal table formatter (critical=red, high=yellow, medium=cyan, low=white)
-- **Go 1.25.9** — updated toolchain with latest security fixes
+- **Go 1.25.8** + go-git v5.17.1 — security fixes
 - **`.leakwatchignore` CWD fallback** — when no `.leakwatchignore` is found alongside the config file, Leakwatch now also checks the current working directory
 
 ### v1.3.0 Highlights

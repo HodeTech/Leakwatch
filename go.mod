@@ -1,6 +1,6 @@
 module github.com/cemililik/leakwatch
 
-go 1.25.9
+go 1.25.8
 
 require (
 	cloud.google.com/go/storage v1.61.3

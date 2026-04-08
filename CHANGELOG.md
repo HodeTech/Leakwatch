@@ -34,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **`.leakwatchignore` CWD fallback** — now searches the current working directory if `.leakwatchignore` is not found in the scan root
 
 ### Security
-- Upgraded to **Go 1.25.9** (fixes 7 stdlib vulnerabilities)
+- Upgraded to **Go 1.25.8** + go-git v5.17.1 (security fixes)
 - Upgraded to **go-git v5.17.1** (fixes idx file DoS vulnerability)
 
 ---
