@@ -12,16 +12,16 @@ Leakwatch is a high-performance, open source (MIT) security tool that detects, v
 
 **Key features:**
 
-- **63 built-in detectors + unlimited YAML custom rules** -- Covers major cloud providers, AI platforms, CI/CD tools, databases, and SaaS services out of the box, with YAML custom rules for anything else
+- **64 detector (60 packages) + unlimited YAML custom rules** -- Covers major cloud providers, AI platforms, CI/CD tools, databases, and SaaS services out of the box, with YAML custom rules for anything else
 - **Hybrid detection engine** -- Aho-Corasick pre-filter, regex validation, and Shannon entropy analysis for a low false positive rate
-- **Secret verification** -- 53 built-in verifiers with 84% verification coverage confirm whether discovered secrets are still active via API calls (AWS, GitHub, Slack, Stripe, and more)
+- **Secret verification** -- 54 verifier (51 packages) with 84% verification coverage confirm whether discovered secrets are still active via API calls (AWS, GitHub, Slack, Stripe, and more)
 - **Multi-source support** -- Filesystem, Git repository, container images, S3, GCS, parallel multi-repo, and Slack
 - **Flexible output** -- JSON, SARIF, CSV, and table formats
 - **Single binary, zero dependencies** -- Runs on every platform, no Docker daemon required
 
 ```mermaid
 flowchart LR
-    subgraph Kaynaklar["Scan Sources"]
+    subgraph Sources["Scan Sources"]
         S1["Filesystem"]
         S2["Git Repository"]
         S3["Container Image"]
@@ -30,24 +30,24 @@ flowchart LR
         S6["Slack"]
     end
 
-    subgraph Motor["Detection Engine"]
+    subgraph Engine["Detection Engine"]
         E1["Aho-Corasick\nPre-Filter"]
         E2["Regex\nValidation"]
         E3["Entropy\nAnalysis"]
     end
 
-    subgraph Dogrulama["Secret Verification\n(53 verifiers, 84% coverage)"]
+    subgraph Verification["Secret Verification\n(54 verifier (51 packages), 84% coverage)"]
         V1["AWS STS"]
         V2["GitHub API"]
         V3["Slack API"]
         V4["Stripe, JWT, ..."]
     end
 
-    Kaynaklar -->|Chunks| E1
+    Sources -->|Chunks| E1
     E1 --> E2
     E2 --> E3
-    E3 -->|Findings| Dogrulama
-    Dogrulama --> Cikti["JSON / SARIF / CSV / Table"]
+    E3 -->|Findings| Verification
+    Verification --> Output["JSON / SARIF / CSV / Table"]
 ```
 
 ---
@@ -349,12 +349,12 @@ By default, Leakwatch writes results to standard output (stdout) in JSON format.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Tespit: Secret found
-    Tespit --> Dogrulama: Verifier available
-    Tespit --> unverified: No verifier
-    Dogrulama --> verified_active: Secret active
-    Dogrulama --> verified_inactive: Secret inactive
-    Dogrulama --> verify_error: Error occurred
+    [*] --> Detection: Secret found
+    Detection --> Verification: Verifier available
+    Detection --> unverified: No verifier
+    Verification --> verified_active: Secret active
+    Verification --> verified_inactive: Secret inactive
+    Verification --> verify_error: Error occurred
 ```
 
 ---
@@ -513,32 +513,32 @@ An overview of how Leakwatch executes a scan:
 
 ```mermaid
 sequenceDiagram
-    participant Kullanici as User (CLI)
-    participant Motor as Scan Engine
-    participant Kaynak as Source (fs/git/image)
+    participant User as User (CLI)
+    participant Engine as Scan Engine
+    participant Source as Source (fs/git/image)
     participant AC as Aho-Corasick
     participant Regex as Regex Validation
-    participant Entropi as Entropy Analysis
+    participant Entropy as Entropy Analysis
     participant Verifier as Secret Verifier
-    participant Cikti as Output Formatter
+    participant Output as Output Formatter
 
-    Kullanici->>Motor: scan command
-    Motor->>Kaynak: Read files/commits
-    Kaynak-->>Motor: Chunks (file fragments)
+    User->>Engine: scan command
+    Engine->>Source: Read files/commits
+    Source-->>Engine: Chunks (file fragments)
 
     loop For each chunk (worker pool)
-        Motor->>AC: Keyword matching
-        AC-->>Motor: Candidate lines
-        Motor->>Regex: Pattern validation
-        Regex-->>Motor: Raw findings
-        Motor->>Entropi: Entropy check
-        Entropi-->>Motor: Filtered findings
+        Engine->>AC: Keyword matching
+        AC-->>Engine: Candidate lines
+        Engine->>Regex: Pattern validation
+        Regex-->>Engine: Raw findings
+        Engine->>Entropy: Entropy check
+        Entropy-->>Engine: Filtered findings
     end
 
-    Motor->>Verifier: Verify findings
-    Verifier-->>Motor: Verification results
-    Motor->>Cikti: Format and write
-    Cikti-->>Kullanici: JSON / SARIF / CSV / Table
+    Engine->>Verifier: Verify findings
+    Verifier-->>Engine: Verification results
+    Engine->>Output: Format and write
+    Output-->>User: JSON / SARIF / CSV / Table
 ```
 
 ---
@@ -563,6 +563,15 @@ sequenceDiagram
 
 ---
 
+### What's New in v1.5.0
+
+- **ADO.NET connection string support** -- Microsoft SQL Server ADO.NET-style connection strings (`Server=...;Database=...;User Id=...;Password=...`) are now detected by the `dbconn` detector.
+- **Lock file false positives reduced** -- `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `Gemfile.lock`, and other lock files are now intelligently filtered to reduce noise.
+- **Placeholder pattern detection** -- common placeholder values (e.g. `your-token-here`, `xxxxxxxx`) are recognized as test fixtures and ignored.
+- **Context-aware PagerDuty detection** -- PagerDuty integration keys are now matched with surrounding context to reduce false positives.
+
+---
+
 ## 9. Next Steps
 
 Check out the following resources to use Leakwatch more effectively:
@@ -570,8 +579,8 @@ Check out the following resources to use Leakwatch more effectively:
 | Topic | Document |
 |-------|----------|
 | Configuration file and options | [Configuration Guide](./configuration.md) |
-| CI/CD integration (GitHub Actions, pre-commit) | [README - CI/CD Integration](../../README.md#cicd-entegrasyonu) |
-| Supported secret types | [README - Supported Secret Types](../../README.md#desteklenen-s%C4%B1r-t%C3%BCrleri) |
+| CI/CD integration (GitHub Actions, pre-commit) | [README - CI/CD Integration](../../README.md#cicd-integration) |
+| Supported secret types | [README - Supported Secret Types](../../README.md#supported-secret-types) |
 | Architecture design | [Architecture Document](../architecture/03-ARCHITECTURE.md) |
 | Roadmap | [Roadmap](../05-ROADMAP.md) |
 | Contribution guide | [CONTRIBUTING.md](../../CONTRIBUTING.md) |

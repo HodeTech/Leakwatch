@@ -64,4 +64,4 @@ Secret scanning requires matching thousands of different patterns (regex) agains
 
 ## Related Decisions
 
-- [ADR-0001: Programming Language](ADR-0001-programlama-dili.md) — Go's regex weakness triggering this decision
+- [ADR-0001: Programming Language](ADR-0001-programming-language.md) — Go's regex weakness triggering this decision

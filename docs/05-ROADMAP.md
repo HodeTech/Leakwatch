@@ -1,9 +1,9 @@
 # Leakwatch - Phased Development Roadmap
 
-> **Document Version:** 5.0
-> **Date:** 2026-03-25
+> **Document Version:** 6.0
+> **Date:** 2026-04-09
 > **Status:** Active
-> **Last Updated:** 2026-03-25
+> **Last Updated:** 2026-04-09
 
 ---
 
@@ -19,23 +19,45 @@
 | Phase 6 — Remediation Guidance | Completed | `v1.1.0` | 2026-03-24 |
 | Phase 7 — Slack Scanning | Completed | `v1.2.0` | 2026-03-24 |
 | Phase 8 — Verifier Expansion | Completed | `v1.3.0` | 2026-03-25 |
-| Phase 8.1 — CLI UX Improvements | Completed | `v1.3.1` | 2026-04-08 |
-| Phase 9 — Confluence/Jira | Planned | `v1.4.0` | — |
-| Phase 10 — Secrets Inventory | Planned | `v1.5.0` | — |
-| Phase 11 — Honeytokens | Planned | `v1.6.0` | — |
+| Phase 8.1 — Binary/Homebrew Fix | Completed | `v1.3.1` | 2026-03-25 |
+| Phase 8.2 — CLI UX Improvements | Completed | `v1.3.2` | 2026-03-25 |
+| Phase 8.3 — Scan Summary + Security | Completed | `v1.4.0` | 2026-04-08 |
+| Phase 8.4 — False Positive Reduction | Completed | `v1.5.0` | 2026-04-09 |
+| Phase 9 — Confluence/Jira | Planned | `v1.6.0` | — |
+| Phase 10 — Secrets Inventory | Planned | `v1.7.0` | — |
+| Phase 11 — Honeytokens | Planned | `v1.8.0` | — |
+
+### v1.5.0 Highlights
+
+- **False positive reduction** — improved filtering for lock files (`package-lock.json`, `yarn.lock`, etc.), test fixtures, and placeholder patterns
+- **ADO.NET connection string support** — `dbconn` detector updated to recognize Microsoft SQL Server ADO.NET connection strings
+- **Go 1.25.8 pin** — CI pinned to Go 1.25.8 (latest available in GitHub Actions)
+- **Go 1.25.9 + go-git v5.17.1** — security patches
+- **PagerDuty context-aware detection** — context-based checks to reduce false positives
+
+### v1.4.0 Highlights
+
+- **Scan summary** — every scan prints a summary to stderr (source, target, duration, file count, findings count, verification stats)
+- **`leakwatch init` command** — generates `.leakwatch.yaml` with sensible defaults
+- **Colored table output** — ANSI colors by severity in the terminal table formatter (critical=red, high=yellow, medium=cyan, low=white)
+- **Rich help messages** — all commands include `Example` sections
+- **`.leakwatchignore` CWD fallback** — when no `.leakwatchignore` is found alongside the config file, the current working directory is also checked
+- **Go 1.25.8** + go-git v5.17.1 — security patches
+
+### v1.3.2 Highlights
+
+- **CLI UX improvements** — more readable help messages, refined defaults
+- **GoReleaser binary name fix** — forced lowercase binary name in release artifacts
 
 ### v1.3.1 Highlights
 
-- **Scan summary** — printed to stderr after every scan, showing source, duration, files scanned, findings count, and verification stats
-- **`leakwatch init`** — new command that generates a starter `.leakwatch.yaml` configuration file with sensible defaults
-- **Colored table output** — ANSI colors for severity levels in terminal table formatter (critical=red, high=yellow, medium=cyan, low=white)
-- **Go 1.25.8** + go-git v5.17.1 — security fixes
-- **`.leakwatchignore` CWD fallback** — when no `.leakwatchignore` is found alongside the config file, Leakwatch now also checks the current working directory
+- **Homebrew automation** — CI configured with `HOMEBREW_TAP_TOKEN` for automatic Homebrew tap updates via GoReleaser
+- **Community infrastructure** — Code of Conduct, issue templates, GitHub Discussions enabled
 
 ### v1.3.0 Highlights
 
-- **53 verifiers implemented** — verification coverage increased from 4.8% (3/63) to 84% (53/63)
-- **Live API verification** for 48 detectors across cloud, AI/ML, DevTools, CI/CD, communication, payment, monitoring, security, and SaaS categories
+- **54 verifiers implemented (51 packages)** — verification coverage increased from ~5% to ~84% (54/64)
+- **Live API verification** for the majority of detectors across cloud, AI/ML, DevTools, CI/CD, communication, payment, monitoring, security, and SaaS categories
 - **Format validation** for 5 detectors (JWT, Azure Storage, Azure Entra, GCP Service Account, Snowflake)
 - **Per-provider rate limiting** for all verifiers with configurable limits
 - **5 implementation sprints** completed: V-1 through V-5
@@ -43,10 +65,10 @@
 ### v1.0.0 Highlights
 
 - **5 scan sources:** Filesystem, Git history, Container image, AWS S3, Google Cloud Storage
-- **63 detectors:** AWS, GitHub, Slack, Stripe, JWT, and 58 more across cloud, AI/ML, DevTools, CI/CD, communication, payment, database, infrastructure, identity, monitoring, security, and SaaS categories + YAML custom rules
+- **64 detectors (60 packages):** AWS, GitHub, Slack, Stripe, JWT, and many more across cloud, AI/ML, DevTools, CI/CD, communication, payment, database, infrastructure, identity, monitoring, security, and SaaS categories + YAML custom rules
 - **4 output formats:** JSON, SARIF, CSV, Table
 - **Aho-Corasick hybrid detection engine** with Shannon entropy analysis
-- **Verifier infrastructure:** AWS STS and GitHub API verifiers (rate-limited, concurrent)
+- **Verifier infrastructure:** 54 verifiers (51 packages), including AWS STS and GitHub API verifiers (rate-limited, concurrent)
 - **`.leakwatchignore`** and inline ignore (`# leakwatch:ignore`)
 - **CI/CD:** Pre-commit hook, GitHub Action, Docker image, Homebrew formula
 - **Parallel repo scanning** (`scan repos --parallel`)
@@ -329,7 +351,7 @@ GitHub Release published with `v1.0.0` tag.
 
 ## Phase 8: Verifier Expansion — COMPLETED
 
-**Goal:** Increase verification coverage from 4.8% (3/63) to 84% (53/63). Verified secrets are the key differentiator.
+**Goal:** Increase verification coverage to ~84% (54/64). Verified secrets are the key differentiator.
 
 **Duration:** 5 sprints | **Version:** `v1.3.0` | **Status:** Completed
 
@@ -339,18 +361,20 @@ GitHub Release published with `v1.0.0` tag.
 
 | Sprint | Verifiers | Coverage | Status |
 |--------|-----------|----------|--------|
-| V-1 (Tier 1 P0) | OpenAI, Anthropic, GitLab, SendGrid, DigitalOcean, Cloudflare, Heroku, New Relic, Telegram, Discord, Notion | 14/63 (22%) | [x] Completed |
-| V-2 (Tier 1 P1) | Sentry, Vercel, NPM, PyPI, Grafana, PagerDuty, Databricks, Linear, Figma, Airtable, HuggingFace, CircleCI | 26/63 (41%) | [x] Completed |
-| V-3 (Tier 1 P2) | DockerHub, Doppler, Snyk, SonarCloud, Postmark, Terraform, LaunchDarkly, Mailgun, Coinbase, Infura | 36/63 (57%) | [x] Completed |
-| V-4 (Tier 2) | Okta, Shopify, Stripe, Twilio, Bitbucket, Auth0, Datadog, RubyGems, DeepSeek, Supabase | 46/63 (73%) | [x] Completed |
-| V-5 (Tier 2+3) | GitHub OAuth, Teams Webhook, Azure Storage, Azure Entra, GCP, Snowflake, RabbitMQ | 53/63 (84%) | [x] Completed |
+| V-1 (Tier 1 P0) | OpenAI, Anthropic, GitLab, SendGrid, DigitalOcean, Cloudflare, Heroku, New Relic, Telegram, Discord, Notion | 14/64 (22%) | [x] Completed |
+| V-2 (Tier 1 P1) | Sentry, Vercel, NPM, PyPI, Grafana, PagerDuty, Databricks, Linear, Figma, Airtable, HuggingFace, CircleCI | 26/64 (41%) | [x] Completed |
+| V-3 (Tier 1 P2) | DockerHub, Doppler, Snyk, SonarCloud, Postmark, Terraform, LaunchDarkly, Mailgun, Coinbase, Infura | 36/64 (56%) | [x] Completed |
+| V-4 (Tier 2) | Okta, Shopify, Stripe, Twilio, Bitbucket, Auth0, Datadog, RubyGems, DeepSeek, Supabase | 47/64 (73%) | [x] Completed |
+| V-5 (Tier 2+3) | GitHub OAuth, Teams Webhook, Azure Storage, Azure Entra, GCP, Snowflake, RabbitMQ | 54/64 (84%) | [x] Completed |
+
+**Final totals:** 54 verifiers (51 packages) covering 64 detectors (60 packages).
 
 ### Acceptance Criteria
 
-- [x] Verification coverage reaches 84%+ (53/63)
+- [x] Verification coverage reaches ~84% (54/64)
 - [x] All Tier 1 verifiers use simple HTTP GET/POST pattern
 - [x] Rate limiting per provider (configurable)
-- [x] `--only-verified` returns results for 53 detector types
+- [x] `--only-verified` returns results for the verified detector types
 - [x] Never log raw credentials during verification
 
 ---
@@ -360,7 +384,7 @@ GitHub Release published with `v1.0.0` tag.
 
 **Goal:** Scan Atlassian Confluence pages and Jira issues for leaked secrets.
 
-**Duration:** 4-5 weeks | **Version:** `v1.3.0` | **Status:** Planned
+**Duration:** 4-5 weeks | **Version:** `v1.6.0` | **Status:** Planned
 
 ### Deliverables
 
@@ -384,11 +408,11 @@ GitHub Release published with `v1.0.0` tag.
 
 ---
 
-## Phase 9: Secrets Inventory — PLANNED
+## Phase 10: Secrets Inventory — PLANNED
 
 **Goal:** Persistent SQLite-based inventory tracking secrets across scans.
 
-**Duration:** 4-5 weeks | **Version:** `v1.4.0` | **Status:** Planned
+**Duration:** 4-5 weeks | **Version:** `v1.7.0` | **Status:** Planned
 
 ### Deliverables
 
@@ -415,11 +439,11 @@ GitHub Release published with `v1.0.0` tag.
 
 ---
 
-## Phase 10: Honeytokens — PLANNED
+## Phase 11: Honeytokens — PLANNED
 
 **Goal:** Generate and deploy decoy credentials that alert on unauthorized use.
 
-**Duration:** 3-4 weeks | **Version:** `v1.5.0` | **Status:** Planned
+**Duration:** 3-4 weeks | **Version:** `v1.8.0` | **Status:** Planned
 
 ### Deliverables
 
@@ -466,14 +490,19 @@ GitHub Release published with `v1.0.0` tag.
 | `v0.3.0` | Phase 3 | Verification, Aho-Corasick, entropy | 2026-03-24 |
 | `v0.4.0` | Phase 4 | Container scanning, SARIF, pre-commit | 2026-03-24 |
 | `v1.0.0` | Phase 5 | S3/GCS, verifiers, GitHub Action, Docker | 2026-03-24 |
-| `v1.1.0` | Phase 6 | Remediation guidance for all detectors | — |
-| `v1.2.0` | Phase 7 | Slack workspace scanning | — |
-| `v1.3.0` | Phase 8 | Verifier expansion (4.8% → 84% coverage) | 2026-03-25 |
-| `v1.3.1` | Phase 8.1 | CLI UX: scan summary, init command, colored table | 2026-04-08 |
-| `v1.4.0` | Phase 9 | Confluence/Jira scanning | — |
-| `v1.5.0` | Phase 10 | Secrets inventory (SQLite) | — |
-| `v1.6.0` | Phase 11 | Honeytokens | — |
+| `v1.1.0` | Phase 6 | Remediation guidance for all detectors (no git tag — see note) | — |
+| `v1.2.0` | Phase 7 | Slack workspace scanning (no git tag — see note) | — |
+| `v1.3.0` | Phase 8 | Verifier expansion (~84% coverage, 54/64) | 2026-03-25 |
+| `v1.3.1` | Phase 8.1 | Binary/Homebrew fix, community infrastructure | 2026-03-25 |
+| `v1.3.2` | Phase 8.2 | CLI UX improvements | 2026-03-25 |
+| `v1.4.0` | Phase 8.3 | Scan summary, `init` command, colored table, security patches | 2026-04-08 |
+| `v1.5.0` | Phase 8.4 | False positive reduction, ADO.NET support | 2026-04-09 |
+| `v1.6.0` | Phase 9 | Confluence/Jira scanning | — |
+| `v1.7.0` | Phase 10 | Secrets inventory (SQLite) | — |
+| `v1.8.0` | Phase 11 | Honeytokens | — |
 | `v2.x.x` | Future | ML detection, SaaS platform, Vault | Ongoing |
+
+> **Note on v1.1.0 / v1.2.0:** Phase 6 (Remediation Guidance) and Phase 7 (Slack Scanning) were completed and merged into `main`, but no `v1.1.0` or `v1.2.0` git tags were ever created. The features shipped as part of the `v1.3.0` release. The version slots are preserved here to keep the phase-to-version mapping consistent.
 
 ---
 
@@ -497,7 +526,7 @@ GitHub Release published with `v1.0.0` tag.
 | GitHub Stars | 500+ | 2,000+ |
 | Contributors | 5+ | 15+ |
 | Detector count | 50+ | 200+ |
-| Verifier count | 53 (achieved) | 60+ |
+| Verifier count | 54 (achieved) | 60+ |
 | Source count | 5 (fs, git, container, S3, GCS) | 8+ |
 
 ---

@@ -136,40 +136,40 @@ Leakwatch scans container images in a daemonless manner using the `go-containerr
 
 ```mermaid
 flowchart TD
-    A["leakwatch scan image myapp:latest"] --> B["Imaj Referansi Cozumle"]
-    B --> C["Registry'den Imaj Manifest'ini Cek"]
-    C --> D["Katmanlari Listele"]
-    D --> E["Her Katman Icin"]
+    A["leakwatch scan image myapp:latest"] --> B["Resolve Image Reference"]
+    B --> C["Fetch Image Manifest from Registry"]
+    C --> D["List Layers"]
+    D --> E["For Each Layer"]
 
-    subgraph KatmanIsle["Katman Isleme"]
-        E --> F["Katmani Uncompress Et"]
-        F --> G["TAR Arsivini Oku"]
-        G --> H{"Dosya Filtrele"}
-        H -->|"Dizin / Ozel dosya"| I["Atla"]
-        H -->|"Boyut > maxFileSize"| I
-        H -->|"Binary uzanti"| I
-        H -->|"Sistem yolu (usr/lib, var/cache...)"| I
+    subgraph LayerProcessing["Layer Processing"]
+        E --> F["Uncompress Layer"]
+        F --> G["Read TAR Archive"]
+        G --> H{"File Filter"}
+        H -->|"Directory / Special file"| I["Skip"]
+        H -->|"Size > maxFileSize"| I
+        H -->|"Binary extension"| I
+        H -->|"System path (usr/lib, var/cache...)"| I
         H -->|"Path traversal"| I
-        H -->|"Gecerli dosya"| J["Binary Icerik Kontrolu"]
+        H -->|"Valid file"| J["Binary Content Check"]
         J -->|"Binary"| I
-        J -->|"Metin"| K["Chunk Olarak Gonder"]
+        J -->|"Text"| K["Send as Chunk"]
     end
 
-    K --> L["Tespit Motoru"]
+    K --> L["Detection Engine"]
 
-    subgraph TespitMotoru["Sir Tespiti"]
-        L --> M["Aho-Corasick On-Filtre"]
-        M --> N["Regex Dogrulama"]
-        N --> O["Entropi Analizi"]
+    subgraph DetectionEngine["Secret Detection"]
+        L --> M["Aho-Corasick Pre-Filter"]
+        M --> N["Regex Validation"]
+        N --> O["Entropy Analysis"]
     end
 
-    O --> P{"Dogrulama Aktif?"}
-    P -->|"Evet"| Q["API ile Dogrula"]
-    P -->|"Hayir"| R["Bulgu Raporla"]
+    O --> P{"Verification Active?"}
+    P -->|"Yes"| Q["Verify via API"]
+    P -->|"No"| R["Report Finding"]
     Q --> R
 
-    style KatmanIsle fill:#f0f4ff,stroke:#4a6fa5
-    style TespitMotoru fill:#fff0f0,stroke:#a54a4a
+    style LayerProcessing fill:#f0f4ff,stroke:#4a6fa5
+    style DetectionEngine fill:#fff0f0,stroke:#a54a4a
 ```
 
 ### Processing Steps
@@ -193,13 +193,13 @@ A container image creates a separate layer for each command in the Dockerfile. T
 
 ```mermaid
 flowchart TD
-    subgraph Imaj["myapp:latest"]
+    subgraph Image["myapp:latest"]
         direction TB
-        L1["Katman 1: FROM ubuntu:22.04<br/>Temel isletim sistemi"]
-        L2["Katman 2: RUN apt-get install...<br/>Paket yuklemesi"]
-        L3["Katman 3: COPY . /app<br/>Uygulama kodu + credentials.json"]
-        L4["Katman 4: RUN rm credentials.json<br/>Whiteout dosyasi (sir hala Katman 3'te!)"]
-        L5["Katman 5: CMD ['./app']<br/>Calistirma komutu"]
+        L1["Layer 1: FROM ubuntu:22.04<br/>Base operating system"]
+        L2["Layer 2: RUN apt-get install...<br/>Package installation"]
+        L3["Layer 3: COPY . /app<br/>Application code + credentials.json"]
+        L4["Layer 4: RUN rm credentials.json<br/>Whiteout file (secret still in Layer 3!)"]
+        L5["Layer 5: CMD ['./app']<br/>Run command"]
 
         L1 --> L2 --> L3 --> L4 --> L5
     end
@@ -268,12 +268,12 @@ Leakwatch uses the `authn.DefaultKeychain` mechanism from the `go-containerregis
 ```mermaid
 flowchart LR
     A["Leakwatch"] --> B["authn.DefaultKeychain"]
-    B --> C{"Kimlik Bilgisi Ara"}
+    B --> C{"Search Credentials"}
     C --> D["~/.docker/config.json"]
-    C --> E["Ortam Degiskenleri"]
-    C --> F["Platforma Ozel<br/>Credential Helper"]
+    C --> E["Environment Variables"]
+    C --> F["Platform-Specific<br/>Credential Helper"]
 
-    D --> G["Registry'ye Baglan"]
+    D --> G["Connect to Registry"]
     E --> G
     F --> G
 ```
@@ -357,9 +357,9 @@ The most effective approach is to scan the container image immediately after bui
 ```mermaid
 flowchart LR
     A["docker build"] --> B["leakwatch scan image"]
-    B --> C{"Sir Bulundu?"}
-    C -->|"Evet"| D["Pipeline Basarisiz"]
-    C -->|"Hayir"| E["docker push"]
+    B --> C{"Secret Found?"}
+    C -->|"Yes"| D["Pipeline Failed"]
+    C -->|"No"| E["docker push"]
     E --> F["Deploy"]
 
     style D fill:#ffe0e0,stroke:#cc0000
@@ -547,5 +547,5 @@ docker build --secret id=github_token,env=GITHUB_TOKEN -t myapp:latest .
 
 - [Architecture Design](../architecture/03-ARCHITECTURE.md)
 - [Cloud Storage Scanning Guide](cloud-scanning.md)
-- [ADR-0006: Container Library](../decisions/ADR-0006-container-kutuphanesi.md)
+- [ADR-0006: Container Library](../decisions/ADR-0006-container-library.md)
 - [Development Standards](../standards/04-DEVELOPMENT-STANDARDS.md)

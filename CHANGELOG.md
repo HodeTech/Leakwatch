@@ -5,37 +5,77 @@ All notable changes to Leakwatch will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [v1.5.0] - 2026-04-09
 
 ### Added
-- **53 new secret detectors** bringing the total to 63 built-in detectors
+- **ADO.NET (Microsoft SQL Server) connection string** format support in the `dbconn` detector
+
+### Fixed
+- **False positive reduction** — improved filtering for lock files (`package-lock.json`, `yarn.lock`, and friends), placeholder patterns, and test fixtures
+- **ADO.NET connection string parsing** — handles key/value pairs separated by `;` correctly
+- **PagerDuty detector** — context-aware detection to reduce false positives in unrelated string matches
+
+### Changed
+- **CI pinned to Go 1.25.8** — latest version currently available in GitHub Actions runners
+
+---
+
+## [v1.4.0] - 2026-04-08
+
+### Added
+- **Scan summary** — every scan prints a summary to stderr (date, source type, target, files scanned, duration, findings count, verification stats)
+- **`leakwatch init` command** — generates a `.leakwatch.yaml` with recommended defaults
+- **Colored table output** — severity-colored terminal output (red=critical/high, yellow=medium, blue=low), auto-disabled when writing to a file
+- **Rich help messages** — all commands include `Example` sections with practical usage patterns
+- **Better error messages** — friendly error messages with help suggestions
+
+### Changed
+- **`scan fs` defaults to current directory** — path argument is now optional (defaults to `.`)
+- **`.leakwatchignore` CWD fallback** — also searches the current working directory if `.leakwatchignore` is not found alongside the config file
+
+### Security
+- Upgraded to **Go 1.25.8** + **go-git v5.17.1** (security fixes, including the idx file DoS vulnerability)
+
+---
+
+## [v1.3.2] - 2026-03-25
+
+### Fixed
+- **GoReleaser binary name** — forced lowercase binary name in release artifacts
+
+---
+
+## [v1.3.1] - 2026-03-25
+
+### Added
+- **Code of Conduct, issue templates, GitHub Discussions** enabled for the repository
+
+### Changed
+- **Homebrew automation** — CI configured with `HOMEBREW_TAP_TOKEN` so GoReleaser can push to the Homebrew tap automatically on release
+
+---
+
+## [v1.3.0] - 2026-03-25
+
+### Added
+- **51 new secret detectors** bringing the total to 60 detector packages (64 detector instances)
   - Sprint 1: OpenAI, Anthropic, GitLab, SendGrid, NPM, Discord, Telegram, Redis, Snowflake, Datadog
   - Sprint 2: Hugging Face, DeepSeek, GCP, Azure (Storage + Entra), Okta, Twilio, Mailgun, Vault, Grafana, PagerDuty, CircleCI, GitHub OAuth
   - Sprint 3: PyPI, RubyGems, Docker Hub, DigitalOcean, Heroku, Vercel, New Relic, Sentry, Shopify, Supabase, Cloudflare, Notion, Linear, Figma, Airtable
   - Sprint 4: Terraform, Databricks, Bitbucket, Coinbase, Infura, RabbitMQ, FTP, LDAP, Auth0, LaunchDarkly, Snyk, SonarCloud, Doppler, MS Teams, Postmark
-- **53 verifiers** — verification coverage increased from 4.8% (3/63) to 84% (53/63)
+- **54 verifiers (51 packages)** — verification coverage increased to ~84% (54/64)
   - V-1 (Tier 1 P0): OpenAI, Anthropic, GitLab, SendGrid, DigitalOcean, Cloudflare, Heroku, New Relic, Telegram, Discord, Notion
   - V-2 (Tier 1 P1): Sentry, Vercel, NPM, PyPI, Grafana, PagerDuty, Databricks, Linear, Figma, Airtable, HuggingFace, CircleCI
   - V-3 (Tier 1 P2): DockerHub, Doppler, Snyk, SonarCloud, Postmark, Terraform, LaunchDarkly, Mailgun, Coinbase, Infura
   - V-4 (Tier 2): Okta, Shopify, Stripe (live+test), Twilio, Bitbucket, Auth0, Datadog, RubyGems, DeepSeek, Supabase
   - V-5 (Tier 2+3): GitHub OAuth, Teams Webhook, Azure Storage, Azure Entra, GCP, Snowflake, RabbitMQ
-  - Verification types: **Live API verification** (48 detectors — API call to provider) and **Format validation** (5 detectors — structural check without network call)
-  - Per-provider rate limiting for all verifiers
-- Remediation guidance for all 63 detectors
-- APISIX key patterns added to generic API key detector
-- **`leakwatch init` command** — generates a `.leakwatch.yaml` with recommended defaults
-- **Scan summary** — every scan prints a summary to stderr (date, source type, target, files scanned, duration, findings count)
-- **Colored table output** — severity-colored terminal output (red=critical/high, yellow=medium, blue=low), auto-disabled when writing to a file
-- **Rich help messages** — all commands include Example sections with practical usage patterns
-- **Better error messages** — friendly error messages with help suggestions
+  - Verification types: **Live API verification** (API call to provider) and **Format validation** (structural check without network call, used for JWT, Azure Storage, Azure Entra, GCP Service Account, Snowflake)
+  - Per-provider rate limiting for all verifiers (configurable)
+- **Remediation guidance** for all detector types (previously planned for the `v1.1.0` slot — shipped together with `v1.3.0`)
+- **Slack workspace scanning** — `scan slack` command with channel/date/DM/file filtering (previously planned for the `v1.2.0` slot — shipped together with `v1.3.0`)
+- **APISIX key patterns** added to the generic API key detector
 
-### Changed
-- **`scan fs` defaults to current directory** — path argument is now optional (defaults to `.`)
-- **`.leakwatchignore` CWD fallback** — now searches the current working directory if `.leakwatchignore` is not found in the scan root
-
-### Security
-- Upgraded to **Go 1.25.8** + go-git v5.17.1 (security fixes)
-- Upgraded to **go-git v5.17.1** (fixes idx file DoS vulnerability)
+> **Note:** The `v1.1.0` (Remediation) and `v1.2.0` (Slack) phases were merged into `main` but never released as standalone git tags. Their features were rolled up into the `v1.3.0` release.
 
 ---
 

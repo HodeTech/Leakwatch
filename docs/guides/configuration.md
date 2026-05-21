@@ -16,11 +16,11 @@ Configuration values are applied in the following order of priority. A higher ti
 
 ```mermaid
 flowchart TD
-    A["1. CLI Flag'leri\n(en yuksek oncelik)"] --> B
-    B["2. Ortam Degiskenleri\n(LEAKWATCH_ on eki)"] --> C
-    C["3. Proje Yapilandirmasi\n(.leakwatch.yaml)"] --> D
-    D["4. Global Yapilandirma\n(~/.leakwatch.yaml)"] --> E
-    E["5. Varsayilan Degerler\n(en dusuk oncelik)"]
+    A["1. CLI Flags\n(highest priority)"] --> B
+    B["2. Environment Variables\n(LEAKWATCH_ prefix)"] --> C
+    C["3. Project Configuration\n(.leakwatch.yaml)"] --> D
+    D["4. Global Configuration\n(~/.leakwatch.yaml)"] --> E
+    E["5. Default Values\n(lowest priority)"]
 ```
 
 | Priority | Source | Description |
@@ -144,7 +144,7 @@ output:
 
 # ── Custom Rules ──────────────────────────────────────────────
 custom-rules:
-  # Leakwatch ships with 63 built-in detectors. Use YAML custom rules
+  # Leakwatch ships with 64 detector (60 packages). Use YAML custom rules
   # to detect secrets not covered by built-in detectors.
   # Each rule can contain the following fields:
   - id: "internal-api-key"
@@ -182,14 +182,14 @@ custom-rules:
 
 ```mermaid
 flowchart LR
-    subgraph Dusuk["Dusuk Entropi (< 3.5)"]
+    subgraph Low["Low Entropy (< 3.5)"]
         D1["password123"]
         D2["admin"]
     end
-    subgraph Orta["Orta Entropi (3.5 - 4.5)"]
+    subgraph Medium["Medium Entropy (3.5 - 4.5)"]
         O1["mySecretKey2026"]
     end
-    subgraph Yuksek["Yuksek Entropi (> 4.5)"]
+    subgraph High["High Entropy (> 4.5)"]
         Y1["aB3$kL9#mN2@pQ7"]
         Y2["AKIAIOSFODNN7EXAMPLE"]
     end
@@ -593,7 +593,7 @@ AWS_KEY = "AKIAIOSFODNN7EXAMPLE"  # leakwatch:ignore:aws-access-key-id
 
 ```go
 // To ignore multiple detectors, specify each with a separate comment
-const slackToken = "xoxb-example-token" // leakwatch:ignore:slack-bot-token
+const slackToken = "xoxb-example-token" // leakwatch:ignore:slack-token
 ```
 
 ### 6.3 Inline Ignore Rules
@@ -674,5 +674,5 @@ leakwatch scan fs . --log-level debug 2>&1 | head -5
 | Quick start | [Getting Started Guide](./getting-started.md) |
 | Development standards | [Development Standards](../standards/04-DEVELOPMENT-STANDARDS.md) |
 | Architecture design | [Architecture Document](../architecture/03-ARCHITECTURE.md) |
-| ADR: CLI framework (Cobra + Viper) | [ADR-0002](../decisions/ADR-0002-cli-cercevesi.md) |
-| ADR: Pattern matching | [ADR-0005](../decisions/ADR-0005-desen-eslestirme.md) |
+| ADR: CLI framework (Cobra + Viper) | [ADR-0002](../decisions/ADR-0002-cli-frame.md) |
+| ADR: Pattern matching | [ADR-0005](../decisions/ADR-0005-pattern-matching.md) |

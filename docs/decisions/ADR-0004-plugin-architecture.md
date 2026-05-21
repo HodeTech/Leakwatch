@@ -56,4 +56,4 @@ Leakwatch needs to allow easy addition of new secret detectors, scan sources, an
 
 ## Related Decisions
 
-- [ADR-0001: Programming Language](ADR-0001-programlama-dili.md) — Go's static compilation philosophy supports this decision
+- [ADR-0001: Programming Language](ADR-0001-programming-language.md) — Go's static compilation philosophy supports this decision

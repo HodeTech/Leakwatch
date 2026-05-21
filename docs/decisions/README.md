@@ -21,11 +21,11 @@ Each ADR follows the structure below:
 
 | ADR | Title | Status | Date |
 |-----|-------|--------|------|
-| [ADR-0001](ADR-0001-programlama-dili.md) | Programming Language: Go | Accepted | 2026-03-24 |
-| [ADR-0002](ADR-0002-cli-cercevesi.md) | CLI Framework: Cobra + Viper | Accepted | 2026-03-24 |
-| [ADR-0003](ADR-0003-git-kutuphanesi.md) | Git Library: go-git | Accepted | 2026-03-24 |
-| [ADR-0004](ADR-0004-eklenti-mimarisi.md) | Plugin Architecture: Compile-Time | Accepted | 2026-03-24 |
-| [ADR-0005](ADR-0005-desen-eslestirme.md) | Pattern Matching: Aho-Corasick Hybrid | Accepted | 2026-03-24 |
-| [ADR-0006](ADR-0006-container-kutuphanesi.md) | Container Library: go-containerregistry | Accepted | 2026-03-24 |
-| [ADR-0007](ADR-0007-lisans.md) | License: MIT | Accepted | 2026-03-24 |
-| [ADR-0008](ADR-0008-eszamanlilik-modeli.md) | Concurrency: Worker Pool | Accepted | 2026-03-24 |
+| [ADR-0001](ADR-0001-programming-language.md) | Programming Language: Go | Accepted | 2026-03-24 |
+| [ADR-0002](ADR-0002-cli-frame.md) | CLI Framework: Cobra + Viper | Accepted | 2026-03-24 |
+| [ADR-0003](ADR-0003-git-library.md) | Git Library: go-git | Accepted | 2026-03-24 |
+| [ADR-0004](ADR-0004-plugin-architecture.md) | Plugin Architecture: Compile-Time | Accepted | 2026-03-24 |
+| [ADR-0005](ADR-0005-pattern-matching.md) | Pattern Matching: Aho-Corasick Hybrid | Accepted | 2026-03-24 |
+| [ADR-0006](ADR-0006-container-library.md) | Container Library: go-containerregistry | Accepted | 2026-03-24 |
+| [ADR-0007](ADR-0007-license.md) | License: MIT | Accepted | 2026-03-24 |
+| [ADR-0008](ADR-0008-concurrency-model.md) | Concurrency: Worker Pool | Accepted | 2026-03-24 |

@@ -25,8 +25,8 @@ docs/
 │   └── 03-ARCHITECTURE.md
 ├── decisions/          # Architecture Decision Records (ADR)
 │   ├── README.md       # ADR index and description
-│   ├── ADR-0001-programlama-dili.md
-│   ├── ADR-0002-cli-cercevesi.md
+│   ├── ADR-0001-programming-language.md
+│   ├── ADR-0002-cli-frame.md
 │   └── ...
 ├── standards/          # Standards and rules
 │   ├── 00-DOCUMENTATION-STANDARDS.md   (this document)
