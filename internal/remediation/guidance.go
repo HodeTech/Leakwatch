@@ -2,6 +2,25 @@ package remediation
 
 import "github.com/cemililik/leakwatch/pkg/finding"
 
+// Reusable step and checklist strings to keep guidance consistent and
+// minimize duplication across providers.
+const (
+	stepUpdateIntegrationsToken = "Update all integrations with the new token."
+	stepUpdateIntegrationsKey   = "Update all integrations with the new key."
+	stepUpdateCICDToken         = "Update CI/CD pipelines with the new token."
+	stepDeleteCompromisedToken  = "Delete the compromised token."
+	stepDeleteCompromisedKey    = "Delete the compromised key."
+	stepDeleteOldAPIKey         = "Delete the old API key."
+	stepRevokeCompromisedToken  = "Revoke the compromised token."
+	stepCreateNewAPIKey         = "Create a new API key."
+	stepCreateNewToken          = "Create a new token."
+	stepCreateNewKey            = "Create a new key."
+
+	checkNotifySecurityTeam = "Notify the security team about the exposure."
+	checkNotifyTeam         = "Notify the team about the exposure."
+	checkScanCodebaseForKey = "Scan the codebase for other occurrences of the same key."
+)
+
 func init() {
 	Register("aws-access-key-id", finding.Remediation{
 		Title: "Rotate AWS Access Key",
@@ -18,8 +37,8 @@ func init() {
 		Checklist: []string{
 			"Review CloudTrail logs for unauthorized usage of the compromised key.",
 			"Check for any resources created or modified by the compromised key.",
-			"Notify the security team about the exposure.",
-			"Scan the codebase for other occurrences of the same key.",
+			checkNotifySecurityTeam,
+			checkScanCodebaseForKey,
 		},
 	})
 
@@ -37,7 +56,7 @@ func init() {
 		Checklist: []string{
 			"Review the GitHub audit log for unauthorized actions performed with the token.",
 			"Check repository and organization settings for unexpected changes.",
-			"Notify the security team about the exposure.",
+			checkNotifySecurityTeam,
 			"Scan for other repositories that may contain the same token.",
 		},
 	})
@@ -96,7 +115,7 @@ func init() {
 			"Review recent Stripe events and logs for unauthorized charges or refunds.",
 			"Check for any new connected accounts or transfers.",
 			"Notify the security and finance teams about the exposure.",
-			"Scan the codebase for other occurrences of the same key.",
+			checkScanCodebaseForKey,
 		},
 	})
 
@@ -131,7 +150,7 @@ func init() {
 		Checklist: []string{
 			"Identify all services and clients that consume the JWT.",
 			"Check authentication logs for unauthorized access using the leaked token.",
-			"Notify the security team about the exposure.",
+			checkNotifySecurityTeam,
 			"Verify that token expiration and refresh mechanisms are properly configured.",
 		},
 	})
@@ -171,7 +190,7 @@ func init() {
 		Checklist: []string{
 			"Review SSH and TLS access logs for unauthorized connections using the compromised key.",
 			"Check certificate transparency logs if the key was used for TLS.",
-			"Notify the security team about the exposure.",
+			checkNotifySecurityTeam,
 			"Audit all systems where the key had access.",
 		},
 	})
@@ -189,8 +208,8 @@ func init() {
 		Urgency:    "high",
 		Checklist: []string{
 			"Review the provider's usage and audit logs for unauthorized API calls.",
-			"Notify the security team about the exposure.",
-			"Scan the codebase for other occurrences of the same key.",
+			checkNotifySecurityTeam,
+			checkScanCodebaseForKey,
 			"Consider using a secrets manager to avoid embedding keys in source code.",
 		},
 	})
@@ -199,9 +218,9 @@ func init() {
 		Title: "Rotate OpenAI API Key",
 		Steps: []string{
 			"Go to platform.openai.com/api-keys.",
-			"Create a new API key.",
-			"Update all integrations with the new key.",
-			"Delete the old API key.",
+			stepCreateNewAPIKey,
+			stepUpdateIntegrationsKey,
+			stepDeleteOldAPIKey,
 			"Check usage logs for unauthorized activity.",
 		},
 		DocURL:     "https://platform.openai.com/docs/guides/safety-best-practices",
@@ -210,7 +229,7 @@ func init() {
 		Checklist: []string{
 			"Check billing for unauthorized usage.",
 			"Review API logs for suspicious activity.",
-			"Notify the team about the exposure.",
+			checkNotifyTeam,
 		},
 	})
 
@@ -218,9 +237,9 @@ func init() {
 		Title: "Rotate Anthropic API Key",
 		Steps: []string{
 			"Go to console.anthropic.com/settings/keys.",
-			"Create a new API key.",
-			"Update all integrations with the new key.",
-			"Delete the old API key.",
+			stepCreateNewAPIKey,
+			stepUpdateIntegrationsKey,
+			stepDeleteOldAPIKey,
 		},
 		DocURL:     "https://docs.anthropic.com/en/docs/initial-setup",
 		ConsoleURL: "https://console.anthropic.com/settings/keys",
@@ -228,7 +247,7 @@ func init() {
 		Checklist: []string{
 			"Check usage logs for unauthorized activity.",
 			"Review billing for unexpected charges.",
-			"Notify the team about the exposure.",
+			checkNotifyTeam,
 		},
 	})
 
@@ -236,9 +255,9 @@ func init() {
 		Title: "Revoke GitLab Personal Access Token",
 		Steps: []string{
 			"Go to GitLab Settings > Access Tokens.",
-			"Revoke the compromised token.",
+			stepRevokeCompromisedToken,
 			"Create a new token with minimal scopes.",
-			"Update CI/CD pipelines with the new token.",
+			stepUpdateCICDToken,
 		},
 		DocURL:     "https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html",
 		ConsoleURL: "https://gitlab.com/-/user_settings/personal_access_tokens",
@@ -256,7 +275,7 @@ func init() {
 			"Go to SendGrid Settings > API Keys.",
 			"Create a new key with minimal permissions.",
 			"Update email service configuration with the new key.",
-			"Delete the old API key.",
+			stepDeleteOldAPIKey,
 		},
 		DocURL:     "https://docs.sendgrid.com/ui/account-and-settings/api-keys",
 		ConsoleURL: "https://app.sendgrid.com/settings/api_keys",
@@ -264,7 +283,7 @@ func init() {
 		Checklist: []string{
 			"Check sent email logs for abuse.",
 			"Monitor bounce and spam rates for anomalies.",
-			"Notify the team about the exposure.",
+			checkNotifyTeam,
 		},
 	})
 
@@ -272,8 +291,8 @@ func init() {
 		Title: "Revoke NPM Access Token",
 		Steps: []string{
 			"Run `npm token revoke <token>` or go to npmjs.com > Access Tokens.",
-			"Create a new token.",
-			"Update CI/CD pipelines with the new token.",
+			stepCreateNewToken,
+			stepUpdateCICDToken,
 			"Check for unauthorized package publishes.",
 		},
 		DocURL:     "https://docs.npmjs.com/about-access-tokens",
@@ -290,9 +309,9 @@ func init() {
 		Title: "Rotate Datadog API Key",
 		Steps: []string{
 			"Go to Datadog Organization Settings > API Keys.",
-			"Create a new API key.",
+			stepCreateNewAPIKey,
 			"Update DD_API_KEY in all deployments.",
-			"Delete the old API key.",
+			stepDeleteOldAPIKey,
 		},
 		DocURL:     "https://docs.datadoghq.com/account_management/api-app-keys/",
 		ConsoleURL: "https://app.datadoghq.com/organization-settings/api-keys",
@@ -385,8 +404,8 @@ func init() {
 		Title: "Revoke Hugging Face Token",
 		Steps: []string{
 			"Go to huggingface.co/settings/tokens.",
-			"Delete the compromised token.",
-			"Create a new token.",
+			stepDeleteCompromisedToken,
+			stepCreateNewToken,
 		},
 		DocURL:     "https://huggingface.co/docs/hub/security-tokens",
 		ConsoleURL: "",
@@ -397,8 +416,8 @@ func init() {
 		Title: "Rotate DeepSeek API Key",
 		Steps: []string{
 			"Go to platform.deepseek.com, API Keys section.",
-			"Delete the compromised key.",
-			"Create a new API key.",
+			stepDeleteCompromisedKey,
+			stepCreateNewAPIKey,
 		},
 		DocURL:     "https://platform.deepseek.com/api-docs",
 		ConsoleURL: "",
@@ -409,8 +428,8 @@ func init() {
 		Title: "Rotate GCP Service Account Key",
 		Steps: []string{
 			"Go to GCP Console > IAM > Service Accounts.",
-			"Delete the compromised key.",
-			"Create a new key.",
+			stepDeleteCompromisedKey,
+			stepCreateNewKey,
 			"Update all deployments with the new key.",
 		},
 		DocURL:     "https://cloud.google.com/iam/docs/keys-create-delete",
@@ -456,7 +475,7 @@ func init() {
 		Title: "Revoke Okta API Token",
 		Steps: []string{
 			"Go to Okta Admin Console > Security > API > Tokens.",
-			"Revoke the compromised token.",
+			stepRevokeCompromisedToken,
 		},
 		DocURL:     "https://developer.okta.com/docs/guides/create-an-api-token",
 		ConsoleURL: "",
@@ -470,8 +489,8 @@ func init() {
 		Title: "Rotate Twilio API Key",
 		Steps: []string{
 			"Go to Twilio Console > API Keys.",
-			"Delete the compromised key.",
-			"Create a new API key.",
+			stepDeleteCompromisedKey,
+			stepCreateNewAPIKey,
 		},
 		DocURL:     "https://www.twilio.com/docs/iam/api-keys",
 		ConsoleURL: "https://console.twilio.com/us1/account/keys-credentials/api-keys",
@@ -485,7 +504,7 @@ func init() {
 		Title: "Rotate Mailgun API Key",
 		Steps: []string{
 			"Go to Mailgun Dashboard > API Keys.",
-			"Create a new key.",
+			stepCreateNewKey,
 			"Update all integrations.",
 			"Delete the old key.",
 		},
@@ -515,7 +534,7 @@ func init() {
 		Title: "Revoke Grafana Service Account Token",
 		Steps: []string{
 			"Go to Grafana > Administration > Service Accounts.",
-			"Delete the compromised token.",
+			stepDeleteCompromisedToken,
 		},
 		DocURL:     "https://grafana.com/docs/grafana/latest/administration/service-accounts/",
 		ConsoleURL: "",
@@ -526,7 +545,7 @@ func init() {
 		Title: "Rotate PagerDuty API Key",
 		Steps: []string{
 			"Go to PagerDuty > My Profile > User Settings > API Access.",
-			"Create a new key.",
+			stepCreateNewKey,
 			"Delete the old key.",
 		},
 		DocURL:     "https://support.pagerduty.com/docs/api-access-keys",
@@ -538,7 +557,7 @@ func init() {
 		Title: "Revoke CircleCI Token",
 		Steps: []string{
 			"Go to CircleCI > User Settings > Personal API Tokens.",
-			"Delete the compromised token.",
+			stepDeleteCompromisedToken,
 		},
 		DocURL:     "https://circleci.com/docs/managing-api-tokens/",
 		ConsoleURL: "",
@@ -549,7 +568,7 @@ func init() {
 		Title: "Revoke GitHub OAuth Token",
 		Steps: []string{
 			"Go to GitHub Settings > Developer Settings > OAuth Apps.",
-			"Revoke the compromised token.",
+			stepRevokeCompromisedToken,
 		},
 		DocURL:     "https://docs.github.com/en/apps/oauth-apps",
 		ConsoleURL: "",
@@ -566,9 +585,9 @@ func init() {
 		Title: "Revoke PyPI API Token",
 		Steps: []string{
 			"Go to pypi.org > Account Settings > API Tokens.",
-			"Delete the compromised token.",
+			stepDeleteCompromisedToken,
 			"Create a new scoped token with minimal permissions.",
-			"Update CI/CD pipelines with the new token.",
+			stepUpdateCICDToken,
 		},
 		DocURL:     "https://pypi.org/help/#apitoken",
 		ConsoleURL: "https://pypi.org/manage/account/#api-tokens",
@@ -579,7 +598,7 @@ func init() {
 		Title: "Revoke RubyGems API Key",
 		Steps: []string{
 			"Go to rubygems.org > Settings > API Keys.",
-			"Delete the compromised key.",
+			stepDeleteCompromisedKey,
 			"Create a new API key with minimal scopes.",
 			"Update CI/CD pipelines with the new key.",
 		},
@@ -611,9 +630,9 @@ func init() {
 		Title: "Revoke DigitalOcean Token",
 		Steps: []string{
 			"Go to cloud.digitalocean.com > API > Tokens.",
-			"Delete the compromised token.",
+			stepDeleteCompromisedToken,
 			"Create a new token with required scopes.",
-			"Update all integrations with the new token.",
+			stepUpdateIntegrationsToken,
 		},
 		DocURL:     "https://docs.digitalocean.com/reference/api/",
 		ConsoleURL: "https://cloud.digitalocean.com/account/api/tokens",
@@ -639,9 +658,9 @@ func init() {
 		Title: "Revoke Vercel Token",
 		Steps: []string{
 			"Go to vercel.com > Settings > Tokens.",
-			"Delete the compromised token.",
-			"Create a new token.",
-			"Update all integrations with the new token.",
+			stepDeleteCompromisedToken,
+			stepCreateNewToken,
+			stepUpdateIntegrationsToken,
 		},
 		DocURL:     "https://vercel.com/docs/rest-api",
 		ConsoleURL: "https://vercel.com/account/tokens",
@@ -652,9 +671,9 @@ func init() {
 		Title: "Delete New Relic API Key",
 		Steps: []string{
 			"Go to one.newrelic.com > API Keys.",
-			"Delete the compromised key.",
-			"Create a new API key.",
-			"Update all integrations with the new key.",
+			stepDeleteCompromisedKey,
+			stepCreateNewAPIKey,
+			stepUpdateIntegrationsKey,
 		},
 		DocURL:     "https://docs.newrelic.com/docs/apis/intro-apis/new-relic-api-keys/",
 		ConsoleURL: "https://one.newrelic.com/api-keys",
@@ -665,9 +684,9 @@ func init() {
 		Title: "Revoke Sentry Auth Token",
 		Steps: []string{
 			"Go to sentry.io > Settings > Auth Tokens.",
-			"Delete the compromised token.",
+			stepDeleteCompromisedToken,
 			"Create a new auth token.",
-			"Update all integrations with the new token.",
+			stepUpdateIntegrationsToken,
 		},
 		DocURL:     "https://docs.sentry.io/api/auth/",
 		ConsoleURL: "https://sentry.io/settings/account/api/auth-tokens/",
@@ -679,7 +698,7 @@ func init() {
 		Steps: []string{
 			"Go to Shopify Admin > Apps > Manage private apps.",
 			"Rotate the compromised access token.",
-			"Update all integrations with the new token.",
+			stepUpdateIntegrationsToken,
 		},
 		DocURL:     "https://shopify.dev/docs/apps/auth",
 		ConsoleURL: "",
@@ -705,9 +724,9 @@ func init() {
 		Title: "Revoke Cloudflare API Token",
 		Steps: []string{
 			"Go to dash.cloudflare.com > My Profile > API Tokens.",
-			"Delete the compromised token.",
+			stepDeleteCompromisedToken,
 			"Create a new token with minimal permissions.",
-			"Update all integrations with the new token.",
+			stepUpdateIntegrationsToken,
 		},
 		DocURL:     "https://developers.cloudflare.com/api/tokens/create/",
 		ConsoleURL: "https://dash.cloudflare.com/profile/api-tokens",
@@ -723,7 +742,7 @@ func init() {
 			"Go to notion.so > Settings > Connections > Develop or manage integrations.",
 			"Revoke the compromised integration token.",
 			"Create a new integration secret.",
-			"Update all integrations with the new token.",
+			stepUpdateIntegrationsToken,
 		},
 		DocURL:     "https://developers.notion.com/docs/authorization",
 		ConsoleURL: "https://www.notion.so/my-integrations",
@@ -734,9 +753,9 @@ func init() {
 		Title: "Revoke Linear API Key",
 		Steps: []string{
 			"Go to linear.app > Settings > API.",
-			"Delete the compromised key.",
-			"Create a new API key.",
-			"Update all integrations with the new key.",
+			stepDeleteCompromisedKey,
+			stepCreateNewAPIKey,
+			stepUpdateIntegrationsKey,
 		},
 		DocURL:     "https://developers.linear.app/docs/graphql/working-with-the-graphql-api",
 		ConsoleURL: "https://linear.app/settings/api",
@@ -747,9 +766,9 @@ func init() {
 		Title: "Revoke Figma PAT",
 		Steps: []string{
 			"Go to figma.com > Settings > Personal Access Tokens.",
-			"Delete the compromised token.",
+			stepDeleteCompromisedToken,
 			"Create a new personal access token.",
-			"Update all integrations with the new token.",
+			stepUpdateIntegrationsToken,
 		},
 		DocURL:     "https://www.figma.com/developers/api#access-tokens",
 		ConsoleURL: "https://www.figma.com/settings",
@@ -760,9 +779,9 @@ func init() {
 		Title: "Revoke Airtable PAT",
 		Steps: []string{
 			"Go to airtable.com > Account > Developer hub > Personal access tokens.",
-			"Delete the compromised token.",
+			stepDeleteCompromisedToken,
 			"Create a new personal access token with minimal scopes.",
-			"Update all integrations with the new token.",
+			stepUpdateIntegrationsToken,
 		},
 		DocURL:     "https://airtable.com/developers/web/guides/personal-access-tokens",
 		ConsoleURL: "https://airtable.com/create/tokens",
@@ -775,9 +794,9 @@ func init() {
 		Title: "Revoke Terraform Cloud Token",
 		Steps: []string{
 			"Go to app.terraform.io > User Settings > Tokens.",
-			"Delete the compromised token.",
-			"Create a new token.",
-			"Update all integrations with the new token.",
+			stepDeleteCompromisedToken,
+			stepCreateNewToken,
+			stepUpdateIntegrationsToken,
 		},
 		DocURL:  "https://developer.hashicorp.com/terraform/cloud-docs/users-teams-organizations/api-tokens",
 		Urgency: "immediate",
@@ -787,9 +806,9 @@ func init() {
 		Title: "Revoke Databricks PAT",
 		Steps: []string{
 			"Go to Databricks workspace > User Settings > Access Tokens.",
-			"Revoke the compromised token.",
+			stepRevokeCompromisedToken,
 			"Create a new personal access token.",
-			"Update all integrations with the new token.",
+			stepUpdateIntegrationsToken,
 		},
 		DocURL:  "https://docs.databricks.com/en/dev-tools/auth/pat.html",
 		Urgency: "immediate",
@@ -813,7 +832,7 @@ func init() {
 			"Go to coinbase.com > Settings > API.",
 			"Delete the compromised API key.",
 			"Create a new API key with minimal permissions.",
-			"Update all integrations with the new key.",
+			stepUpdateIntegrationsKey,
 		},
 		DocURL:  "https://docs.cdp.coinbase.com/coinbase-app/docs/getting-started",
 		Urgency: "immediate",
@@ -827,7 +846,7 @@ func init() {
 		Steps: []string{
 			"Go to app.infura.io > Project Settings.",
 			"Regenerate the compromised API key.",
-			"Update all integrations with the new key.",
+			stepUpdateIntegrationsKey,
 		},
 		DocURL:  "https://docs.infura.io/api/getting-started",
 		Urgency: "high",
@@ -885,7 +904,7 @@ func init() {
 		Steps: []string{
 			"Go to LaunchDarkly dashboard > Account Settings > Projects.",
 			"Reset the compromised SDK key.",
-			"Update all integrations with the new key.",
+			stepUpdateIntegrationsKey,
 		},
 		DocURL:  "https://docs.launchdarkly.com/sdk/concepts/client-side-server-side",
 		Urgency: "high",
@@ -895,9 +914,9 @@ func init() {
 		Title: "Revoke Snyk Token",
 		Steps: []string{
 			"Go to app.snyk.io > Account Settings > API Token.",
-			"Revoke the compromised token.",
+			stepRevokeCompromisedToken,
 			"Generate a new API token.",
-			"Update all integrations with the new token.",
+			stepUpdateIntegrationsToken,
 		},
 		DocURL:  "https://docs.snyk.io/snyk-api/authentication-for-api",
 		Urgency: "high",
@@ -907,9 +926,9 @@ func init() {
 		Title: "Revoke SonarCloud Token",
 		Steps: []string{
 			"Go to sonarcloud.io > My Account > Security.",
-			"Revoke the compromised token.",
+			stepRevokeCompromisedToken,
 			"Generate a new token.",
-			"Update all integrations with the new token.",
+			stepUpdateIntegrationsToken,
 		},
 		DocURL:  "https://docs.sonarsource.com/sonarcloud/advanced-setup/user-accounts/generating-and-using-tokens/",
 		Urgency: "high",
@@ -921,7 +940,7 @@ func init() {
 			"Go to dashboard.doppler.com > Project > Service Tokens.",
 			"Delete the compromised service token.",
 			"Create a new service token.",
-			"Update all integrations with the new token.",
+			stepUpdateIntegrationsToken,
 		},
 		DocURL:  "https://docs.doppler.com/docs/service-tokens",
 		Urgency: "immediate",
@@ -944,7 +963,7 @@ func init() {
 		Steps: []string{
 			"Go to account.postmarkapp.com > Servers > API Tokens.",
 			"Regenerate the compromised server token.",
-			"Update all integrations with the new token.",
+			stepUpdateIntegrationsToken,
 		},
 		DocURL:  "https://postmarkapp.com/developer/api/overview",
 		Urgency: "high",
