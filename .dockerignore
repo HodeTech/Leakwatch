@@ -1,11 +1,48 @@
+# Build outputs
 bin/
 dist/
 coverage.out
 coverage.html
 *.test
 *.prof
+
+# VCS and tooling metadata
 .git
+.gitignore
 .github
-docs/
+.golangci.yml
+.goreleaser.yml
+.pre-commit-hooks.yaml
+
+# IDE / editor
 .idea/
 .vscode/
+*.swp
+*.swo
+
+# Documentation, marketing, formulae — not needed at runtime
+docs/
+README.md
+CHANGELOG.md
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+Formula/
+action/
+
+# VS Code extension (separate build)
+vscode/
+
+# Local-only configuration that may include secrets
+.env
+.env.*
+*.pem
+*.key
+*.crt
+*.p12
+.leakwatch.yaml
+.leakwatchignore
+.claude/
+
+# Test fixtures and example rules
+rules/
+testdata/

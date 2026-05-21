@@ -1,9 +1,9 @@
 # Leakwatch - Phased Development Roadmap
 
-> **Document Version:** 5.0
-> **Date:** 2026-03-25
-> **Status:** Active
-> **Last Updated:** 2026-03-25
+> **Document Version:** 6.1
+> **Date:** 2026-04-09
+> **Status:** Approved
+> **Last Updated:** 2026-05-21
 
 ---
 
@@ -19,23 +19,44 @@
 | Phase 6 — Remediation Guidance | Completed | `v1.1.0` | 2026-03-24 |
 | Phase 7 — Slack Scanning | Completed | `v1.2.0` | 2026-03-24 |
 | Phase 8 — Verifier Expansion | Completed | `v1.3.0` | 2026-03-25 |
-| Phase 8.1 — CLI UX Improvements | Completed | `v1.3.1` | 2026-04-08 |
-| Phase 9 — Confluence/Jira | Planned | `v1.4.0` | — |
-| Phase 10 — Secrets Inventory | Planned | `v1.5.0` | — |
-| Phase 11 — Honeytokens | Planned | `v1.6.0` | — |
+| Phase 8.1 — Binary/Homebrew Fix | Completed | `v1.3.1` | 2026-03-25 |
+| Phase 8.2 — CLI UX Improvements | Completed | `v1.3.2` | 2026-03-25 |
+| Phase 8.3 — Scan Summary + Security | Completed | `v1.4.0` | 2026-04-08 |
+| Phase 8.4 — False Positive Reduction | Completed | `v1.5.0` | 2026-04-09 |
+| Phase 9 — Confluence/Jira | Planned | `v1.6.0` | — |
+| Phase 10 — Secrets Inventory | Planned | `v1.7.0` | — |
+| Phase 11 — Honeytokens | Planned | `v1.8.0` | — |
+
+### v1.5.0 Highlights
+
+- **False positive reduction** — improved filtering for lock files (`package-lock.json`, `yarn.lock`, etc.), test fixtures, and placeholder patterns
+- **ADO.NET connection string support** — `dbconn` detector updated to recognize Microsoft SQL Server ADO.NET connection strings
+- **Go 1.25.8 pin** — CI pinned to Go 1.25.8 (latest version available in GitHub Actions runners at the time of release)
+- **PagerDuty context-aware detection** — context-based checks to reduce false positives
+
+### v1.4.0 Highlights
+
+- **Scan summary** — every scan prints a summary to stderr (source, target, duration, file count, findings count, verification stats)
+- **`leakwatch init` command** — generates `.leakwatch.yaml` with sensible defaults
+- **Colored table output** — ANSI colors by severity in the terminal table formatter (critical=red, high=yellow, medium=cyan, low=white)
+- **Rich help messages** — all commands include `Example` sections
+- **`.leakwatchignore` CWD fallback** — when no `.leakwatchignore` is found alongside the config file, the current working directory is also checked
+- **Go 1.25.8** + go-git v5.17.1 — security patches
+
+### v1.3.2 Highlights
+
+- **CLI UX improvements** — more readable help messages, refined defaults
+- **GoReleaser binary name fix** — forced lowercase binary name in release artifacts
 
 ### v1.3.1 Highlights
 
-- **Scan summary** — printed to stderr after every scan, showing source, duration, files scanned, findings count, and verification stats
-- **`leakwatch init`** — new command that generates a starter `.leakwatch.yaml` configuration file with sensible defaults
-- **Colored table output** — ANSI colors for severity levels in terminal table formatter (critical=red, high=yellow, medium=cyan, low=white)
-- **Go 1.25.8** + go-git v5.17.1 — security fixes
-- **`.leakwatchignore` CWD fallback** — when no `.leakwatchignore` is found alongside the config file, Leakwatch now also checks the current working directory
+- **Homebrew automation** — CI configured with `HOMEBREW_TAP_TOKEN` for automatic Homebrew tap updates via GoReleaser
+- **Community infrastructure** — Code of Conduct, issue templates, GitHub Discussions enabled
 
 ### v1.3.0 Highlights
 
-- **53 verifiers implemented** — verification coverage increased from 4.8% (3/63) to 84% (53/63)
-- **Live API verification** for 48 detectors across cloud, AI/ML, DevTools, CI/CD, communication, payment, monitoring, security, and SaaS categories
+- **54 verifiers implemented (51 packages)** — verification coverage increased from ~5% to ~84% (54/64)
+- **Live API verification** for the majority of detectors across cloud, AI/ML, DevTools, CI/CD, communication, payment, monitoring, security, and SaaS categories
 - **Format validation** for 5 detectors (JWT, Azure Storage, Azure Entra, GCP Service Account, Snowflake)
 - **Per-provider rate limiting** for all verifiers with configurable limits
 - **5 implementation sprints** completed: V-1 through V-5
@@ -43,10 +64,10 @@
 ### v1.0.0 Highlights
 
 - **5 scan sources:** Filesystem, Git history, Container image, AWS S3, Google Cloud Storage
-- **63 detectors:** AWS, GitHub, Slack, Stripe, JWT, and 58 more across cloud, AI/ML, DevTools, CI/CD, communication, payment, database, infrastructure, identity, monitoring, security, and SaaS categories + YAML custom rules
+- **64 detectors (60 packages):** AWS, GitHub, Slack, Stripe, JWT, and many more across cloud, AI/ML, DevTools, CI/CD, communication, payment, database, infrastructure, identity, monitoring, security, and SaaS categories + YAML custom rules
 - **4 output formats:** JSON, SARIF, CSV, Table
 - **Aho-Corasick hybrid detection engine** with Shannon entropy analysis
-- **Verifier infrastructure:** AWS STS and GitHub API verifiers (rate-limited, concurrent)
+- **Verifier infrastructure:** 54 verifiers (51 packages), including AWS STS and GitHub API verifiers (rate-limited, concurrent)
 - **`.leakwatchignore`** and inline ignore (`# leakwatch:ignore`)
 - **CI/CD:** Pre-commit hook, GitHub Action, Docker image, Homebrew formula
 - **Parallel repo scanning** (`scan repos --parallel`)
@@ -329,7 +350,7 @@ GitHub Release published with `v1.0.0` tag.
 
 ## Phase 8: Verifier Expansion — COMPLETED
 
-**Goal:** Increase verification coverage from 4.8% (3/63) to 84% (53/63). Verified secrets are the key differentiator.
+**Goal:** Increase verification coverage to ~84% (54/64). Verified secrets are the key differentiator.
 
 **Duration:** 5 sprints | **Version:** `v1.3.0` | **Status:** Completed
 
@@ -339,18 +360,20 @@ GitHub Release published with `v1.0.0` tag.
 
 | Sprint | Verifiers | Coverage | Status |
 |--------|-----------|----------|--------|
-| V-1 (Tier 1 P0) | OpenAI, Anthropic, GitLab, SendGrid, DigitalOcean, Cloudflare, Heroku, New Relic, Telegram, Discord, Notion | 14/63 (22%) | [x] Completed |
-| V-2 (Tier 1 P1) | Sentry, Vercel, NPM, PyPI, Grafana, PagerDuty, Databricks, Linear, Figma, Airtable, HuggingFace, CircleCI | 26/63 (41%) | [x] Completed |
-| V-3 (Tier 1 P2) | DockerHub, Doppler, Snyk, SonarCloud, Postmark, Terraform, LaunchDarkly, Mailgun, Coinbase, Infura | 36/63 (57%) | [x] Completed |
-| V-4 (Tier 2) | Okta, Shopify, Stripe, Twilio, Bitbucket, Auth0, Datadog, RubyGems, DeepSeek, Supabase | 46/63 (73%) | [x] Completed |
-| V-5 (Tier 2+3) | GitHub OAuth, Teams Webhook, Azure Storage, Azure Entra, GCP, Snowflake, RabbitMQ | 53/63 (84%) | [x] Completed |
+| V-1 (Tier 1 P0) | OpenAI, Anthropic, GitLab, SendGrid, DigitalOcean, Cloudflare, Heroku, New Relic, Telegram, Discord, Notion | 14/64 (22%) | [x] Completed |
+| V-2 (Tier 1 P1) | Sentry, Vercel, NPM, PyPI, Grafana, PagerDuty, Databricks, Linear, Figma, Airtable, HuggingFace, CircleCI | 26/64 (41%) | [x] Completed |
+| V-3 (Tier 1 P2) | DockerHub, Doppler, Snyk, SonarCloud, Postmark, Terraform, LaunchDarkly, Mailgun, Coinbase, Infura | 36/64 (56%) | [x] Completed |
+| V-4 (Tier 2) | Okta, Shopify, Stripe, Twilio, Bitbucket, Auth0, Datadog, RubyGems, DeepSeek, Supabase | 47/64 (73%) | [x] Completed |
+| V-5 (Tier 2+3) | GitHub OAuth, Teams Webhook, Azure Storage, Azure Entra, GCP, Snowflake, RabbitMQ | 54/64 (84%) | [x] Completed |
+
+**Final totals:** 54 verifiers (51 packages) covering 64 detectors (60 packages).
 
 ### Acceptance Criteria
 
-- [x] Verification coverage reaches 84%+ (53/63)
+- [x] Verification coverage reaches ~84% (54/64)
 - [x] All Tier 1 verifiers use simple HTTP GET/POST pattern
 - [x] Rate limiting per provider (configurable)
-- [x] `--only-verified` returns results for 53 detector types
+- [x] `--only-verified` returns results for the verified detector types
 - [x] Never log raw credentials during verification
 
 ---
@@ -360,7 +383,7 @@ GitHub Release published with `v1.0.0` tag.
 
 **Goal:** Scan Atlassian Confluence pages and Jira issues for leaked secrets.
 
-**Duration:** 4-5 weeks | **Version:** `v1.3.0` | **Status:** Planned
+**Duration:** 4-5 weeks | **Version:** `v1.6.0` | **Status:** Planned
 
 ### Deliverables
 
@@ -384,11 +407,11 @@ GitHub Release published with `v1.0.0` tag.
 
 ---
 
-## Phase 9: Secrets Inventory — PLANNED
+## Phase 10: Secrets Inventory — PLANNED
 
 **Goal:** Persistent SQLite-based inventory tracking secrets across scans.
 
-**Duration:** 4-5 weeks | **Version:** `v1.4.0` | **Status:** Planned
+**Duration:** 4-5 weeks | **Version:** `v1.7.0` | **Status:** Planned
 
 ### Deliverables
 
@@ -415,11 +438,11 @@ GitHub Release published with `v1.0.0` tag.
 
 ---
 
-## Phase 10: Honeytokens — PLANNED
+## Phase 11: Honeytokens — PLANNED
 
 **Goal:** Generate and deploy decoy credentials that alert on unauthorized use.
 
-**Duration:** 3-4 weeks | **Version:** `v1.5.0` | **Status:** Planned
+**Duration:** 3-4 weeks | **Version:** `v1.8.0` | **Status:** Planned
 
 ### Deliverables
 
@@ -445,6 +468,104 @@ GitHub Release published with `v1.0.0` tag.
 
 ---
 
+## Known Gaps & Follow-up Work
+
+These are not new phases — they are **work that the current `v1.5.0` release still owes**: features the documentation promises but the code does not (yet) deliver, code-quality findings that survived the PR #6 cleanup pass, and refactors flagged by SonarCloud that need their own focused review. Tracked here so nothing slips through the cracks.
+
+**Source:** PR #6 (chore/docs-cleanup-and-sonar-alignment) verification pass and SonarCloud scan of `cemililik_Leakwatch` taken 2026-05-21.
+
+### P0 — Functional Bugs (documented features that do not work)
+
+Each of these is referenced in the public guides, but the corresponding wiring is missing from the scan pipeline. A user following the docs today will get silently incorrect behavior.
+
+| # | Bug | Evidence | Fix sketch |
+|---|-----|----------|------------|
+| 1 | **YAML `custom-rules:` is never loaded** — `internal/detector/custom.RegisterCustomRules(...)` exists with tests, but no caller anywhere. `.leakwatch.yaml` with `custom-rules:` is silently ignored, breaking the entire Custom Rules feature documented in [custom-rules.md](guides/custom-rules.md) and in the README. **Note:** the `internal/detector/custom` package is also intentionally **not** blank-imported in [cmd/imports.go](../cmd/imports.go) — unlike the other 59 detector packages, `custom` has no `init()` function (it is wired at runtime via `RegisterCustomRules`), so a blank import would do nothing on its own. The fix below addresses both the missing import path and the missing wiring. | `grep -r RegisterCustomRules .` returns only the definition site and its test; never called from `cmd/`, `engine/`, or `config/`. | Extend `Config` (in [internal/config/config.go](../internal/config/config.go)) with `CustomRules []custom.RuleDef`, bind via Viper; in [cmd/scan_common.go](../cmd/scan_common.go) `executeScan`, add `import "github.com/cemililik/leakwatch/internal/detector/custom"` (non-blank, since we now call its exported function) and call `custom.RegisterCustomRules(cfg.CustomRules)` **before** engine construction. |
+| 2 | **Inline ignore (`# leakwatch:ignore` / `# leakwatch:ignore:<id>`) is not applied** — [internal/filter/inline.go](../internal/filter/inline.go) exposes `HasInlineIgnore`, `HasInlineIgnoreForDetector`, `FilterFindingsByInlineIgnore` with passing tests, but `executeScan` never invokes them. README, [configuration.md §6](guides/configuration.md), and [ci-cd-integration.md §7.3](guides/ci-cd-integration.md) all promise this works. | `grep -r FilterFindingsByInlineIgnore .` returns the definition + tests only. | Two viable approaches: (a) post-scan filter in `executeScan` using cached source data (requires engine to keep chunk text); (b) detector-level check inside the engine where `chunkData` and `lineNum` are already known. (b) is cleaner — extend the engine's `processChunk` to consult `inline.HasInlineIgnoreForDetector` before emitting a `RawFinding`. |
+| 3 | **`verification.*` YAML config is not bound** — `verification.enabled`, `verification.timeout`, `verification.concurrency`, `verification.rate-limit` are emitted into `.leakwatch.yaml` by `leakwatch init` (see [cmd/init.go](../cmd/init.go)) and documented in [configuration.md §2.1-§2.2](guides/configuration.md), but `internal/config/config.go` has no `VerificationConfig` struct. Users editing these values get no effect. | `grep -E "verification|VerificationConfig" internal/config/` is empty. | Add `VerificationConfig` to `Config` with fields `Enabled bool`, `Timeout time.Duration`, `Concurrency int`, `RateLimit float64`; bind keys in Viper init; flow through `addVerifyFlags` overrides in `cmd/scan_common.go` so CLI > env > config > defaults precedence holds. |
+
+**Suggested follow-up branch:** `fix/wire-custom-rules-and-inline-ignore` — bundle (1) and (2) since they share the same `executeScan` integration surface. (3) is independent and can go in a separate small PR.
+
+### P1 — Config Schema Drift
+
+`docs/guides/configuration.md` documents YAML keys beyond the three P0 items above; `internal/config/config.go` does not read them. They silently no-op today.
+
+| YAML key | Documented at | Current behavior |
+|---|---|---|
+| `output.severity-threshold` | configuration.md:143, 220 | Only `--min-severity` CLI flag is read. |
+| `filter.exclude-detectors` | configuration.md:120-122, 211 | Not bound; no detector-disable path exists in the engine. |
+| `slack.token`, `slack.channels`, `slack.exclude-channels`, `slack.include-dms`, `slack.include-files`, `slack.rate-limit` | configuration.md:239-255 | Only `--token` / `LEAKWATCH_SLACK_TOKEN` env is read; the other six knobs come from CLI flags exclusively. |
+
+**Plan:** either bind these keys in Viper and route them through `cmd/scan_*.go`, or remove them from `configuration.md` to stop over-promising. Recommend binding — they are useful config sources.
+
+### P1 — SonarCloud Findings Still Open
+
+PR #6 closed: 8 BLOCKER vulns (`action.yml` script injection), 110 × `godre:S8184` blank-import smell, 13 × `go:S1192` in `remediation/guidance.go`, 2 hotspots (Dockerfile + release.yml). Remaining open findings as of the 2026-05-21 scan:
+
+| Rule | Count | Severity | Where | Plan |
+|---|---:|---|---|---|
+| `go:S3776` Cognitive complexity > 15 | 11 funcs | Critical | [internal/source/git/git.go:269](../internal/source/git/git.go) (**cog 49**), `s3.go:122` (31), `git.go:164` (29), `cmd/scan_common.go:154` (29), `scan_repos.go:60` (26), `filesystem.go:67` (24), `container.go:116` (22), `sarif_formatter.go:121` (22), `slack.go:196` (19), `gcs.go:174` (16), `table_formatter.go:37` (16) | Extract-method refactor per function. `git.go:269` is the highest priority (49 ≫ 15). |
+| `go:S1192` | 1 | Critical | `internal/verifier/infura/infura_verifier.go:93` — `"Infura API key is invalid or revoked"` ×3 | Local `const`. |
+| `go:S108` Empty test block | 2 | Major | `gcs_test.go:321`, `s3_test.go:242` | Either remove or add `TODO` + meaningful assertion. |
+| `godre:S8196` One-method interface naming | 3 | Minor | `cmd/scan_common.go:34`, `internal/source/gcs/gcs.go:45`, `internal/verifier/aws/aws_verifier.go:22` | Rename to `-er` suffix (project naming convention). |
+| `godre:S8205` Nested anonymous struct | 2 | Minor | `terraform_verifier.go:107`, `linear_verifier.go:112` | Promote to named type. |
+| `godre:S8209` Consecutive same-type params | 1 | Minor | `internal/filter/inline.go:27` | Group params (`a, b string` rather than `a string, b string`). |
+| `typescript:S6551` | 7 | Minor | `vscode/src/scanner.ts` | Replace `?? ""` non-string fallbacks with explicit `String(...)` casts. |
+| `typescript:S7772` | 2-3 | Minor | `vscode/src/extension.ts`, `scanner.ts`, `webpack.config.js` | Use `node:` prefix for `path`, `child_process`. |
+| `typescript:S7778` | 2 | Minor | `vscode/src/extension.ts` | Combine consecutive `push(a); push(b);` into `push(a, b)`. |
+| `docker:S7020` | 1 | Minor | `Dockerfile:11` | Likely already closed by the PR #6 line split; verify on next scan. |
+
+### P1 — SonarCloud Project Hygiene
+
+- **Quality Gate** — was `NONE` at the time of PR #6's first verification scan; the default "Sonar way" gate is now in effect. It Quality-Gate-Failed PR #6 twice on `new_duplicated_lines_density` (11.6%, then 11.0% after the first fix attempt). Root cause: **SonarCloud Automatic Analysis does not read `sonar-project.properties`** — that file is only honored by CI Based Analysis. Fix landed in PR #6: the exclusions in `sonar-project.properties` were also mirrored to the project via the Settings API (`POST /api/settings/set` for `sonar.cpd.exclusions`, `sonar.exclusions`, `sonar.coverage.exclusions`). **Action remaining:** verify the assigned gate is the project owner's preference; revisit the cpd exclusions in any future refactor PR (especially the verifier-httpapi extraction listed under P2).
+- **`sonar-project.properties`** — added in PR #6 as a canonical source-of-truth file and as the configuration that CI Based Analysis would use. It is currently a documentation artifact (Automatic Analysis ignores it). **Done.**
+- **`.github/workflows/sonar.yml`** — still missing. A dedicated workflow with `SonarSource/sonarqube-scan-action` would (a) enable per-PR coverage upload, (b) make `sonar-project.properties` the live source of truth (no more API mirroring), and (c) tighten the PR feedback loop. **Action:** add as a small chore PR once `SONAR_TOKEN` is configured as a repo secret. The Automatic Analysis must be **disabled** in the SonarCloud UI at the same time, otherwise the two analysis paths will fight each other.
+
+### P2 — Duplication Refactor Opportunities
+
+SonarCloud reports the project at **36.8% duplicated lines**. PR #6 dramatically reduced one source (the remediation registry — was 99.3% density). Remaining major duplication clusters:
+
+| Refactor | Files affected | Estimated dedup |
+|---|---|---|
+| **`internal/verifier/httpapi` generic HTTP helper** (Bearer/Basic + JSON body + status-code → `VerificationStatus` map) | 14+ verifier packages (anthropic, openai, deepseek, github, huggingface, gitlab, dockerhub, discord, circleci, etc., each at ~95% density and ~100-130 lines) | ~6 000 → ~1 000 duplicate lines |
+| **`internal/verifier/testutil/verifierharness`** table-driven HTTP mock | 14+ `_test.go` files mirror the same setup/teardown for table-driven HTTP tests (sendgrid, snyk, rubygems, npm, dockerhub, heroku, sentry, notion, ...) | ~1 500 → ~300 duplicate lines |
+| **`internal/detector/credstring`** common `scheme://user:pass@host` detector | 4 connection-string detectors (FTP, Redis, RabbitMQ, LDAP — tests are ~92% byte-identical) and their tests | ~500 → ~150 duplicate lines |
+
+Combined target: **project duplication 36.8% → ~10%**. Each of these is architectural — open a dedicated PR per refactor, not a mega-commit.
+
+### P2 — Coverage Gaps
+
+CLAUDE.md sets the detector-coverage standard at **≥95%**. Packages currently below or at the edge:
+
+| Package | Coverage | Standard | Note |
+|---|---:|---|---|
+| `detector/generic` | 82.1% | 95% | Entropy paths not all exercised. |
+| `detector/heroku` | 93.8% | 95% | One regex branch uncovered. |
+| `detector/privatekey` | 92.3% | 95% | DSA / EC / PGP branches less covered than RSA / SSH. |
+| `detector/snowflake` | 92.3% | 95% | Format validator edge cases. |
+| `detector/stripe` | 92.3% | 95% | Live + test key duplication; testutil refactor (P2 above) helps here. |
+
+Source packages (no formal standard, but visible gaps):
+
+| Package | Coverage |
+|---|---:|
+| `source/container` | 55.2% |
+| `source/git` | 64.2% |
+| `source/gcs` | 71.3% |
+| `source/s3` | 73.6% |
+
+### P2 — Miscellaneous
+
+- **VS Code extension custom rules path setting** ([vscode-extension.md](guides/vscode-extension.md) `leakwatch.customRulesPath`) is wired through to the CLI via `--custom-rules`, but the CLI side does nothing until P0 #1 is fixed. Will auto-resolve.
+- **JWT format-only verifier (optional future):** `internal/verifier/jwt/` does not exist. If we ever want format-only verification for JWTs (decode + `exp` check) we need a new verification status semantic ("verified_well_formed" or similar) to avoid implying the token grants access. Until then, JWT findings are correctly classified as "Not Verifiable".
+
+### P3 — Long-tail Notes
+
+- **Missing `v1.1.0` / `v1.2.0` git tags:** Phase 6 and Phase 7 were released as part of `v1.3.0` without intermediate tags. Backfilling tags retroactively is optional (`git tag v1.1.0 <commit>; git tag v1.2.0 <commit>; git push --tags`) — useful for some package indexers, not blocking. See note under Release Plan.
+- **Self-scan noise from test fixtures:** detector and verifier tests embed synthetic keys that match their own regex. `.leakwatchignore` already excludes `**/*_test.go` and `internal/verifier/**` for user-facing scans; running `leakwatch scan fs .` inside this repo with the default ignore will still find a handful in `rules/examples.yaml` and docs — acceptable.
+
+---
+
 ## Future: Long Term Vision
 
 | Task | Description |
@@ -466,14 +587,19 @@ GitHub Release published with `v1.0.0` tag.
 | `v0.3.0` | Phase 3 | Verification, Aho-Corasick, entropy | 2026-03-24 |
 | `v0.4.0` | Phase 4 | Container scanning, SARIF, pre-commit | 2026-03-24 |
 | `v1.0.0` | Phase 5 | S3/GCS, verifiers, GitHub Action, Docker | 2026-03-24 |
-| `v1.1.0` | Phase 6 | Remediation guidance for all detectors | — |
-| `v1.2.0` | Phase 7 | Slack workspace scanning | — |
-| `v1.3.0` | Phase 8 | Verifier expansion (4.8% → 84% coverage) | 2026-03-25 |
-| `v1.3.1` | Phase 8.1 | CLI UX: scan summary, init command, colored table | 2026-04-08 |
-| `v1.4.0` | Phase 9 | Confluence/Jira scanning | — |
-| `v1.5.0` | Phase 10 | Secrets inventory (SQLite) | — |
-| `v1.6.0` | Phase 11 | Honeytokens | — |
+| `v1.1.0` | Phase 6 | Remediation guidance for all detectors (no git tag — see note) | — |
+| `v1.2.0` | Phase 7 | Slack workspace scanning (no git tag — see note) | — |
+| `v1.3.0` | Phase 8 | Verifier expansion (~84% coverage, 54/64) | 2026-03-25 |
+| `v1.3.1` | Phase 8.1 | Binary/Homebrew fix, community infrastructure | 2026-03-25 |
+| `v1.3.2` | Phase 8.2 | CLI UX improvements | 2026-03-25 |
+| `v1.4.0` | Phase 8.3 | Scan summary, `init` command, colored table, security patches | 2026-04-08 |
+| `v1.5.0` | Phase 8.4 | False positive reduction, ADO.NET support | 2026-04-09 |
+| `v1.6.0` | Phase 9 | Confluence/Jira scanning | — |
+| `v1.7.0` | Phase 10 | Secrets inventory (SQLite) | — |
+| `v1.8.0` | Phase 11 | Honeytokens | — |
 | `v2.x.x` | Future | ML detection, SaaS platform, Vault | Ongoing |
+
+> **Note on v1.1.0 / v1.2.0:** Phase 6 (Remediation Guidance) and Phase 7 (Slack Scanning) were completed and merged into `main`, but no `v1.1.0` or `v1.2.0` git tags were ever created. The features shipped as part of the `v1.3.0` release. The version slots are preserved here to keep the phase-to-version mapping consistent.
 
 ---
 
@@ -497,7 +623,7 @@ GitHub Release published with `v1.0.0` tag.
 | GitHub Stars | 500+ | 2,000+ |
 | Contributors | 5+ | 15+ |
 | Detector count | 50+ | 200+ |
-| Verifier count | 53 (achieved) | 60+ |
+| Verifier count | 54 (achieved) | 60+ |
 | Source count | 5 (fs, git, container, S3, GCS) | 8+ |
 
 ---

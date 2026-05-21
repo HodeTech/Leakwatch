@@ -45,8 +45,8 @@ leaked secrets (API keys, passwords, certificates) in codebases, Git histories,
 container images, cloud storage buckets, and Slack workspaces.
 
 Features:
-  - 63 built-in secret detectors covering AWS, GitHub, Slack, Stripe, JWT, and more
-  - 53 verification checks to confirm whether discovered secrets are active
+  - 64 built-in secret detectors (60 packages) covering AWS, GitHub, Slack, Stripe, JWT, and more
+  - 54 verification checks to confirm whether discovered secrets are active
   - Scans filesystems, Git repos, container images, S3, GCS, and Slack
   - Multiple output formats: JSON, SARIF, CSV, and terminal table
   - Aho-Corasick pre-filtering for fast multi-pattern matching

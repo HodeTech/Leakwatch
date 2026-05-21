@@ -2,7 +2,7 @@
 
 > **Document Version:** 1.0
 > **Date:** 2026-03-24
-> **Status:** Active
+> **Status:** Approved
 
 ---
 

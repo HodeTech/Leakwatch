@@ -95,10 +95,12 @@ func redactADONet(raw string) string {
 }
 
 // isPlaceholderPassword checks if a password is a common placeholder value.
+// Comparison is case-insensitive — placeholder entries are stored in lowercase
+// and the input is lowercased before comparison.
 func isPlaceholderPassword(password string) bool {
 	placeholders := []string{
 		"change_me", "changeme", "your_password", "your-password",
-		"replace_me", "xxxxxxxx", "TODO", "FIXME", "placeholder",
+		"replace_me", "xxxxxxxx", "todo", "fixme", "placeholder",
 		"example", "password", "secret", "change_me_in_production",
 	}
 	lower := strings.ToLower(password)

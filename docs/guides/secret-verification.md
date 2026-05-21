@@ -1,14 +1,14 @@
 # Leakwatch - Secret Verification Guide
 
-> **Document Version:** 2.0
+> **Document Version:** 1.1
 > **Date:** 2026-03-25
-> **Status:** Active
+> **Status:** Approved
 
 ---
 
 ## 1. What is Secret Verification?
 
-Secret verification is the process of checking whether a detected secret is actually active and valid. Leakwatch ships with **53 verifiers** covering **84% of its 63 built-in detectors**, making it one of the most comprehensive verification systems available under an MIT license.
+Secret verification is the process of checking whether a detected secret is actually active and valid. Leakwatch ships with **54 verifiers (51 packages)** covering **84% of its 64 detectors (60 packages)**, making it one of the most comprehensive verification systems available under an MIT license.
 
 Verification is performed through two methods:
 - **Live API verification** (48 detectors) -- controlled, read-only API calls to the service that issued the credential
@@ -68,7 +68,7 @@ stateDiagram-v2
 
 ## 3. Verified Detectors
 
-Leakwatch provides 53 verifiers across three verification types. The following table shows all verified detectors grouped by verification method.
+Leakwatch provides 54 verifiers (51 packages) across three verification types. The following table shows all verified detectors grouped by verification method.
 
 ### Live API Verification (48 detectors)
 
@@ -124,14 +124,14 @@ These verifiers make a read-only API call to the provider to confirm whether the
 | **SaaS** | Linear API Key | `linear-api-key` | `api.linear.app/graphql` |
 | **SaaS** | Figma PAT | `figma-pat` | `api.figma.com/v1/me` |
 | **SaaS** | Airtable PAT | `airtable-pat` | `api.airtable.com/v0/meta/whoami` |
+| **Blockchain** | Infura API Key | `infura-api-key` | `mainnet.infura.io/v3/{key}` |
 
-### Format Validation (5 detectors)
+### Format Validation (4 detectors)
 
-These verifiers perform structural validation without making network calls. They check format, decode tokens, and validate expiry claims.
+These verifiers perform structural validation without making network calls. They check format and decode tokens without contacting the provider.
 
 | Detector | Detector ID | Validation Method |
 |----------|-------------|-------------------|
-| JWT | `jwt` | Decode and check `exp` claim; validate structural integrity |
 | Azure Storage Key | `azure-storage-key` | HMAC-SHA256 signature format validation |
 | Azure Entra Secret | `azure-entra-secret` | OAuth2 client credential format check |
 | GCP Service Account | `gcp-service-account` | JSON key file structure and private key parsing |
@@ -143,6 +143,7 @@ These detectors identify secrets that cannot be verified through automated means
 
 | Detector | Detector ID | Reason |
 |----------|-------------|--------|
+| JWT | `jwt` | No central issuer to query; validity depends on the signing key holder |
 | Private Key | `private-key` | No remote verification endpoint; validity depends on deployment target |
 | Generic API Key | `generic-api-key` | Unknown provider; no way to determine which API to call |
 | Database Connection String | `database-connection-string` | Requires direct database connection; intrusive and unsafe |
@@ -152,7 +153,6 @@ These detectors identify secrets that cannot be verified through automated means
 | LDAP Credentials | `ldap-credentials` | Requires direct connection to LDAP directory server |
 | Slack Webhook | `slack-webhook` | Verification would send a message (side effect) |
 | MS Teams Webhook | `teams-webhook` | Verification would send a message (side effect) |
-| Infura API Key | `infura-api-key` | Uses API quota; high false-positive overlap with generic hex strings |
 
 ---
 

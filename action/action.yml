@@ -35,6 +35,10 @@ inputs:
     description: 'Upload SARIF results to GitHub Code Scanning'
     required: false
     default: 'false'
+  fail-on-findings:
+    description: 'Fail the workflow step when leakwatch finds secrets (exit code 1). When set to "false" the step prints a ::warning:: but still succeeds, so the scan does not block the pipeline. Hard errors (exit code >= 2) always fail the step regardless of this setting.'
+    required: false
+    default: 'true'
   version:
     description: 'Leakwatch version to use'
     required: false
@@ -42,7 +46,7 @@ inputs:
 
 outputs:
   findings-count:
-    description: 'Number of secrets found'
+    description: 'Number of secrets found (0 or 1; mirrors leakwatch exit code).'
   sarif-file:
     description: 'Path to SARIF output file (if format=sarif)'
 
@@ -51,52 +55,68 @@ runs:
   steps:
     - name: Install Leakwatch
       shell: bash
+      env:
+        INPUT_VERSION: ${{ inputs.version }}
       run: |
-        VERSION="${{ inputs.version }}"
-        if [ "$VERSION" = "latest" ]; then
+        if [ "$INPUT_VERSION" = "latest" ]; then
           go install github.com/cemililik/leakwatch@latest
         else
-          go install github.com/cemililik/leakwatch@"$VERSION"
+          go install "github.com/cemililik/leakwatch@$INPUT_VERSION"
         fi
 
     - name: Run scan
       id: scan
       shell: bash
+      env:
+        INPUT_SCAN_TYPE: ${{ inputs.scan-type }}
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_FORMAT: ${{ inputs.format }}
+        INPUT_MIN_SEVERITY: ${{ inputs.min-severity }}
+        INPUT_ONLY_VERIFIED: ${{ inputs.only-verified }}
+        INPUT_NO_VERIFY: ${{ inputs.no-verify }}
+        INPUT_FAIL_ON_FINDINGS: ${{ inputs.fail-on-findings }}
       run: |
-        ARGS="scan ${{ inputs.scan-type }} ${{ inputs.path }}"
-        ARGS="$ARGS --format ${{ inputs.format }}"
-        ARGS="$ARGS --min-severity ${{ inputs.min-severity }}"
+        ARGS=(scan "$INPUT_SCAN_TYPE" "$INPUT_PATH" --format "$INPUT_FORMAT" --min-severity "$INPUT_MIN_SEVERITY")
 
-        if [ "${{ inputs.only-verified }}" = "true" ]; then
-          ARGS="$ARGS --only-verified"
+        if [ "$INPUT_ONLY_VERIFIED" = "true" ]; then
+          ARGS+=(--only-verified)
         fi
 
-        if [ "${{ inputs.no-verify }}" = "true" ]; then
-          ARGS="$ARGS --no-verify"
+        if [ "$INPUT_NO_VERIFY" = "true" ]; then
+          ARGS+=(--no-verify)
         fi
 
-        if [ "${{ inputs.format }}" = "sarif" ]; then
-          ARGS="$ARGS --output results.sarif"
+        if [ "$INPUT_FORMAT" = "sarif" ]; then
+          ARGS+=(--output results.sarif)
           echo "sarif-file=results.sarif" >> "$GITHUB_OUTPUT"
         fi
 
         set +e
-        leakwatch $ARGS
+        leakwatch "${ARGS[@]}"
         EXIT_CODE=$?
         set -e
 
-        if [ $EXIT_CODE -eq 1 ]; then
-          echo "findings-count=1" >> "$GITHUB_OUTPUT"
-          echo "::warning::Leakwatch found secrets in your code"
-        elif [ $EXIT_CODE -eq 0 ]; then
+        # leakwatch exit codes (see cmd/root.go):
+        #   0 — no findings
+        #   1 — findings reported (controlled by fail-on-findings)
+        #   2+ — hard error (always fails the step)
+        if [ "$EXIT_CODE" -eq 0 ]; then
           echo "findings-count=0" >> "$GITHUB_OUTPUT"
+        elif [ "$EXIT_CODE" -eq 1 ]; then
+          echo "findings-count=1" >> "$GITHUB_OUTPUT"
+          if [ "$INPUT_FAIL_ON_FINDINGS" = "true" ]; then
+            echo "::error::Leakwatch found secrets in your code"
+            exit 1
+          else
+            echo "::warning::Leakwatch found secrets in your code (fail-on-findings=false; step will not fail)"
+          fi
         else
           echo "::error::Leakwatch scan failed with exit code $EXIT_CODE"
-          exit $EXIT_CODE
+          exit "$EXIT_CODE"
         fi
 
     - name: Upload SARIF
-      if: inputs.sarif-upload == 'true' && inputs.format == 'sarif'
+      if: always() && inputs.sarif-upload == 'true' && inputs.format == 'sarif'
       uses: github/codeql-action/upload-sarif@v3
       with:
         sarif_file: results.sarif

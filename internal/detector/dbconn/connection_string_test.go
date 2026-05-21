@@ -152,3 +152,131 @@ func TestRedactPassword_VariousFormats(t *testing.T) {
 		})
 	}
 }
+
+func TestRedactPassword_MalformedURL(t *testing.T) {
+	// url.Parse rarely fails outright; force the error path with a control
+	// character which the parser rejects.
+	result := redactPassword("postgres://user:pass@host\x7f:5432/db")
+	assert.Equal(t, "****", result, "malformed URL should be redacted entirely")
+}
+
+func TestConnectionString_Scan_MatchesADONet(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected int
+		contains string
+	}{
+		{
+			name:     "ADO.NET Host=...Password=...",
+			input:    "Host=localhost;Database=mydb;Username=user;Password=secret123",
+			expected: 1,
+			contains: "Password=****",
+		},
+		{
+			name:     "ADO.NET Server=...Pwd=...",
+			input:    "Server=db.example.com;Database=app;User Id=sa;Pwd=S3cr3t!",
+			expected: 1,
+			contains: "Pwd=****",
+		},
+		{
+			name:     "ADO.NET Data Source",
+			input:    "Data Source=sql.example.com;Initial Catalog=app;User ID=admin;Password=hunter2",
+			expected: 1,
+			contains: "Password=****",
+		},
+		{
+			name:     "case-insensitive PASSWORD",
+			input:    "Host=localhost;Database=app;User=admin;PASSWORD=hunter2",
+			expected: 1,
+			contains: "PASSWORD=****",
+		},
+	}
+
+	d := &ConnectionString{}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			findings := d.Scan(context.Background(), []byte(tt.input))
+			require.Len(t, findings, tt.expected)
+			assert.Contains(t, findings[0].Redacted, tt.contains)
+		})
+	}
+}
+
+func TestConnectionString_Scan_SkipsADONetPlaceholders(t *testing.T) {
+	placeholders := []string{
+		"Host=localhost;Database=mydb;User=admin;Password=changeme",
+		"Server=db;Database=app;User=admin;Password=your_password",
+		"Data Source=sql;Initial Catalog=app;User ID=admin;Password=TODO",
+		"Host=localhost;Database=app;User=admin;Pwd=xxxxxxxx",
+		"Host=localhost;Database=app;User=admin;Password=placeholder",
+	}
+
+	d := &ConnectionString{}
+	for _, input := range placeholders {
+		t.Run(input, func(t *testing.T) {
+			findings := d.Scan(context.Background(), []byte(input))
+			assert.Empty(t, findings, "placeholder password should not be reported as a finding")
+		})
+	}
+}
+
+func TestRedactADONet(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "Password key",
+			input:    "Host=localhost;Database=mydb;User=admin;Password=secret123",
+			expected: "Host=localhost;Database=mydb;User=admin;Password=****",
+		},
+		{
+			name:     "Pwd shorthand",
+			input:    "Server=db;User=admin;Pwd=secret123",
+			expected: "Server=db;User=admin;Pwd=****",
+		},
+		{
+			name:     "lowercase password",
+			input:    "Server=db;User=admin;password=secret123",
+			expected: "Server=db;User=admin;password=****",
+		},
+		{
+			name:     "no password to redact",
+			input:    "Server=db;User=admin",
+			expected: "Server=db;User=admin",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, redactADONet(tt.input))
+		})
+	}
+}
+
+func TestIsPlaceholderPassword(t *testing.T) {
+	placeholders := []string{
+		"change_me", "changeme", "your_password", "your-password",
+		"replace_me", "xxxxxxxx", "TODO", "FIXME", "placeholder",
+		"example", "password", "secret", "change_me_in_production",
+		// Case insensitive
+		"CHANGEME", "Password", "SECRET",
+	}
+	for _, p := range placeholders {
+		t.Run("placeholder "+p, func(t *testing.T) {
+			assert.True(t, isPlaceholderPassword(p), "%q should be recognized as a placeholder", p)
+		})
+	}
+
+	realSecrets := []string{
+		"S3cr3t!", "hunter2", "Tr0ub4dor&3", "correct horse battery staple",
+		"a1b2c3d4e5", "MyRealP@ssw0rd",
+	}
+	for _, s := range realSecrets {
+		t.Run("real "+s, func(t *testing.T) {
+			assert.False(t, isPlaceholderPassword(s), "%q should NOT be a placeholder", s)
+		})
+	}
+}

@@ -37,7 +37,7 @@ Cloud storage services (AWS S3, Google Cloud Storage) are fundamental infrastruc
 
 ```mermaid
 flowchart LR
-    subgraph Kaynaklar["Cloud Storage"]
+    subgraph Sources["Cloud Storage"]
         S3["AWS S3"]
         GCS["Google Cloud Storage"]
     end
@@ -50,14 +50,14 @@ flowchart LR
         Scan["Secret Detection"]
     end
 
-    subgraph Cikti["Reporting"]
+    subgraph Output["Reporting"]
         JSON["JSON"]
         SARIF["SARIF"]
         CSV["CSV"]
         Table["Table"]
     end
 
-    Kaynaklar --> Auth --> List --> Filter --> Download --> Scan --> Cikti
+    Sources --> Auth --> List --> Filter --> Download --> Scan --> Output
 ```
 
 ---
@@ -629,6 +629,6 @@ flowchart TD
 
 - [Architecture Design](../architecture/03-ARCHITECTURE.md)
 - [Container Image Scanning Guide](container-scanning.md)
-- [ADR-0003: Git Library](../decisions/ADR-0003-git-kutuphanesi.md)
+- [ADR-0003: Git Library](../decisions/ADR-0003-git-library.md)
 - [Development Standards](../standards/04-DEVELOPMENT-STANDARDS.md)
 - [Roadmap](../05-ROADMAP.md)

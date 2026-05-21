@@ -32,23 +32,23 @@ Key reasons for performing secret scanning in CI/CD pipelines:
 
 ```mermaid
 flowchart LR
-    subgraph Gelistirici["Gelistirici Ortami"]
-        A[Kod Yaz] --> B[git commit]
+    subgraph Gelistirici["Developer Environment"]
+        A[Write Code] --> B[git commit]
     end
 
     subgraph CI["CI/CD Pipeline"]
-        C[Pre-commit Hook] --> D[PR Taramasi]
-        D --> E[Tam Gecmis Taramasi]
+        C[Pre-commit Hook] --> D[PR Scan]
+        D --> E[Full History Scan]
     end
 
-    subgraph Sonuc["Sonuc"]
-        F[Basarili: Merge]
-        G[Basarisiz: Blokla]
+    subgraph Sonuc["Result"]
+        F[Success: Merge]
+        G[Failure: Block]
     end
 
     B --> C
-    E -->|Temiz| F
-    E -->|Sir Bulundu| G
+    E -->|Clean| F
+    E -->|Secret Found| G
 ```
 
 ---
@@ -162,7 +162,7 @@ sequenceDiagram
     GH->>LW: leakwatch scan git . --format sarif
     LW-->>GH: results.sarif
     GH->>CS: Upload SARIF
-    CS-->>GH: Security sekmesinde goruntule
+    CS-->>GH: View in Security tab
 ```
 
 ### 2.4 Pull Request Scanning (Changed Files Only)
@@ -621,12 +621,12 @@ The Leakwatch pre-commit hook runs the `leakwatch scan fs` command. Before each 
 
 ```mermaid
 flowchart TD
-    A[git commit] --> B[pre-commit hook tetiklenir]
+    A[git commit] --> B[pre-commit hook triggered]
     B --> C[leakwatch scan fs]
-    C --> D{Sir bulundu mu?}
-    D -->|Hayir| E[Commit basarili]
-    D -->|Evet| F[Commit engellenir]
-    F --> G[Gelistirici siri temizler]
+    C --> D{Secret found?}
+    D -->|No| E[Commit succeeds]
+    D -->|Yes| F[Commit blocked]
+    F --> G[Developer removes secret]
     G --> A
 ```
 
@@ -752,7 +752,7 @@ leakwatch scan fs . --min-severity critical
 
 ### 7.2 Reducing False Positives with `--only-verified`
 
-Leakwatch ships with 53 built-in verifiers covering 84% of all detector types, confirming whether discovered secrets are still active via API calls. With the `--only-verified` parameter, you can report only verified (active) secrets:
+Leakwatch ships with 54 verifiers (51 packages) covering 84% of all detector types, confirming whether discovered secrets are still active via API calls. With the `--only-verified` parameter, you can report only verified (active) secrets:
 
 ```bash
 # Sadece dogrulanmis sirlari raporla
@@ -762,7 +762,7 @@ leakwatch scan git . --only-verified
 leakwatch scan git . --since-commit HEAD~1 --only-verified --min-severity medium
 ```
 
-**Note:** With 53 verifiers and 84% coverage, `--only-verified` is effective for most secret types. However, the remaining 16% of detectors (e.g., generic private keys) do not have verifiers, so those findings will not be reported. For full coverage, periodically run a full scan without `--only-verified`.
+**Note:** With 54 verifiers (51 packages) and 84% coverage, `--only-verified` is effective for most secret types. However, the remaining 16% of detectors (e.g., generic private keys) do not have verifiers, so those findings will not be reported. For full coverage, periodically run a full scan without `--only-verified`.
 
 ### 7.3 Excluding Known Values with `.leakwatchignore`
 
@@ -815,10 +815,10 @@ Do not rely on a single checkpoint. Perform secret scanning at multiple layers:
 
 ```mermaid
 flowchart TD
-    A[Gelistirici: pre-commit hook] --> B[PR: Degisiklik taramasi]
-    B --> C[Main: Push taramasi]
-    C --> D[Zamanlanmis: Tam gecmis taramasi]
-    D --> E[Deploy: Container imaj taramasi]
+    A[Developer: pre-commit hook] --> B[PR: Change scan]
+    B --> C[Main: Push scan]
+    C --> D[Scheduled: Full history scan]
+    D --> E[Deploy: Container image scan]
 
     style A fill:#e1f5fe
     style B fill:#fff3e0

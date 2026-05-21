@@ -61,19 +61,20 @@ Deprecation process:
 ## 2. Branching Strategy (GitHub Flow)
 
 ```mermaid
-gitgraph
-    commit id: "v0.1.0"
-    branch feature/scan-git
-    commit id: "feat: git source"
-    commit id: "test: git tests"
-    checkout main
-    merge feature/scan-git id: "squash merge"
-    commit id: "v0.2.0" tag: "v0.2.0"
-    branch fix/race-condition
-    commit id: "fix: worker pool race"
-    checkout main
-    merge fix/race-condition id: "squash merge fix"
-    commit id: "v0.2.1" tag: "v0.2.1"
+flowchart LR
+    subgraph main
+        M1["v0.1.0"] --> M2["squash merge"] --> M3["v0.2.0 🏷️"] --> M4["squash merge fix"] --> M5["v0.2.1 🏷️"]
+    end
+    subgraph feature/scan-git
+        F1["feat: git source"] --> F2["test: git tests"]
+    end
+    subgraph fix/race-condition
+        H1["fix: worker pool race"]
+    end
+    M1 -.->|branch| F1
+    F2 -.->|merge| M2
+    M3 -.->|branch| H1
+    H1 -.->|merge| M4
 ```
 
 ### 2.1 Branch Rules

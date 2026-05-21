@@ -7,39 +7,102 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- **`dbconn` placeholder case-sensitivity bug** — `Password=TODO` and `Password=FIXME` (uppercase) were previously **not** skipped as placeholders even though the placeholder list contained the entries. The lookup lowercased the password but compared against uppercase slice entries, so the two values silently fell through and were reported as findings. The placeholder slice is now lowercased so case-insensitive matching actually works as documented. **User-visible behavior change:** `Password=TODO` no longer produces a finding.
+
+### Tests
+- **`detector/dbconn` coverage** raised from 51.5% to 97.0% (CLAUDE.md standard is 95%). New table-driven tests cover ADO.NET parsing, the placeholder list (case-insensitive), `redactADONet`, and the `url.Parse` error path of `redactPassword`.
+
+### Security
+- **`action/action.yml` shell injection (SonarCloud `githubactions:S7630`, 8 BLOCKER findings)** — every `${{ inputs.* }}` interpolation moved into an `env:` block; bash args switched from a whitespace-joined string to an array. CWE-94 closed.
+- **`action/action.yml` exit code propagation (Gemini code-assist review, high priority)** — the scan step previously swallowed `leakwatch`'s exit code, so the action reported success even when secrets were found. New input `fail-on-findings` (default `true`) controls whether findings fail the step; hard errors (exit ≥ 2) always fail.
+- **`Dockerfile`** — base image bumped from `golang:1.24-alpine` (could not build the v1.25.8 go.mod) to `golang:1.25.8-alpine`. `.dockerignore` hardened against secrets, build artifacts, and unused trees.
+- **`.github/workflows/release.yml`** — third-party actions pinned to immutable commit SHAs (`actions/checkout` v6.0.0, `actions/setup-go` v6.0.0, `goreleaser/goreleaser-action` v6.4.0). `persist-credentials: false` on checkout.
+
+### Changed
+- **`internal/remediation/guidance.go`** — 13 frequently repeated step/checklist strings extracted to package-level constants. Emitted strings are byte-identical; 100% test coverage preserved.
+- **`cmd/imports.go`** — each blank import now carries an inline `// register <plugin>` comment plus a file-level explanation of the ADR-0004 plugin-registration pattern (SonarCloud `godre:S8184`).
+
+### Documentation
+- Comprehensive doc cleanup aligning all guides, the README, CLAUDE.md, ROADMAP, and CHANGELOG with the actual v1.5.0 state: corrected detector/verifier counts (60 packages / 64 detectors, 51 packages / 54 verifiers), fixed 20+ broken ADR/anchor links (English file names), translated ~18 Mermaid diagrams from Turkish to English, standardized `Status:` fields, corrected JWT/Infura verifier categorization, added v1.5.0 "What's New" section, and added a "Known Gaps & Follow-up Work" section to the ROADMAP tracking the items intentionally left for future PRs.
+
+---
+
+## [v1.5.0] - 2026-04-09
+
 ### Added
-- **53 new secret detectors** bringing the total to 63 built-in detectors
+- **ADO.NET (Microsoft SQL Server) connection string** format support in the `dbconn` detector
+
+### Fixed
+- **False positive reduction** — improved filtering for lock files (`package-lock.json`, `yarn.lock`, and friends), and test fixtures. (Note: case-insensitive placeholder matching for `TODO`/`FIXME` was intended in this release but was incomplete — fixed under `[Unreleased]`.)
+- **ADO.NET connection string parsing** — handles key/value pairs separated by `;` correctly
+- **PagerDuty detector** — context-aware detection to reduce false positives in unrelated string matches
+
+### Changed
+- **CI pinned to Go 1.25.8** — latest version currently available in GitHub Actions runners
+
+---
+
+## [v1.4.0] - 2026-04-08
+
+### Added
+- **Scan summary** — every scan prints a summary to stderr (date, source type, target, files scanned, duration, findings count, verification stats)
+- **`leakwatch init` command** — generates a `.leakwatch.yaml` with recommended defaults
+- **Colored table output** — severity-colored terminal output (red=critical/high, yellow=medium, blue=low), auto-disabled when writing to a file
+- **Rich help messages** — all commands include `Example` sections with practical usage patterns
+- **Better error messages** — friendly error messages with help suggestions
+
+### Changed
+- **`scan fs` defaults to current directory** — path argument is now optional (defaults to `.`)
+- **`.leakwatchignore` CWD fallback** — also searches the current working directory if `.leakwatchignore` is not found alongside the config file
+
+### Security
+- Upgraded to **Go 1.25.8** + **go-git v5.17.1** (security fixes, including the idx file DoS vulnerability)
+
+---
+
+## [v1.3.2] - 2026-03-25
+
+### Fixed
+- **GoReleaser binary name** — forced lowercase binary name in release artifacts
+
+---
+
+## [v1.3.1] - 2026-03-25
+
+### Added
+- **Code of Conduct, issue templates, GitHub Discussions** enabled for the repository
+
+### Changed
+- **Homebrew automation** — CI configured with `HOMEBREW_TAP_TOKEN` so GoReleaser can push to the Homebrew tap automatically on release
+
+---
+
+## [v1.3.0] - 2026-03-25
+
+### Added
+- **51 new secret detectors** bringing the total to 60 detector packages (64 detector instances)
   - Sprint 1: OpenAI, Anthropic, GitLab, SendGrid, NPM, Discord, Telegram, Redis, Snowflake, Datadog
   - Sprint 2: Hugging Face, DeepSeek, GCP, Azure (Storage + Entra), Okta, Twilio, Mailgun, Vault, Grafana, PagerDuty, CircleCI, GitHub OAuth
   - Sprint 3: PyPI, RubyGems, Docker Hub, DigitalOcean, Heroku, Vercel, New Relic, Sentry, Shopify, Supabase, Cloudflare, Notion, Linear, Figma, Airtable
   - Sprint 4: Terraform, Databricks, Bitbucket, Coinbase, Infura, RabbitMQ, FTP, LDAP, Auth0, LaunchDarkly, Snyk, SonarCloud, Doppler, MS Teams, Postmark
-- **53 verifiers** — verification coverage increased from 4.8% (3/63) to 84% (53/63)
+- **54 verifiers (51 packages)** — verification coverage increased to ~84% (54/64)
   - V-1 (Tier 1 P0): OpenAI, Anthropic, GitLab, SendGrid, DigitalOcean, Cloudflare, Heroku, New Relic, Telegram, Discord, Notion
   - V-2 (Tier 1 P1): Sentry, Vercel, NPM, PyPI, Grafana, PagerDuty, Databricks, Linear, Figma, Airtable, HuggingFace, CircleCI
   - V-3 (Tier 1 P2): DockerHub, Doppler, Snyk, SonarCloud, Postmark, Terraform, LaunchDarkly, Mailgun, Coinbase, Infura
   - V-4 (Tier 2): Okta, Shopify, Stripe (live+test), Twilio, Bitbucket, Auth0, Datadog, RubyGems, DeepSeek, Supabase
   - V-5 (Tier 2+3): GitHub OAuth, Teams Webhook, Azure Storage, Azure Entra, GCP, Snowflake, RabbitMQ
-  - Verification types: **Live API verification** (48 detectors — API call to provider) and **Format validation** (5 detectors — structural check without network call)
-  - Per-provider rate limiting for all verifiers
-- Remediation guidance for all 63 detectors
-- APISIX key patterns added to generic API key detector
-- **`leakwatch init` command** — generates a `.leakwatch.yaml` with recommended defaults
-- **Scan summary** — every scan prints a summary to stderr (date, source type, target, files scanned, duration, findings count)
-- **Colored table output** — severity-colored terminal output (red=critical/high, yellow=medium, blue=low), auto-disabled when writing to a file
-- **Rich help messages** — all commands include Example sections with practical usage patterns
-- **Better error messages** — friendly error messages with help suggestions
+  - Verification types: **Live API verification** (API call to provider) and **Format validation** (structural check without network call, used for JWT, Azure Storage, Azure Entra, GCP Service Account, Snowflake)
+  - Per-provider rate limiting for all verifiers (configurable)
+- **Remediation guidance** for all detector types (previously planned for the `v1.1.0` slot — shipped together with `v1.3.0`)
+- **Slack workspace scanning** — `scan slack` command with channel/date/DM/file filtering (previously planned for the `v1.2.0` slot — shipped together with `v1.3.0`)
+- **APISIX key patterns** added to the generic API key detector
 
-### Changed
-- **`scan fs` defaults to current directory** — path argument is now optional (defaults to `.`)
-- **`.leakwatchignore` CWD fallback** — now searches the current working directory if `.leakwatchignore` is not found in the scan root
-
-### Security
-- Upgraded to **Go 1.25.8** + go-git v5.17.1 (security fixes)
-- Upgraded to **go-git v5.17.1** (fixes idx file DoS vulnerability)
+> **Note:** The `v1.1.0` (Remediation) and `v1.2.0` (Slack) phases were merged into `main` but never released as standalone git tags. Their features were rolled up into the `v1.3.0` release.
 
 ---
 
-## [v1.2.0] - 2026-03-24
+## [v1.2.0] - 2026-03-24 _(rolled into v1.3.0; no git tag)_
 
 ### Added
 - **Slack Workspace Scanning** — scan Slack messages, channels, and files for secrets
@@ -51,7 +114,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [v1.1.0] - 2026-03-24
+## [v1.1.0] - 2026-03-24 _(rolled into v1.3.0; no git tag)_
 
 ### Added
 - **Remediation Guidance** — actionable rotation/revocation instructions for all detectors
