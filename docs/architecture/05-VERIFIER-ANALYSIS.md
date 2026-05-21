@@ -6,13 +6,13 @@
 
 ## 1. Current State
 
-Leakwatch has **63 built-in detectors** and **53 verifiers** covering 84% of all detectors.
+Leakwatch has **64 built-in detectors (60 packages)** and **54 verifiers (51 packages)** covering 84% of all detectors.
 
 | Metric | Value |
 |--------|-------|
-| Total Detectors | 63 |
-| Verifiers Implemented | 53 |
-| Verification Coverage | 53/63 (84%) |
+| Total Detectors | 64 (60 packages) |
+| Verifiers Implemented | 54 (51 packages) |
+| Verification Coverage | 54/64 (84%) |
 | Live API Verifiers | 48 |
 | Format Validators | 5 |
 | Not Verifiable | 10 |
@@ -29,7 +29,7 @@ All current verifiers follow a consistent pattern:
 
 ## 2. Verifier Classification
 
-All 63 detectors are classified into four tiers based on verification feasibility.
+All 64 detectors are classified into four tiers based on verification feasibility.
 
 ### Tier 1 --- Easy (Simple API call, single credential, no extra context)
 
@@ -138,17 +138,17 @@ These detectors identify secrets that cannot be verified through a public API ca
 | Tier 2 (Medium) | 18 | Needs context extraction or multi-step auth | Medium confidence |
 | Tier 3 (Hard) | 5 | Complex auth flows or second credential | Low confidence |
 | Tier 4 (Not Verifiable) | 10 | No public API or side-effect-only | Not possible |
-| **Total** | **63** | | |
+| **Total** | **64** | | |
 
-**Maximum achievable verification coverage: 53/63 (84.1%)**
+**Maximum achievable verification coverage: 54/64 (84.4%)**
 
 ## 3. Implementation Roadmap (COMPLETED)
 
-All 5 sprints have been completed as of 2026-03-25. Verification coverage reached the target of 84% (53/63).
+All 5 sprints have been completed as of 2026-03-25. Verification coverage reached the target of 84% (54/64).
 
 ### Sprint 1 --- High-Value Easy Wins (P0, Tier 1) -- COMPLETED
 
-**Goal:** Increase coverage from 4.8% to 17.5% (11/63)
+**Goal:** Increase coverage from 4.8% to 17.5% (11/64)
 
 | Verifier | Detector ID | Estimated Effort |
 |----------|-------------|-----------------|
@@ -165,7 +165,7 @@ All 5 sprints have been completed as of 2026-03-25. Verification coverage reache
 
 ### Sprint 2 --- Tier 1 Continued (P1) -- COMPLETED
 
-**Goal:** Increase coverage to 34.9% (22/63)
+**Goal:** Increase coverage to 34.4% (22/64)
 
 | Verifier | Detector ID | Estimated Effort |
 |----------|-------------|-----------------|
@@ -185,7 +185,7 @@ All 5 sprints have been completed as of 2026-03-25. Verification coverage reache
 
 ### Sprint 3 --- Remaining Tier 1 + Key Tier 2 (P1-P2) -- COMPLETED
 
-**Goal:** Increase coverage to 52.4% (33/63)
+**Goal:** Increase coverage to 51.6% (33/64)
 
 | Verifier | Detector ID | Estimated Effort |
 |----------|-------------|-----------------|
@@ -205,7 +205,7 @@ All 5 sprints have been completed as of 2026-03-25. Verification coverage reache
 
 ### Sprint 4 --- Tier 2 Medium-Priority -- COMPLETED
 
-**Goal:** Increase coverage to 69.8% (44/63)
+**Goal:** Increase coverage to 68.8% (44/64)
 
 | Verifier | Detector ID | Estimated Effort |
 |----------|-------------|-----------------|
@@ -225,7 +225,7 @@ All 5 sprints have been completed as of 2026-03-25. Verification coverage reache
 
 ### Sprint 5 --- Remaining Tier 2 + Tier 3 -- COMPLETED
 
-**Goal:** Increase coverage to 84.1% (53/63)
+**Goal:** Increase coverage to 84.4% (54/64)
 
 | Verifier | Detector ID | Estimated Effort |
 |----------|-------------|-----------------|
@@ -245,12 +245,12 @@ All 5 sprints have been completed as of 2026-03-25. Verification coverage reache
 
 | Sprint | New Verifiers | Cumulative Coverage | Effort |
 |--------|--------------|---------------------|--------|
-| Sprint 1 | 8 | 11/63 (17.5%) | 4 days |
-| Sprint 2 | 11 | 22/63 (34.9%) | 5.5 days |
-| Sprint 3 | 11 | 33/63 (52.4%) | 6 days |
-| Sprint 4 | 11 | 44/63 (69.8%) | 10 days |
-| Sprint 5 | 9 | 53/63 (84.1%) | 12 days |
-| **Total** | **50** | **53/63 (84.1%)** | **37.5 days** |
+| Sprint 1 | 8 | 11/64 (17.2%) | 4 days |
+| Sprint 2 | 11 | 22/64 (34.4%) | 5.5 days |
+| Sprint 3 | 11 | 33/64 (51.6%) | 6 days |
+| Sprint 4 | 11 | 44/64 (68.8%) | 10 days |
+| Sprint 5 | 9 | 54/64 (84.4%) | 12 days |
+| **Total** | **50** | **54/64 (84.4%)** | **37.5 days** |
 
 ## 4. Security Considerations
 

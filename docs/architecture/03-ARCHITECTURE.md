@@ -28,7 +28,7 @@ flowchart LR
         E4[Custom Rules]
     end
 
-    subgraph Verifiers["Verifiers (53 verifiers, 84% coverage)"]
+    subgraph Verifiers["Verifiers (54 verifiers, 51 packages, 84% coverage)"]
         V1[AWS STS]
         V2[GitHub API]
         V3[Slack API]

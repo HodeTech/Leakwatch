@@ -32,7 +32,7 @@ Leakwatch is a security tool that performs secret scanning across multiple sourc
 
 ### Known weakness and mitigation strategy
 
-Go's RE2-based `regexp` package is 2-5x slower compared to Rust's regex crate. This will be mitigated with an Aho-Corasick-first hybrid strategy (see [ADR-0005](ADR-0005-desen-eslestirme.md)). By reducing regex workload by 90%+, Go's regex disadvantage is practically eliminated.
+Go's RE2-based `regexp` package is 2-5x slower compared to Rust's regex crate. This will be mitigated with an Aho-Corasick-first hybrid strategy (see [ADR-0005](ADR-0005-pattern-matching.md)). By reducing regex workload by 90%+, Go's regex disadvantage is practically eliminated.
 
 ## Alternatives Considered
 
@@ -78,4 +78,4 @@ Go's RE2-based `regexp` package is 2-5x slower compared to Rust's regex crate. T
 
 ## Related Decisions
 
-- [ADR-0005: Pattern Matching Strategy](ADR-0005-desen-eslestirme.md) — Mitigation of Go's regex weakness
+- [ADR-0005: Pattern Matching Strategy](ADR-0005-pattern-matching.md) — Mitigation of Go's regex weakness

@@ -5,13 +5,36 @@ All notable changes to Leakwatch will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- **`dbconn` placeholder case-sensitivity bug** — `Password=TODO` and `Password=FIXME` (uppercase) were previously **not** skipped as placeholders even though the placeholder list contained the entries. The lookup lowercased the password but compared against uppercase slice entries, so the two values silently fell through and were reported as findings. The placeholder slice is now lowercased so case-insensitive matching actually works as documented. **User-visible behavior change:** `Password=TODO` no longer produces a finding.
+
+### Tests
+- **`detector/dbconn` coverage** raised from 51.5% to 97.0% (CLAUDE.md standard is 95%). New table-driven tests cover ADO.NET parsing, the placeholder list (case-insensitive), `redactADONet`, and the `url.Parse` error path of `redactPassword`.
+
+### Security
+- **`action/action.yml` shell injection (SonarCloud `githubactions:S7630`, 8 BLOCKER findings)** — every `${{ inputs.* }}` interpolation moved into an `env:` block; bash args switched from a whitespace-joined string to an array. CWE-94 closed.
+- **`action/action.yml` exit code propagation (Gemini code-assist review, high priority)** — the scan step previously swallowed `leakwatch`'s exit code, so the action reported success even when secrets were found. New input `fail-on-findings` (default `true`) controls whether findings fail the step; hard errors (exit ≥ 2) always fail.
+- **`Dockerfile`** — base image bumped from `golang:1.24-alpine` (could not build the v1.25.8 go.mod) to `golang:1.25.8-alpine`. `.dockerignore` hardened against secrets, build artifacts, and unused trees.
+- **`.github/workflows/release.yml`** — third-party actions pinned to immutable commit SHAs (`actions/checkout` v6.0.0, `actions/setup-go` v6.0.0, `goreleaser/goreleaser-action` v6.4.0). `persist-credentials: false` on checkout.
+
+### Changed
+- **`internal/remediation/guidance.go`** — 13 frequently repeated step/checklist strings extracted to package-level constants. Emitted strings are byte-identical; 100% test coverage preserved.
+- **`cmd/imports.go`** — each blank import now carries an inline `// register <plugin>` comment plus a file-level explanation of the ADR-0004 plugin-registration pattern (SonarCloud `godre:S8184`).
+
+### Documentation
+- Comprehensive doc cleanup aligning all guides, the README, CLAUDE.md, ROADMAP, and CHANGELOG with the actual v1.5.0 state: corrected detector/verifier counts (60 packages / 64 detectors, 51 packages / 54 verifiers), fixed 20+ broken ADR/anchor links (English file names), translated ~18 Mermaid diagrams from Turkish to English, standardized `Status:` fields, corrected JWT/Infura verifier categorization, added v1.5.0 "What's New" section, and added a "Known Gaps & Follow-up Work" section to the ROADMAP tracking the items intentionally left for future PRs.
+
+---
+
 ## [v1.5.0] - 2026-04-09
 
 ### Added
 - **ADO.NET (Microsoft SQL Server) connection string** format support in the `dbconn` detector
 
 ### Fixed
-- **False positive reduction** — improved filtering for lock files (`package-lock.json`, `yarn.lock`, and friends), placeholder patterns, and test fixtures
+- **False positive reduction** — improved filtering for lock files (`package-lock.json`, `yarn.lock`, and friends), and test fixtures. (Note: case-insensitive placeholder matching for `TODO`/`FIXME` was intended in this release but was incomplete — fixed under `[Unreleased]`.)
 - **ADO.NET connection string parsing** — handles key/value pairs separated by `;` correctly
 - **PagerDuty detector** — context-aware detection to reduce false positives in unrelated string matches
 
@@ -79,7 +102,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [v1.2.0] - 2026-03-24
+## [v1.2.0] - 2026-03-24 _(rolled into v1.3.0; no git tag)_
 
 ### Added
 - **Slack Workspace Scanning** — scan Slack messages, channels, and files for secrets
@@ -91,7 +114,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [v1.1.0] - 2026-03-24
+## [v1.1.0] - 2026-03-24 _(rolled into v1.3.0; no git tag)_
 
 ### Added
 - **Remediation Guidance** — actionable rotation/revocation instructions for all detectors

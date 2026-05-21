@@ -752,7 +752,7 @@ leakwatch scan fs . --min-severity critical
 
 ### 7.2 Reducing False Positives with `--only-verified`
 
-Leakwatch ships with 54 verifier (51 packages) covering 84% of all detector types, confirming whether discovered secrets are still active via API calls. With the `--only-verified` parameter, you can report only verified (active) secrets:
+Leakwatch ships with 54 verifiers (51 packages) covering 84% of all detector types, confirming whether discovered secrets are still active via API calls. With the `--only-verified` parameter, you can report only verified (active) secrets:
 
 ```bash
 # Sadece dogrulanmis sirlari raporla
@@ -762,7 +762,7 @@ leakwatch scan git . --only-verified
 leakwatch scan git . --since-commit HEAD~1 --only-verified --min-severity medium
 ```
 
-**Note:** With 54 verifier (51 packages) and 84% coverage, `--only-verified` is effective for most secret types. However, the remaining 16% of detectors (e.g., generic private keys) do not have verifiers, so those findings will not be reported. For full coverage, periodically run a full scan without `--only-verified`.
+**Note:** With 54 verifiers (51 packages) and 84% coverage, `--only-verified` is effective for most secret types. However, the remaining 16% of detectors (e.g., generic private keys) do not have verifiers, so those findings will not be reported. For full coverage, periodically run a full scan without `--only-verified`.
 
 ### 7.3 Excluding Known Values with `.leakwatchignore`
 
