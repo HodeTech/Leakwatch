@@ -16,12 +16,13 @@ import (
 var scanSlackCmd = &cobra.Command{
 	Use:   "slack",
 	Short: "Scans a Slack workspace",
-	Long: `Scans messages, channels, and uploaded files in a Slack workspace to detect
-leaked secrets such as API keys, passwords, and certificates.
+	Long: `Scans messages across channels in a Slack workspace to detect leaked secrets
+such as API keys, passwords, and certificates. Scanning of uploaded file
+content is planned but not yet implemented; only message text is scanned.
 
 Requires a Slack Bot Token with appropriate scopes (channels:history,
-groups:history, im:history, mpim:history, files:read). The token can be
-provided via the --token flag or the LEAKWATCH_SLACK_TOKEN environment variable.`,
+groups:history, im:history, mpim:history). The token can be provided via the
+--token flag or the LEAKWATCH_SLACK_TOKEN environment variable.`,
 	Example: `  # Scan all channels using environment variable for token
   export LEAKWATCH_SLACK_TOKEN=xoxb-your-token
   leakwatch scan slack
