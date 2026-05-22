@@ -2,8 +2,10 @@ package infura
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -115,6 +117,41 @@ func TestVerify_ErrorResponse_ReturnsInactive(t *testing.T) {
 
 	assert.Equal(t, finding.StatusVerifiedInactive, result.Status)
 	assert.Equal(t, "Infura API key is invalid or revoked", result.Message)
+}
+
+// failingRoundTripper returns an error that embeds the request URL, mimicking
+// the *url.Error that net/http produces on DNS/TLS/proxy failures.
+type failingRoundTripper struct{}
+
+func (failingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	return nil, &url.Error{
+		Op:  req.Method,
+		URL: req.URL.String(),
+		Err: errors.New("dial tcp: lookup failed"),
+	}
+}
+
+func TestVerify_TransportError_DoesNotLeakToken(t *testing.T) {
+	// fakeToken is a non-secret placeholder used only to prove redaction.
+	const fakeToken = "FAKEtoken1234567890abcdef1234567890"
+
+	v := &Verifier{
+		apiURL:     "https://mainnet.infura.example/v3",
+		httpClient: &http.Client{Transport: failingRoundTripper{}},
+	}
+
+	raw := detector.RawFinding{
+		DetectorID: detectorID,
+		Raw:        []byte(fakeToken),
+		Redacted:   "****7890",
+	}
+
+	result := v.Verify(context.Background(), raw)
+
+	assert.Equal(t, finding.StatusVerifyError, result.Status)
+	assert.NotContains(t, result.Message, fakeToken,
+		"transport error message must not contain the token")
+	assert.Contains(t, result.Message, "[REDACTED]")
 }
 
 func TestVerify_Type_ReturnsCorrectID(t *testing.T) {

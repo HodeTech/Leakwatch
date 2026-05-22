@@ -29,7 +29,6 @@ package httpx
 import (
 	"io"
 	"net/http"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -100,17 +99,25 @@ func IsRedirect(statusCode int) bool {
 	return statusCode >= 300 && statusCode < 400
 }
 
-// EnsureHTTPS returns rawURL unchanged when it already uses the https scheme.
-// Otherwise it returns ok=false. It is intended for URLs derived from
-// untrusted context (for example a host taken from detector ExtraData) to make
-// sure credentials are only ever sent over TLS.
-func EnsureHTTPS(rawURL string) (string, bool) {
-	u, err := url.Parse(rawURL)
-	if err != nil {
-		return "", false
+// RedactError returns err.Error() with every occurrence of secret replaced by
+// "[REDACTED]".
+//
+// Transport errors from net/http wrap a *url.Error whose message embeds the
+// full request URL. When a verifier places a credential in the request URL (for
+// example Telegram and Infura embed the token in the path, and Teams uses the
+// webhook URL itself), a DNS, TLS, or proxy failure would otherwise echo that
+// credential into logs and the returned VerificationResult.Message. Callers MUST
+// route such error text through this helper before logging or returning it.
+//
+// If secret is empty the original message is returned unchanged, since an empty
+// match would otherwise corrupt the string. The returned text is safe to log.
+func RedactError(err error, secret string) string {
+	if err == nil {
+		return ""
 	}
-	if !strings.EqualFold(u.Scheme, "https") {
-		return "", false
+	msg := err.Error()
+	if secret == "" {
+		return msg
 	}
-	return rawURL, true
+	return strings.ReplaceAll(msg, secret, "[REDACTED]")
 }

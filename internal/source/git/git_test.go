@@ -426,7 +426,10 @@ func TestGitSource_Close_NoTmpDir(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestSanitizeURL_StripsCredentials(t *testing.T) {
+func TestSafeDisplayURL_StripsCredentials(t *testing.T) {
+	// fakeToken is a non-secret placeholder used only to prove redaction.
+	const fakeToken = "ghp_FAKEtoken1234567890"
+
 	tests := []struct {
 		name     string
 		input    string
@@ -435,7 +438,7 @@ func TestSanitizeURL_StripsCredentials(t *testing.T) {
 		{
 			name:     "https with user and password",
 			input:    "https://user:password@github.com/org/repo.git",
-			expected: "https://github.com/org/repo.git (credentials redacted)",
+			expected: "https://github.com/org/repo.git",
 		},
 		{
 			name:     "https without credentials",
@@ -443,16 +446,81 @@ func TestSanitizeURL_StripsCredentials(t *testing.T) {
 			expected: "https://github.com/org/repo.git",
 		},
 		{
-			name:     "https with token",
-			input:    "https://token@github.com/org/repo.git",
-			expected: "https://github.com/org/repo.git (credentials redacted)",
+			name:     "https with token as userinfo",
+			input:    "https://" + fakeToken + "@github.com/org/repo.git",
+			expected: "https://github.com/org/repo.git",
+		},
+		{
+			name:     "https with user and token",
+			input:    "https://user:" + fakeToken + "@github.com/org/repo.git",
+			expected: "https://github.com/org/repo.git",
+		},
+		{
+			name:     "local path is unchanged",
+			input:    "/local/path/to/repo",
+			expected: "/local/path/to/repo",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := sanitizeURL(tt.input)
+			result := SafeDisplayURL(tt.input)
 			assert.Equal(t, tt.expected, result)
+			assert.NotContains(t, result, fakeToken, "credential must not appear in display URL")
+			// The returned value must be a clean URL with no noisy suffix that
+			// would pollute a metadata field.
+			assert.NotContains(t, result, "redacted")
+			assert.NotContains(t, result, "(")
 		})
 	}
+}
+
+func TestSafeDisplayURL_ParseFailure_MasksCredential(t *testing.T) {
+	// fakeToken is a non-secret placeholder used only to prove redaction.
+	const fakeToken = "FAKEtoken1234567890"
+	// A control character makes url.Parse fail, exercising the best-effort path.
+	input := "https://user:" + fakeToken + "@ho\x7fst/repo.git"
+
+	result := SafeDisplayURL(input)
+
+	assert.NotContains(t, result, fakeToken, "credential must not appear after best-effort masking")
+	assert.Contains(t, result, "***@")
+}
+
+func TestGitSource_New_SetsCredentialFreeDisplayTarget(t *testing.T) {
+	// fakeToken is a non-secret placeholder used only to prove redaction.
+	const fakeToken = "ghp_FAKEtoken1234567890"
+	target := "https://user:" + fakeToken + "@github.com/org/repo.git"
+
+	s := New(target)
+
+	// The real target is retained for cloning, but the display form is clean.
+	assert.Equal(t, target, s.target)
+	assert.Equal(t, "https://github.com/org/repo.git", s.displayTarget)
+	assert.NotContains(t, s.displayTarget, fakeToken)
+}
+
+func TestGitSource_Chunks_RepositoryMetadataHasNoCredential(t *testing.T) {
+	// fakeToken is a non-secret placeholder used only to prove redaction.
+	const fakeToken = "ghp_FAKEtoken1234567890"
+
+	dir, _ := initTestRepo(t, map[string]string{"README.md": "hello"})
+
+	// Build a source pointed at the local repo, but override the display target
+	// as if it had been created from a credentialed remote URL. We set target to
+	// the local dir so Validate/Chunks can read it, and displayTarget to the
+	// credential-stripped remote form that should appear in metadata.
+	s := New(dir)
+	s.displayTarget = SafeDisplayURL("https://user:" + fakeToken + "@github.com/org/repo.git")
+	require.NoError(t, s.Validate())
+
+	ctx := context.Background()
+	var sawChunk bool
+	for chunk := range s.Chunks(ctx) {
+		sawChunk = true
+		assert.Equal(t, "https://github.com/org/repo.git", chunk.SourceMetadata.Repository)
+		assert.NotContains(t, chunk.SourceMetadata.Repository, fakeToken,
+			"SourceMetadata.Repository must not contain the credential")
+	}
+	assert.True(t, sawChunk, "expected at least one chunk")
 }

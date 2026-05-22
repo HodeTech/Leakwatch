@@ -69,10 +69,13 @@ func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, webhookURL, bytes.NewReader(payload))
 	if err != nil {
-		slog.ErrorContext(ctx, "teams verifier: failed to create request", slog.String("error", err.Error()))
+		// The webhook URL is itself the secret and may appear in the error text;
+		// redact it before logging or returning.
+		safeErr := httpx.RedactError(err, webhookURL)
+		slog.ErrorContext(ctx, "teams verifier: failed to create request", slog.String("error", safeErr))
 		return finding.VerificationResult{
 			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("failed to create request: %v", err),
+			Message: fmt.Sprintf("failed to create request: %s", safeErr),
 		}
 	}
 	req.Header.Set("Content-Type", "application/json")
@@ -85,10 +88,13 @@ func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.
 
 	resp, err := client.Do(req)
 	if err != nil {
-		slog.ErrorContext(ctx, "teams verifier: request failed", slog.String("error", err.Error()))
+		// A *url.Error from the transport embeds the full request URL, which is
+		// the webhook secret; redact it before logging or returning.
+		safeErr := httpx.RedactError(err, webhookURL)
+		slog.ErrorContext(ctx, "teams verifier: request failed", slog.String("error", safeErr))
 		return finding.VerificationResult{
 			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("request failed: %v", err),
+			Message: fmt.Sprintf("request failed: %s", safeErr),
 		}
 	}
 	defer func() { _ = resp.Body.Close() }()

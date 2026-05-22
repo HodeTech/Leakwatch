@@ -27,6 +27,7 @@ const maxSeenEntries = 1_000_000
 // GitSource is a Git repository-based scan source.
 type GitSource struct {
 	target         string // Local path or remote URL
+	displayTarget  string // Credential-stripped form of target, safe for output/logs
 	repo           *git.Repository
 	bufferSize     int
 	since          *time.Time
@@ -42,9 +43,10 @@ type GitSource struct {
 // New creates a new GitSource.
 func New(target string, opts ...Option) *GitSource {
 	s := &GitSource{
-		target:      target,
-		bufferSize:  64,
-		maxFileSize: 10 * 1024 * 1024,
+		target:        target,
+		displayTarget: SafeDisplayURL(target),
+		bufferSize:    64,
+		maxFileSize:   10 * 1024 * 1024,
 	}
 	for _, opt := range opts {
 		opt(s)
@@ -162,22 +164,28 @@ func (s *GitSource) cloneRemote() error {
 		cloneOpts.SingleBranch = true
 	}
 
-	slog.Info("cloning remote repository", "url", sanitizeURL(s.target), "tmpDir", tmpDir)
+	slog.Info("cloning remote repository", "url", s.displayTarget, "tmpDir", tmpDir)
 
 	repo, err := git.PlainClone(tmpDir, false, cloneOpts)
 	if err != nil {
 		_ = os.RemoveAll(tmpDir)
-		return fmt.Errorf("failed to clone git repository %s: %w", sanitizeURL(s.target), err)
+		return fmt.Errorf("failed to clone git repository %s: %w", s.displayTarget, err)
 	}
 	s.repo = repo
 	s.tmpDir = tmpDir
 	return nil
 }
 
-// sanitizeURL strips credentials from a URL before it is used in log messages.
-// If the URL cannot be parsed, the original string is returned with any
-// user-info portion masked.
-func sanitizeURL(raw string) string {
+// SafeDisplayURL returns a credential-stripped form of raw that is safe to put
+// in logs, output metadata, error messages, and the scan summary. Any user-info
+// portion (the "user:password@" part of a URL) is removed so no secret is ever
+// surfaced.
+//
+// The returned value is the clean URL with no noisy suffix, so it can be stored
+// verbatim in a metadata field. When the URL cannot be parsed, the credential
+// between "://" and "@" is masked on a best-effort basis; non-URL targets (for
+// example local paths) are returned unchanged.
+func SafeDisplayURL(raw string) string {
 	u, err := url.Parse(raw)
 	if err != nil {
 		// Best-effort: mask anything between :// and @
@@ -190,7 +198,6 @@ func sanitizeURL(raw string) string {
 	}
 	if u.User != nil {
 		u.User = nil
-		return u.String() + " (credentials redacted)"
 	}
 	return u.String()
 }
@@ -298,7 +305,7 @@ func (s *GitSource) chunksFullHistory(ctx context.Context, ch chan<- source.Chun
 				Data: []byte(content),
 				SourceMetadata: finding.SourceMetadata{
 					SourceType: "git",
-					Repository: s.target,
+					Repository: s.displayTarget,
 					Commit:     c.Hash.String(),
 					Author:     c.Author.Name,
 					Email:      c.Author.Email,
@@ -449,7 +456,7 @@ func (s *GitSource) chunksSinceCommit(ctx context.Context, ch chan<- source.Chun
 				Data: []byte(content),
 				SourceMetadata: finding.SourceMetadata{
 					SourceType: "git",
-					Repository: s.target,
+					Repository: s.displayTarget,
 					Commit:     c.Hash.String(),
 					Author:     c.Author.Name,
 					Email:      c.Author.Email,

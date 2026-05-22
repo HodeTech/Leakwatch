@@ -104,7 +104,12 @@ func runScanRepos(cmd *cobra.Command, args []string) error {
 			default:
 			}
 
-			slog.Info("scanning repository", "url", url)
+			// displayURL strips any embedded credentials so a URL like
+			// https://user:TOKEN@host/repo.git never leaks to logs, errors, or
+			// output. The real url is still passed to gitsource.New for cloning.
+			displayURL := gitsource.SafeDisplayURL(url)
+
+			slog.Info("scanning repository", "url", displayURL)
 
 			src := gitsource.New(url, srcOpts...)
 
@@ -114,21 +119,21 @@ func runScanRepos(cmd *cobra.Command, args []string) error {
 
 			// Clean up cloned repo.
 			if closeErr := src.Close(); closeErr != nil {
-				slog.Warn("failed to clean up repo", "url", url, "error", closeErr)
+				slog.Warn("failed to clean up repo", "url", displayURL, "error", closeErr)
 			}
 
 			mu.Lock()
 			defer mu.Unlock()
 
 			if err != nil && result == nil {
-				scanErrors = append(scanErrors, fmt.Errorf("scan failed for %s: %w", url, err))
+				scanErrors = append(scanErrors, fmt.Errorf("scan failed for %s: %w", displayURL, err))
 				return
 			}
 
 			if result != nil {
 				allFindings = append(allFindings, result.Findings...)
 				totalChunks += result.ScannedChunks
-				slog.Info("repository scan completed", "url", url, "findings", len(result.Findings), "files", result.ScannedChunks)
+				slog.Info("repository scan completed", "url", displayURL, "findings", len(result.Findings), "files", result.ScannedChunks)
 			}
 		}(repoURL)
 	}

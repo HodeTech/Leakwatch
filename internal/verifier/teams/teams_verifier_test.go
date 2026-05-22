@@ -2,9 +2,11 @@ package teams
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -126,6 +128,40 @@ func TestVerify_ServerError_ReturnsUnverified(t *testing.T) {
 	// A 5xx is inconclusive for a non-destructive probe.
 	assert.Equal(t, finding.StatusUnverified, result.Status)
 	assert.Contains(t, result.Message, "inconclusive")
+}
+
+// failingRoundTripper returns an error that embeds the request URL, mimicking
+// the *url.Error that net/http produces on DNS/TLS/proxy failures.
+type failingRoundTripper struct{}
+
+func (failingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	return nil, &url.Error{
+		Op:  req.Method,
+		URL: req.URL.String(),
+		Err: errors.New("dial tcp: lookup failed"),
+	}
+}
+
+func TestVerify_TransportError_DoesNotLeakWebhookURL(t *testing.T) {
+	// fakeWebhook is a non-secret placeholder used only to prove redaction. The
+	// path segment stands in for the secret token portion of a real webhook.
+	const fakeWebhook = "https://outlook.office.example/webhook/FAKEsecret1234567890"
+
+	v := &Verifier{httpClient: &http.Client{Transport: failingRoundTripper{}}}
+
+	raw := detector.RawFinding{
+		DetectorID: detectorID,
+		Raw:        []byte(fakeWebhook),
+		Redacted:   "https://outlook.office.example/webhook/****",
+	}
+
+	result := v.Verify(context.Background(), raw)
+
+	assert.Equal(t, finding.StatusVerifyError, result.Status)
+	assert.NotContains(t, result.Message, "FAKEsecret1234567890",
+		"transport error message must not contain the webhook secret")
+	assert.NotContains(t, result.Message, fakeWebhook)
+	assert.Contains(t, result.Message, "[REDACTED]")
 }
 
 func TestVerify_Type_ReturnsCorrectID(t *testing.T) {

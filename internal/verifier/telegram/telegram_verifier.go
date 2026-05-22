@@ -57,10 +57,13 @@ func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL+"/bot"+token+"/getMe", nil)
 	if err != nil {
-		slog.ErrorContext(ctx, "telegram verifier: failed to create request", slog.String("error", err.Error()))
+		// The error text may embed the request URL, which contains the token;
+		// redact it before logging or returning.
+		safeErr := httpx.RedactError(err, token)
+		slog.ErrorContext(ctx, "telegram verifier: failed to create request", slog.String("error", safeErr))
 		return finding.VerificationResult{
 			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("failed to create request: %v", err),
+			Message: fmt.Sprintf("failed to create request: %s", safeErr),
 		}
 	}
 	req.Header.Set("User-Agent", "leakwatch-verifier")
@@ -72,10 +75,13 @@ func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.
 
 	resp, err := client.Do(req)
 	if err != nil {
-		slog.ErrorContext(ctx, "telegram verifier: request failed", slog.String("error", err.Error()))
+		// A *url.Error from the transport embeds the full request URL (and thus
+		// the token); redact it before logging or returning.
+		safeErr := httpx.RedactError(err, token)
+		slog.ErrorContext(ctx, "telegram verifier: request failed", slog.String("error", safeErr))
 		return finding.VerificationResult{
 			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("request failed: %v", err),
+			Message: fmt.Sprintf("request failed: %s", safeErr),
 		}
 	}
 	defer func() { _ = resp.Body.Close() }()
