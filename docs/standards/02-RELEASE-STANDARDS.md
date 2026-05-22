@@ -129,7 +129,7 @@ On merge to the `main` branch:
 |------|-------------|
 | PR pipeline steps | Test + lint + security + build |
 | Cross-compilation | linux/darwin/windows x amd64/arm64 |
-| Coverage report | Test coverage >= 80% check |
+| Coverage report | Test coverage >= 70% check |
 
 ### 3.3 Release Pipeline
 
@@ -159,7 +159,7 @@ flowchart LR
 - [ ] All tests pass on `main` branch (`go test -race ./...`)
 - [ ] `golangci-lint` has no warnings
 - [ ] `govulncheck` is clean
-- [ ] Test coverage >= 80%
+- [ ] Test coverage >= 70%
 - [ ] CHANGELOG.md updated
 - [ ] README.md updated (if new features)
 - [ ] Breaking changes documented if applicable

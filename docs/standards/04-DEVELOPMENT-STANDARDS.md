@@ -145,7 +145,9 @@ block-beta
 | `internal/entropy/*` | 95% |
 | `internal/matcher/*` | 90% |
 | `internal/output/*` | 85% |
-| **Overall Target** | **80%+** |
+| **Overall Target** | **70%+ (enforced by CI)** |
+
+> These per-package figures are aspirational targets; CI enforces only the overall 70% floor.
 
 ### 3.3 Test Writing Rules
 

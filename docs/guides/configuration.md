@@ -78,11 +78,15 @@ detection:
     # Default: true
     enabled: true
 
-    # Minimum entropy threshold (between 0.0 - 8.0).
-    # Higher value = more selective (fewer findings, fewer false positives)
-    # Lower value = more inclusive (more findings, more false positives)
-    # Recommended range: 3.5 - 4.5
-    # Default: 4.0
+    # Shannon entropy threshold (float64, 0.0–8.0). Default: 4.0
+    #
+    # NOTE — this value is currently display-only for built-in detectors.
+    # The engine computes and attaches entropy scores to findings for context,
+    # but does NOT gate or filter built-in detector findings on this threshold.
+    # Engine-level gating is planned — see the ROADMAP
+    # "Documented-but-Unimplemented Gaps" §4 (Engine-level entropy-threshold gating).
+    #
+    # Per-rule entropy thresholds in `custom-rules:` DO filter custom-rule matches.
     threshold: 4.0
 
 # ── Verification Settings ─────────────────────────────────────────
@@ -177,7 +181,7 @@ custom-rules:
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `enabled` | bool | `true` | Enable/disable entropy analysis |
-| `threshold` | float64 | `4.0` | Minimum entropy threshold (0.0-8.0) |
+| `threshold` | float64 | `4.0` | Entropy threshold (0.0–8.0). Display-only for built-in detectors; filters custom-rule matches only |
 
 **What is entropy?** Shannon entropy measures the degree of randomness in a text. Secrets typically have high entropy (4.0+) because they consist of random characters. Normal code has lower entropy.
 

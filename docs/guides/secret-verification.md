@@ -11,7 +11,7 @@
 Secret verification is the process of checking whether a detected secret is actually active and valid. Leakwatch ships with **54 verifiers (51 packages)** covering **85.7% of its 63 detectors (60 packages)**, making it one of the most comprehensive verification systems available under an MIT license.
 
 Verification is performed through two methods:
-- **Live API verification** (48 detectors) -- controlled, read-only API calls to the service that issued the credential
+- **Live API verification** (48 detectors) -- controlled, non-destructive API calls to the service that issued the credential
 - **Format validation** (5 detectors) -- structural checks (decode, parse, expiry) without network calls
 
 **Why it matters:**
@@ -72,7 +72,7 @@ Leakwatch provides 54 verifiers (51 packages) across three verification types. T
 
 ### Live API Verification (48 detectors)
 
-These verifiers make a read-only API call to the provider to confirm whether the secret is active or inactive.
+These verifiers make a controlled, non-destructive API call to the provider to confirm whether the secret is active or inactive. The majority use HTTP GET; a small number (e.g., the Teams webhook verifier) use a non-destructive POST to a validation endpoint.
 
 | Category | Detector | Detector ID | API Endpoint |
 |----------|----------|-------------|-------------|
@@ -321,7 +321,7 @@ Verification involves sending discovered credentials to provider APIs. Keep the 
 
 - **Credentials are transmitted over the network** -- The raw secret value is sent to the provider's API endpoint (e.g., `sts.amazonaws.com`, `api.github.com`) over HTTPS. Ensure your network allows outbound HTTPS traffic to these endpoints.
 - **Leakwatch never logs raw secrets** -- Verifiers are designed to never log, persist, or cache the raw credential values. Only redacted values appear in logs.
-- **Read-only operations only** -- All verification calls are read-only. They check validity without performing any destructive or state-changing actions.
+- **Non-destructive operations only** -- All verification calls are controlled and non-destructive. The majority use HTTP GET; where a POST is required (e.g., the Teams webhook verifier), it targets a validation endpoint and does not cause state changes or side effects.
 - **Network requirements** -- Verification requires outbound HTTPS access. In air-gapped or restricted environments, use `--no-verify` to skip verification entirely.
 - **Provider rate limits** -- While Leakwatch applies its own rate limiting, provider-side rate limits may still apply. If you are verifying a large number of findings, consider the provider's documented rate limits.
 

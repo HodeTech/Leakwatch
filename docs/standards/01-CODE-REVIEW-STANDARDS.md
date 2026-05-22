@@ -123,7 +123,7 @@ Since Leakwatch is a security tool, this section has the **highest priority**.
 | TEST-05 | Are mocks written against interfaces? | MINOR |
 | TEST-06 | Do detector tests use format patterns, not real secret content? | CRITICAL |
 | TEST-07 | Is `fstest.MapFS` preferred for in-memory filesystem tests? | SUGGESTION |
-| TEST-08 | Are test coverage targets met? (detectors 95%, engine 85%, overall 80%) | MAJOR |
+| TEST-08 | Are test coverage targets met? (detectors 95%, engine 85%, overall 70%) | MAJOR |
 | TEST-09 | Are tests deterministic? Are there dependencies on time, filesystem, or network? | MAJOR |
 | TEST-10 | Do tests pass with the race detector (`-race`)? | MAJOR |
 
