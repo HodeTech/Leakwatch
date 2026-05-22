@@ -41,7 +41,6 @@ func init() {
 	flags.String("project", "", "GCP project ID")
 
 	addVerifyFlags(flags)
-	bindScanFlags(flags)
 }
 
 func runScanGCS(cmd *cobra.Command, args []string) error {
@@ -52,6 +51,10 @@ func runScanGCS(cmd *cobra.Command, args []string) error {
 
 	var opts []gcssource.Option
 	opts = append(opts, gcssource.WithMaxFileSize(cfg.maxFileSize))
+
+	if len(cfg.excludePaths) > 0 {
+		opts = append(opts, gcssource.WithExcludePaths(cfg.excludePaths))
+	}
 
 	if prefix, _ := cmd.Flags().GetString("prefix"); prefix != "" {
 		opts = append(opts, gcssource.WithPrefix(prefix))

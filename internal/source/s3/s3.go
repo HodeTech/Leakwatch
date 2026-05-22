@@ -31,12 +31,13 @@ type s3Client interface {
 
 // S3Source scans objects in an AWS S3 bucket for leaked secrets.
 type S3Source struct {
-	bucket      string
-	prefix      string
-	region      string
-	maxFileSize int64
-	bufferSize  int
-	client      s3Client
+	bucket       string
+	prefix       string
+	region       string
+	maxFileSize  int64
+	bufferSize   int
+	excludePaths []string
+	client       s3Client
 }
 
 // New creates a new S3Source for the given bucket.
@@ -173,9 +174,19 @@ func (s *S3Source) listAndSendChunks(ctx context.Context, ch chan<- source.Chunk
 				continue
 			}
 
+			// Skip objects matching exclude-path globs (relative key).
+			if filter.MatchesGlob(key, s.excludePaths) {
+				slog.Debug("skipping excluded path", "key", key)
+				continue
+			}
+
 			data, err := s.downloadObject(ctx, key)
 			if err != nil {
 				slog.Warn("s3 object download failed", "key", key, "error", err)
+				continue
+			}
+			if data == nil {
+				// Object exceeded the size limit and was skipped.
 				continue
 			}
 
@@ -220,9 +231,18 @@ func (s *S3Source) downloadObject(ctx context.Context, key string) ([]byte, erro
 	}
 	defer func() { _ = output.Body.Close() }()
 
-	data, err := io.ReadAll(output.Body)
+	// Bound the read to guard against OOM/DoS from objects whose listed size
+	// is stale, missing, or smaller than the actual body. Read one extra byte
+	// so an object that exactly fills maxFileSize can be distinguished from one
+	// that exceeds it.
+	data, err := io.ReadAll(io.LimitReader(output.Body, s.maxFileSize+1))
 	if err != nil {
 		return nil, fmt.Errorf("read object %q: %w", key, err)
+	}
+
+	if int64(len(data)) > s.maxFileSize {
+		slog.Debug("skipping oversize object", "key", key, "limit", s.maxFileSize)
+		return nil, nil
 	}
 
 	return data, nil

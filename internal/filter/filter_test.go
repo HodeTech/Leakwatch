@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestIsExcludedExtension_BinaryExe_ReturnsTrue(t *testing.T) {
@@ -103,14 +102,30 @@ func TestMatchesGlob_DoubleStarNoMatch_ReturnsFalse(t *testing.T) {
 	assert.False(t, MatchesGlob("src/main.go", []string{"vendor/**"}))
 }
 
-func TestMatchesGlobStrict_InvalidPattern_ReturnsError(t *testing.T) {
-	_, err := MatchesGlobStrict("file.go", []string{"[unclosed"})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid glob pattern")
+func TestMatchesGlob_InvalidPattern_TreatedAsNonMatch(t *testing.T) {
+	// An invalid glob must never match and must not panic; it is logged and
+	// treated as a non-match so one malformed exclude cannot break filtering.
+	assert.False(t, MatchesGlob("file.go", []string{"[unclosed"}))
 }
 
-func TestMatchesGlobStrict_ValidPattern_ReturnsNoError(t *testing.T) {
-	matched, err := MatchesGlobStrict("config.yaml", []string{"*.yaml"})
-	require.NoError(t, err)
-	assert.True(t, matched)
+func TestMatchesGlob_TrailingSlashDir_MatchesSubtree(t *testing.T) {
+	tests := []struct {
+		name    string
+		pattern string
+		path    string
+		want    bool
+	}{
+		{"top-level file under dir", "build/", "build/output.txt", true},
+		{"nested file under dir", "build/", "build/sub/deep.go", true},
+		{"dir nested deeper in path", "build/", "src/build/artifact.o", true},
+		{"node_modules subtree", "node_modules/", "node_modules/pkg/index.js", true},
+		{"unrelated path", "build/", "src/main.go", false},
+		{"directory itself with no child is not matched", "build/", "build", false},
+		{"glob directory name", "build*/", "builds/output.txt", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, MatchesGlob(tt.path, []string{tt.pattern}))
+		})
+	}
 }

@@ -27,11 +27,14 @@ type SlackSource struct {
 	excludeChannels []string
 	since           time.Time
 	includeDMs      bool
-	includeFiles    bool
-	rateLimit       float64
-	bufferSize      int
-	client          slackClient
-	newClient       func(token string) slackClient
+	// includeFiles is accepted for forward-compatibility but is currently a
+	// no-op: Slack file scanning is not yet implemented (only message text is
+	// scanned). See processChannel and TODO(planned) below.
+	includeFiles bool
+	rateLimit    float64
+	bufferSize   int
+	client       slackClient
+	newClient    func(token string) slackClient
 }
 
 // defaultNewClient creates a real Slack API client.
@@ -43,9 +46,11 @@ func defaultNewClient(token string) slackClient {
 // Use functional options to configure channel filtering, rate limits, etc.
 func New(token string, opts ...Option) *SlackSource {
 	s := &SlackSource{
-		token:        token,
-		includeDMs:   false,
-		includeFiles: true,
+		token:      token,
+		includeDMs: false,
+		// includeFiles defaults to false: file scanning is not implemented yet,
+		// so advertising it on by default would be misleading.
+		includeFiles: false,
 		rateLimit:    defaultRateLimit,
 		bufferSize:   defaultBufferSize,
 		newClient:    defaultNewClient,
@@ -85,6 +90,13 @@ func (s *SlackSource) Chunks(ctx context.Context) <-chan source.Chunk {
 		defer close(ch)
 
 		s.ensureClient()
+
+		// File scanning is advertised via WithIncludeFiles but is not yet
+		// implemented. Warn loudly instead of silently ignoring the request so
+		// the behavior is honest. See TODO(planned) in processChannel.
+		if s.includeFiles {
+			slog.Warn("slack file scanning requested but not yet implemented; scanning message text only")
+		}
 
 		limiter := rate.NewLimiter(rate.Limit(s.rateLimit), 1)
 
@@ -161,28 +173,33 @@ func (s *SlackSource) listChannels(ctx context.Context, limiter *rate.Limiter) (
 }
 
 // filterChannels applies include/exclude channel filters.
+//
+// Filters are matched against the channel name (e.g. "engineering"), which is
+// what the CLI flags and documentation expose (--channels engineering). Slack
+// channel IDs (e.g. "C001") are an implementation detail and are not matched
+// here.
 func (s *SlackSource) filterChannels(channels []slack.Channel) []slack.Channel {
 	if len(s.channels) == 0 && len(s.excludeChannels) == 0 {
 		return channels
 	}
 
 	includeSet := make(map[string]struct{}, len(s.channels))
-	for _, id := range s.channels {
-		includeSet[id] = struct{}{}
+	for _, name := range s.channels {
+		includeSet[name] = struct{}{}
 	}
 
 	excludeSet := make(map[string]struct{}, len(s.excludeChannels))
-	for _, id := range s.excludeChannels {
-		excludeSet[id] = struct{}{}
+	for _, name := range s.excludeChannels {
+		excludeSet[name] = struct{}{}
 	}
 
 	var filtered []slack.Channel
 	for _, ch := range channels {
-		if _, excluded := excludeSet[ch.ID]; excluded {
+		if _, excluded := excludeSet[ch.Name]; excluded {
 			continue
 		}
 		if len(includeSet) > 0 {
-			if _, included := includeSet[ch.ID]; !included {
+			if _, included := includeSet[ch.Name]; !included {
 				continue
 			}
 		}
@@ -214,6 +231,13 @@ func (s *SlackSource) processChannel(ctx context.Context, ch chan<- source.Chunk
 			Limit:     200,
 		}
 
+		// Push the since filter down to the API via the "oldest" parameter so
+		// older messages are never transferred. The client-side check below
+		// remains as a correctness backstop for boundary timestamps.
+		if !s.since.IsZero() {
+			params.Oldest = formatSlackTimestamp(s.since)
+		}
+
 		resp, err := s.client.GetConversationHistoryContext(ctx, params)
 		if err != nil {
 			slog.Warn("slack conversation history failed", "channel", channel.ID, "error", err)
@@ -239,6 +263,11 @@ func (s *SlackSource) processChannel(ctx context.Context, ch chan<- source.Chunk
 				continue
 			}
 
+			// TODO(planned): Slack file scanning — see ROADMAP. When
+			// s.includeFiles is honored, msg.Files (and each File.URLPrivate)
+			// should be downloaded and emitted as additional chunks here.
+			// Currently only msg.Text is scanned.
+
 			select {
 			case ch <- source.Chunk{
 				Data: []byte(msg.Text),
@@ -261,6 +290,12 @@ func (s *SlackSource) processChannel(ctx context.Context, ch chan<- source.Chunk
 		}
 		cursor = resp.ResponseMetaData.NextCursor
 	}
+}
+
+// formatSlackTimestamp converts a time.Time to the Slack "oldest" parameter
+// format (Unix seconds with a fractional component, e.g. "1234567890.000000").
+func formatSlackTimestamp(t time.Time) string {
+	return strconv.FormatInt(t.Unix(), 10) + ".000000"
 }
 
 // parseSlackTimestamp converts a Slack message timestamp (e.g., "1234567890.123456")

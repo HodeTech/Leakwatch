@@ -2,12 +2,14 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -64,23 +66,72 @@ type scanConfig struct {
 	customRules []custom.RuleDef
 }
 
-// bindScanFlags binds common scan flags to Viper.
-func bindScanFlags(flags *pflag.FlagSet) {
-	if err := viper.BindPFlag("scan.concurrency", flags.Lookup("concurrency")); err != nil {
-		slog.Warn("failed to bind concurrency flag", "error", err)
+// scanFlagBindings maps Viper config keys to the scan flag that overrides them.
+// Each scan command's pflags are bound to a fresh, per-invocation Viper instance
+// (see newScanViper) so that one command's flag defaults never leak into another
+// command's resolved config. Binding a flag only takes effect when the user
+// explicitly sets it; otherwise Viper falls back to env vars, the config file,
+// and finally the registered defaults — preserving flag > env > file > default
+// precedence. A flag that does not exist on a given command is skipped.
+var scanFlagBindings = map[string]string{
+	"scan.concurrency":   "concurrency",
+	"scan.max-file-size": "max-file-size",
+	"output.format":      "format",
+	"output.file":        "output",
+	"output.show-raw":    "show-raw",
+}
+
+// bindScanFlags binds the current command's common scan flags to the given,
+// per-invocation Viper instance. Only flags present on the command are bound.
+func bindScanFlags(v *viper.Viper, flags *pflag.FlagSet) {
+	for key, flagName := range scanFlagBindings {
+		f := flags.Lookup(flagName)
+		if f == nil {
+			continue
+		}
+		if err := v.BindPFlag(key, f); err != nil {
+			slog.Warn("failed to bind scan flag", "flag", flagName, "error", err)
+		}
 	}
-	if err := viper.BindPFlag("scan.max-file-size", flags.Lookup("max-file-size")); err != nil {
-		slog.Warn("failed to bind max-file-size flag", "error", err)
+}
+
+// newScanViper builds an isolated Viper instance for a single scan invocation.
+// It replicates the global config discovery performed in cmd/root.go's
+// initConfig (respecting --config, otherwise searching the working directory
+// and home directory for .leakwatch.yaml), enables LEAKWATCH_-prefixed env var
+// overrides with the same key replacer, and binds the active command's pflags so
+// that flag > env > config-file > default precedence holds without cross-command
+// global-state leakage (SYS-07a/b).
+func newScanViper(cmd *cobra.Command) *viper.Viper {
+	v := viper.New()
+
+	if cfgFile != "" {
+		v.SetConfigFile(cfgFile)
+	} else {
+		v.SetConfigName(".leakwatch")
+		v.SetConfigType("yaml")
+		v.AddConfigPath(".")
+		if home, err := os.UserHomeDir(); err == nil {
+			v.AddConfigPath(home)
+		}
 	}
-	if err := viper.BindPFlag("output.format", flags.Lookup("format")); err != nil {
-		slog.Warn("failed to bind format flag", "error", err)
+
+	v.SetEnvPrefix("LEAKWATCH")
+	// Map nested config keys to env vars: scan.concurrency -> LEAKWATCH_SCAN_CONCURRENCY,
+	// output.severity-threshold -> LEAKWATCH_OUTPUT_SEVERITY_THRESHOLD.
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
+	v.AutomaticEnv()
+
+	if err := v.ReadInConfig(); err != nil {
+		// A missing config file is acceptable; only surface genuine parse errors.
+		var notFound viper.ConfigFileNotFoundError
+		if !errors.As(err, &notFound) && v.ConfigFileUsed() != "" {
+			slog.Warn("failed to parse config file", "file", v.ConfigFileUsed(), "error", err)
+		}
 	}
-	if err := viper.BindPFlag("output.file", flags.Lookup("output")); err != nil {
-		slog.Warn("failed to bind output flag", "error", err)
-	}
-	if err := viper.BindPFlag("output.show-raw", flags.Lookup("show-raw")); err != nil {
-		slog.Warn("failed to bind show-raw flag", "error", err)
-	}
+
+	bindScanFlags(v, cmd.Flags())
+	return v
 }
 
 // addVerifyFlags adds --no-verify, --only-verified and --min-severity flags.
@@ -91,9 +142,16 @@ func addVerifyFlags(flags *pflag.FlagSet) {
 	flags.Bool("remediation", false, "include remediation guidance in output")
 }
 
-// loadScanConfig loads and validates configuration from Viper and flags.
+// loadScanConfig loads and validates configuration for the active command using
+// an isolated Viper instance whose only bound flags are this command's own. This
+// guarantees that flags such as --concurrency, --max-file-size, and --format
+// honor flag > env > config-file > default precedence without picking up another
+// scan command's flag defaults (SYS-07a/b). Flags that are not config-keyed
+// (--no-verify, --only-verified, --min-severity, --remediation, --exclude) are
+// read directly from the command.
 func loadScanConfig(cmd *cobra.Command) (*scanConfig, error) {
-	cfg, err := config.Load()
+	v := newScanViper(cmd)
+	cfg, err := config.LoadFrom(v)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
@@ -121,17 +179,12 @@ func loadScanConfig(cmd *cobra.Command) (*scanConfig, error) {
 		slog.Debug("remediation flag not available", "error", err)
 	}
 
-	format, err := cmd.Flags().GetString("format")
-	if err != nil || format == "" {
-		format = cfg.Output.Format
-	}
-	outputFile, err := cmd.Flags().GetString("output")
-	if err != nil || outputFile == "" {
-		outputFile = cfg.Output.File
-	}
-	showRaw, err := cmd.Flags().GetBool("show-raw")
-	if err != nil {
-		showRaw = cfg.Output.ShowRaw
+	// show-raw is bound to the isolated Viper, so cfg.Output.ShowRaw already
+	// reflects flag > env > config > default. The explicit-set check lets
+	// --show-raw=false override a config `show-raw: true` (OUT-m-04).
+	showRaw := cfg.Output.ShowRaw
+	if cmd.Flags().Changed("show-raw") {
+		showRaw, _ = cmd.Flags().GetBool("show-raw")
 	}
 
 	return &scanConfig{
@@ -141,9 +194,9 @@ func loadScanConfig(cmd *cobra.Command) (*scanConfig, error) {
 		excludeDetectors:  cfg.Filter.ExcludeDetectors,
 		enableEntropy:     cfg.Detection.Entropy.Enabled,
 		entropyThreshold:  cfg.Detection.Entropy.Threshold,
-		showRaw:           showRaw || cfg.Output.ShowRaw,
-		outputFile:        outputFile,
-		format:            format,
+		showRaw:           showRaw,
+		outputFile:        cfg.Output.File,
+		format:            cfg.Output.Format,
 		noVerify:          noVerify,
 		onlyVerified:      onlyVerified,
 		minSeverity:       minSev,
@@ -171,6 +224,40 @@ func selectFormatter(format string, showRaw bool, colorEnabled bool) output.Form
 	}
 }
 
+// resolveColorEnabled decides whether ANSI color should be used for the given
+// format/output destination by inspecting the real process environment: stdout
+// must be a character device (a terminal, not a pipe/redirect) and the NO_COLOR
+// convention (https://no-color.org) must not be set. It delegates the pure
+// decision to shouldEnableColor so the policy can be unit-tested without a TTY.
+func resolveColorEnabled(format, outputFile string) bool {
+	_, noColor := os.LookupEnv("NO_COLOR")
+	return shouldEnableColor(format, outputFile, stdoutIsTerminal(), noColor)
+}
+
+// shouldEnableColor is the pure color-policy decision: color is enabled only for
+// table output written to stdout, when stdout is a terminal and NO_COLOR is unset.
+func shouldEnableColor(format, outputFile string, stdoutIsTTY, noColor bool) bool {
+	if format != "table" || outputFile != "" {
+		return false
+	}
+	if noColor {
+		return false
+	}
+	return stdoutIsTTY
+}
+
+// stdoutIsTerminal reports whether os.Stdout is connected to a terminal rather
+// than a pipe or redirected file. It uses the ModeCharDevice bit from Stat so no
+// extra dependency is required; pipes and regular files lack this bit, so ANSI
+// escape sequences never leak into captured or redirected output (OUT-M-03).
+func stdoutIsTerminal() bool {
+	fi, err := os.Stdout.Stat()
+	if err != nil {
+		return false
+	}
+	return fi.Mode()&os.ModeCharDevice != 0
+}
+
 // executeScan runs the scan pipeline: detect, verify, filter, format, output.
 // If cl is non-nil, Close() is called when the scan completes.
 func executeScan(parent context.Context, cfg *scanConfig, src source.Source, cl closeable) error {
@@ -196,27 +283,38 @@ func executeScan(parent context.Context, cfg *scanConfig, src source.Source, cl 
 		return fmt.Errorf("scan failed: %w", err)
 	}
 
-	// Apply .leakwatchignore — search in scan root first, then CWD.
-	result.Findings = applyLeakwatchIgnore(result.Findings, cfg.scanRoot)
+	return renderResult(cfg, result, src.Type(), cfg.scanRoot)
+}
 
-	// Enrich findings with remediation guidance if enabled.
+// renderResult finishes the shared scan pipeline for an already-produced
+// ScanResult: it applies .leakwatchignore (searched in ignoreRoot, then CWD),
+// enriches findings with remediation guidance when enabled, writes the formatted
+// output to the configured destination, prints the scan summary to stderr, and
+// returns a FindingsExitError when any findings remain. Both single-source scans
+// (executeScan) and the multi-repo scan (runScanRepos) funnel through here so
+// their output behavior cannot drift (CMD-M-04).
+func renderResult(cfg *scanConfig, result *engine.ScanResult, sourceType, ignoreRoot string) error {
+	result.Findings = applyLeakwatchIgnore(result.Findings, ignoreRoot)
+
 	if cfg.enableRemediation {
 		result.Findings = remediation.EnrichFindings(result.Findings)
 	}
+	if result.Findings == nil {
+		result.Findings = []finding.Finding{}
+	}
 
-	// Write output.
-	// Enable color for table format only when writing to stdout (terminal).
-	colorEnabled := cfg.format == "table" && cfg.outputFile == ""
+	colorEnabled := resolveColorEnabled(cfg.format, cfg.outputFile)
 	formatter := selectFormatter(cfg.format, cfg.showRaw, colorEnabled)
 
 	var w io.WriteCloser
 	if cfg.outputFile != "" {
 		cleanPath := filepath.Clean(cfg.outputFile)
-		w, err = os.Create(cleanPath)
+		f, err := os.Create(cleanPath)
 		if err != nil {
 			return fmt.Errorf("failed to create output file: %w", err)
 		}
-		defer func() { _ = w.Close() }()
+		defer func() { _ = f.Close() }()
+		w = f
 	} else {
 		w = os.Stdout
 	}
@@ -226,7 +324,7 @@ func executeScan(parent context.Context, cfg *scanConfig, src source.Source, cl 
 	}
 
 	// Print scan summary to stderr (visible regardless of output format/file).
-	printScanSummary(result, src.Type(), cfg.scanTarget)
+	printScanSummary(result, sourceType, cfg.scanTarget)
 
 	if len(result.Findings) > 0 {
 		return &FindingsExitError{Count: len(result.Findings)}

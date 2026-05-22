@@ -34,6 +34,7 @@ type GitSource struct {
 	branch         string
 	depth          int
 	maxFileSize    int64
+	excludePaths   []string
 	tmpDir         string // Temporary directory for cloned repos
 	resolvedBranch string // Cached branch resolution
 }
@@ -57,11 +58,60 @@ func (s *GitSource) Type() string {
 }
 
 // Validate checks that the Git repository is accessible and opens/clones it.
+// When --since-commit is set, it also verifies that the given commit is an
+// ancestor of HEAD; otherwise the diff-based walk would silently fall back to
+// scanning the entire history.
 func (s *GitSource) Validate() error {
 	if s.isRemote() {
-		return s.cloneRemote()
+		if err := s.cloneRemote(); err != nil {
+			return err
+		}
+	} else if err := s.openLocal(); err != nil {
+		return err
 	}
-	return s.openLocal()
+
+	if s.sinceCommit != "" {
+		if err := s.validateSinceCommit(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// validateSinceCommit verifies that the configured since-commit exists and is
+// an ancestor of HEAD. Returning an explicit error prevents the diff-based scan
+// from silently degrading into a full-history scan.
+func (s *GitSource) validateSinceCommit() error {
+	commitHash := plumbing.NewHash(s.sinceCommit)
+	sinceCommitObj, err := s.repo.CommitObject(commitHash)
+	if err != nil {
+		return fmt.Errorf("since-commit %q not found: %w", s.sinceCommit, err)
+	}
+
+	headRef, err := s.repo.Head()
+	if err != nil {
+		return fmt.Errorf("failed to resolve HEAD for since-commit check: %w", err)
+	}
+
+	headCommit, err := s.repo.CommitObject(headRef.Hash())
+	if err != nil {
+		return fmt.Errorf("failed to resolve HEAD commit for since-commit check: %w", err)
+	}
+
+	if sinceCommitObj.Hash == headCommit.Hash {
+		return nil
+	}
+
+	isAncestor, err := sinceCommitObj.IsAncestor(headCommit)
+	if err != nil {
+		return fmt.Errorf("failed to check ancestry of since-commit %q: %w", s.sinceCommit, err)
+	}
+	if !isAncestor {
+		return fmt.Errorf("since-commit %q is not an ancestor of HEAD %q", s.sinceCommit, headCommit.Hash.String())
+	}
+
+	return nil
 }
 
 // Close cleans up temporary resources. For cloned repositories, it removes
@@ -230,6 +280,11 @@ func (s *GitSource) chunksFullHistory(ctx context.Context, ch chan<- source.Chun
 				return nil
 			}
 
+			// Skip files matching exclude-path globs (relative path).
+			if filter.MatchesGlob(f.Name, s.excludePaths) {
+				return nil
+			}
+
 			content, err := f.Contents()
 			if err != nil {
 				slog.Warn("failed to read file contents", "file", f.Name, "error", err)
@@ -375,6 +430,11 @@ func (s *GitSource) chunksSinceCommit(ctx context.Context, ch chan<- source.Chun
 			}
 
 			if filter.IsSkippedFilename(change.To.Name) {
+				continue
+			}
+
+			// Skip files matching exclude-path globs (relative path).
+			if filter.MatchesGlob(change.To.Name, s.excludePaths) {
 				continue
 			}
 

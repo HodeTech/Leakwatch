@@ -41,7 +41,6 @@ func init() {
 	flags.String("region", "", "AWS region (default: from AWS config)")
 
 	addVerifyFlags(flags)
-	bindScanFlags(flags)
 }
 
 func runScanS3(cmd *cobra.Command, args []string) error {
@@ -52,6 +51,10 @@ func runScanS3(cmd *cobra.Command, args []string) error {
 
 	var opts []s3source.Option
 	opts = append(opts, s3source.WithMaxFileSize(cfg.maxFileSize))
+
+	if len(cfg.excludePaths) > 0 {
+		opts = append(opts, s3source.WithExcludePaths(cfg.excludePaths))
+	}
 
 	if prefix, _ := cmd.Flags().GetString("prefix"); prefix != "" {
 		opts = append(opts, s3source.WithPrefix(prefix))

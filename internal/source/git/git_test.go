@@ -194,6 +194,96 @@ func TestGitSource_Chunks_SinceCommit(t *testing.T) {
 	assert.NotContains(t, files, "old.txt")
 }
 
+func TestGitSource_Validate_SinceCommitNotFound_ReturnsError(t *testing.T) {
+	dir, _ := initTestRepo(t, map[string]string{"a.txt": "content"})
+
+	// A well-formed but non-existent commit hash.
+	s := New(dir, WithSinceCommit("0123456789abcdef0123456789abcdef01234567"))
+	err := s.Validate()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestGitSource_Validate_SinceCommitNotAncestor_ReturnsError(t *testing.T) {
+	dir, repo := initTestRepo(t, map[string]string{"base.txt": "base"})
+
+	// Record the base commit and the default branch (HEAD currently points here).
+	headRef, err := repo.Head()
+	require.NoError(t, err)
+	baseHash := headRef.Hash()
+	mainBranch := headRef.Name()
+
+	// Create a divergent branch off the base commit and commit there.
+	wt, err := repo.Worktree()
+	require.NoError(t, err)
+	require.NoError(t, wt.Checkout(&gogit.CheckoutOptions{
+		Hash:   baseHash,
+		Branch: "refs/heads/sidebranch",
+		Create: true,
+	}))
+	sideHash := addCommit(t, dir, repo, map[string]string{"side.txt": "side"}, "side commit")
+
+	// Switch HEAD back to the main branch and advance it independently.
+	require.NoError(t, wt.Checkout(&gogit.CheckoutOptions{Branch: mainBranch}))
+	addCommit(t, dir, repo, map[string]string{"main2.txt": "main2"}, "main second commit")
+
+	// sideHash lives only on sidebranch, so it is not an ancestor of HEAD (main).
+	s := New(dir, WithSinceCommit(sideHash))
+	err = s.Validate()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not an ancestor")
+}
+
+func TestGitSource_Validate_SinceCommitIsAncestor_ReturnsNil(t *testing.T) {
+	dir, repo := initTestRepo(t, map[string]string{"a.txt": "content"})
+
+	headRef, err := repo.Head()
+	require.NoError(t, err)
+	baseHash := headRef.Hash().String()
+
+	addCommit(t, dir, repo, map[string]string{"b.txt": "more"}, "second commit")
+
+	s := New(dir, WithSinceCommit(baseHash))
+	assert.NoError(t, s.Validate())
+}
+
+func TestGitSource_Validate_SinceCommitEqualsHead_ReturnsNil(t *testing.T) {
+	dir, repo := initTestRepo(t, map[string]string{"a.txt": "content"})
+
+	headRef, err := repo.Head()
+	require.NoError(t, err)
+	headHash := headRef.Hash().String()
+
+	s := New(dir, WithSinceCommit(headHash))
+	assert.NoError(t, s.Validate())
+}
+
+func TestGitSource_Chunks_WithExcludePaths_SkipsMatching(t *testing.T) {
+	dir, _ := initTestRepo(t, map[string]string{
+		"src/app.go":     "package app",
+		"vendor/lib.go":  "package lib",
+		"node_modules/x": "junk",
+	})
+
+	s := New(dir, WithExcludePaths([]string{"vendor/**", "node_modules/**"}))
+	require.NoError(t, s.Validate())
+
+	ctx := context.Background()
+	var files []string
+	for chunk := range s.Chunks(ctx) {
+		files = append(files, chunk.SourceMetadata.FilePath)
+	}
+
+	assert.Contains(t, files, "src/app.go")
+	assert.NotContains(t, files, "vendor/lib.go")
+	assert.NotContains(t, files, "node_modules/x")
+}
+
+func TestGitSource_New_WithExcludePaths_StoresPatterns(t *testing.T) {
+	s := New("/tmp/repo", WithExcludePaths([]string{"a/**", "b"}))
+	assert.Equal(t, []string{"a/**", "b"}, s.excludePaths)
+}
+
 func TestGitSource_Chunks_WithSince(t *testing.T) {
 	dir := t.TempDir()
 

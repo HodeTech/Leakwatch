@@ -18,6 +18,10 @@ type mockSlackClient struct {
 	authErr    error
 	listErr    error
 	historyErr error
+
+	// lastHistoryOldest records the Oldest parameter from the most recent
+	// GetConversationHistoryContext call, for assertions.
+	lastHistoryOldest string
 }
 
 func (m *mockSlackClient) AuthTestContext(_ context.Context) (*slack.AuthTestResponse, error) {
@@ -39,6 +43,7 @@ func (m *mockSlackClient) GetConversationsContext(_ context.Context, params *sla
 }
 
 func (m *mockSlackClient) GetConversationHistoryContext(_ context.Context, params *slack.GetConversationHistoryParameters) (*slack.GetConversationHistoryResponse, error) {
+	m.lastHistoryOldest = params.Oldest
 	if m.historyErr != nil {
 		return nil, m.historyErr
 	}
@@ -139,7 +144,8 @@ func TestSlackSource_Chunks_ChannelFilter_OnlyMatchingChannels(t *testing.T) {
 		},
 	}
 
-	s := New("xoxb-test-token", WithChannels([]string{"C001", "C003"}))
+	// Filters are matched against channel names, not IDs.
+	s := New("xoxb-test-token", WithChannels([]string{"general", "secrets"}))
 	s.client = mock
 
 	ctx := context.Background()
@@ -152,6 +158,31 @@ func TestSlackSource_Chunks_ChannelFilter_OnlyMatchingChannels(t *testing.T) {
 	assert.Contains(t, channelIDs, "C001")
 	assert.Contains(t, channelIDs, "C003")
 	assert.NotContains(t, channelIDs, "C002")
+}
+
+func TestSlackSource_Chunks_ChannelFilter_ByID_MatchesNothing(t *testing.T) {
+	mock := &mockSlackClient{
+		channels: []slack.Channel{
+			{GroupConversation: slack.GroupConversation{Conversation: slack.Conversation{ID: "C001"}, Name: "general"}},
+			{GroupConversation: slack.GroupConversation{Conversation: slack.Conversation{ID: "C002"}, Name: "random"}},
+		},
+		messages: map[string][]slack.Message{
+			"C001": {{Msg: slack.Msg{Text: "msg from general", User: "U001", Timestamp: "1700000001.000000"}}},
+			"C002": {{Msg: slack.Msg{Text: "msg from random", User: "U001", Timestamp: "1700000001.000000"}}},
+		},
+	}
+
+	// Passing channel IDs (not names) must not match any channel.
+	s := New("xoxb-test-token", WithChannels([]string{"C001"}))
+	s.client = mock
+
+	ctx := context.Background()
+	count := 0
+	for range s.Chunks(ctx) {
+		count++
+	}
+
+	assert.Equal(t, 0, count)
 }
 
 func TestSlackSource_Chunks_ExcludeChannels_SkipsExcluded(t *testing.T) {
@@ -168,7 +199,8 @@ func TestSlackSource_Chunks_ExcludeChannels_SkipsExcluded(t *testing.T) {
 		},
 	}
 
-	s := New("xoxb-test-token", WithExcludeChannels([]string{"C002"}))
+	// Exclude filters are matched against channel names, not IDs.
+	s := New("xoxb-test-token", WithExcludeChannels([]string{"random"}))
 	s.client = mock
 
 	ctx := context.Background()
@@ -210,6 +242,82 @@ func TestSlackSource_Chunks_SinceFilter_SkipsOldMessages(t *testing.T) {
 
 	assert.Len(t, chunks, 1)
 	assert.Equal(t, "new message", chunks[0])
+}
+
+func TestSlackSource_Chunks_SinceFilter_SetsOldestParam(t *testing.T) {
+	mock := &mockSlackClient{
+		channels: []slack.Channel{
+			{GroupConversation: slack.GroupConversation{Conversation: slack.Conversation{ID: "C001"}, Name: "general"}},
+		},
+		messages: map[string][]slack.Message{
+			"C001": {{Msg: slack.Msg{Text: "new message", User: "U001", Timestamp: "1700000000.000000"}}},
+		},
+	}
+
+	sinceTime := time.Unix(1650000000, 0)
+	s := New("xoxb-test-token", WithSince(sinceTime))
+	s.client = mock
+
+	ctx := context.Background()
+	for range s.Chunks(ctx) { //nolint:revive // drain channel
+	}
+
+	// The since filter must be pushed down to the API via Oldest.
+	assert.Equal(t, "1650000000.000000", mock.lastHistoryOldest)
+}
+
+func TestSlackSource_Chunks_NoSince_DoesNotSetOldest(t *testing.T) {
+	mock := &mockSlackClient{
+		channels: []slack.Channel{
+			{GroupConversation: slack.GroupConversation{Conversation: slack.Conversation{ID: "C001"}, Name: "general"}},
+		},
+		messages: map[string][]slack.Message{
+			"C001": {{Msg: slack.Msg{Text: "message", User: "U001", Timestamp: "1700000000.000000"}}},
+		},
+	}
+
+	s := New("xoxb-test-token")
+	s.client = mock
+
+	ctx := context.Background()
+	for range s.Chunks(ctx) { //nolint:revive // drain channel
+	}
+
+	assert.Empty(t, mock.lastHistoryOldest)
+}
+
+func TestFormatSlackTimestamp_ProducesSlackFormat(t *testing.T) {
+	got := formatSlackTimestamp(time.Unix(1650000000, 0))
+	assert.Equal(t, "1650000000.000000", got)
+}
+
+func TestSlackSource_New_IncludeFilesDefaultsFalse(t *testing.T) {
+	s := New("xoxb-test-token")
+	assert.False(t, s.includeFiles)
+}
+
+func TestSlackSource_Chunks_IncludeFiles_ScansTextOnly(t *testing.T) {
+	// File scanning is not implemented; enabling WithIncludeFiles must not
+	// change the emitted chunks (still text-only) and must not error.
+	mock := &mockSlackClient{
+		channels: []slack.Channel{
+			{GroupConversation: slack.GroupConversation{Conversation: slack.Conversation{ID: "C001"}, Name: "general"}},
+		},
+		messages: map[string][]slack.Message{
+			"C001": {{Msg: slack.Msg{Text: "hello", User: "U001", Timestamp: "1700000001.000000"}}},
+		},
+	}
+
+	s := New("xoxb-test-token", WithIncludeFiles(true))
+	s.client = mock
+
+	ctx := context.Background()
+	var chunks []string
+	for chunk := range s.Chunks(ctx) {
+		chunks = append(chunks, string(chunk.Data))
+	}
+
+	assert.Equal(t, []string{"hello"}, chunks)
 }
 
 func TestSlackSource_Chunks_ContextCancellation_Stops(t *testing.T) {

@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
-	"os"
 	"os/signal"
 	"runtime"
 	"sync"
@@ -14,7 +12,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/cemililik/leakwatch/internal/engine"
-	"github.com/cemililik/leakwatch/internal/remediation"
 	gitsource "github.com/cemililik/leakwatch/internal/source/git"
 	"github.com/cemililik/leakwatch/pkg/finding"
 )
@@ -53,7 +50,6 @@ func init() {
 	flags.Bool("show-raw", false, "show raw secret content in output")
 
 	addVerifyFlags(flags)
-	bindScanFlags(flags)
 }
 
 func runScanRepos(cmd *cobra.Command, args []string) error {
@@ -67,7 +63,7 @@ func runScanRepos(cmd *cobra.Command, args []string) error {
 		parallel = 3
 	}
 
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	ctx, cancel := signal.NotifyContext(cmd.Context(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
 	// Build the shared engine config once (registers custom-rules, applies
@@ -76,6 +72,12 @@ func runScanRepos(cmd *cobra.Command, args []string) error {
 	engCfg, err := buildEngineConfig(cfg)
 	if err != nil {
 		return err
+	}
+
+	// Reuse the same source options (max file size, exclude-paths) for every repo.
+	srcOpts := []gitsource.Option{gitsource.WithMaxFileSize(cfg.maxFileSize)}
+	if len(cfg.excludePaths) > 0 {
+		srcOpts = append(srcOpts, gitsource.WithExcludePaths(cfg.excludePaths))
 	}
 
 	scanStart := time.Now()
@@ -104,7 +106,7 @@ func runScanRepos(cmd *cobra.Command, args []string) error {
 
 			slog.Info("scanning repository", "url", url)
 
-			src := gitsource.New(url, gitsource.WithMaxFileSize(cfg.maxFileSize))
+			src := gitsource.New(url, srcOpts...)
 
 			eng := engine.New(engCfg)
 
@@ -137,51 +139,25 @@ func runScanRepos(cmd *cobra.Command, args []string) error {
 		slog.Error("scan error", "error", err)
 	}
 
-	// Apply .leakwatchignore (from CWD) and remediation enrichment to the
-	// combined result, mirroring the single-source executeScan pipeline.
-	allFindings = applyLeakwatchIgnore(allFindings, "")
-	if cfg.enableRemediation {
-		allFindings = remediation.EnrichFindings(allFindings)
-	}
-
-	// Write output.
-	colorEnabled := cfg.format == "table" && cfg.outputFile == ""
-	formatter := selectFormatter(cfg.format, cfg.showRaw, colorEnabled)
-
-	var w *os.File
-	if cfg.outputFile != "" {
-		w, err = os.Create(cfg.outputFile)
-		if err != nil {
-			return fmt.Errorf("failed to create output file: %w", err)
-		}
-		defer func() { _ = w.Close() }()
-	} else {
-		w = os.Stdout
-	}
-
-	// Fallback for nil findings.
-	if allFindings == nil {
-		allFindings = []finding.Finding{}
-	}
-
-	if err := formatter.Format(w, allFindings); err != nil {
-		return fmt.Errorf("failed to write output: %w", err)
-	}
-
-	// Print combined summary for all repos.
-	printScanSummary(&engine.ScanResult{
+	// Funnel the combined result through the shared render pipeline so
+	// .leakwatchignore, remediation, formatting, output, and the summary behave
+	// identically to single-source scans (CMD-M-04). The ignore root is empty so
+	// only a CWD .leakwatchignore applies (repos are remote/temporary clones).
+	cfg.scanTarget = fmt.Sprintf("%d repositories", len(args))
+	combined := &engine.ScanResult{
 		Findings:      allFindings,
 		ScannedChunks: totalChunks,
 		Duration:      time.Since(scanStart),
-	}, "repos", fmt.Sprintf("%d repositories", len(args)))
-
-	if len(allFindings) > 0 {
-		return &FindingsExitError{Count: len(allFindings)}
+		Interrupted:   ctx.Err() != nil,
 	}
 
-	if len(scanErrors) > 0 {
+	renderErr := renderResult(cfg, combined, "repos", "")
+
+	// A failed scan must surface even when no findings were produced; only report
+	// it when the render pipeline itself did not already return a findings exit.
+	if renderErr == nil && len(scanErrors) > 0 {
 		return fmt.Errorf("%d repository scans failed", len(scanErrors))
 	}
 
-	return nil
+	return renderErr
 }

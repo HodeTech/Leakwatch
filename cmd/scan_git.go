@@ -58,7 +58,6 @@ func init() {
 	flags.Int("depth", 0, "clone depth (remote repos only, 0=all)")
 
 	addVerifyFlags(flags)
-	bindScanFlags(flags)
 }
 
 func runScanGit(cmd *cobra.Command, args []string) error {
@@ -69,6 +68,10 @@ func runScanGit(cmd *cobra.Command, args []string) error {
 
 	var opts []gitsource.Option
 	opts = append(opts, gitsource.WithMaxFileSize(cfg.maxFileSize))
+
+	if len(cfg.excludePaths) > 0 {
+		opts = append(opts, gitsource.WithExcludePaths(cfg.excludePaths))
+	}
 
 	if since, _ := cmd.Flags().GetString("since"); since != "" {
 		t, err := time.Parse("2006-01-02", since)

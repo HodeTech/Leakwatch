@@ -48,7 +48,6 @@ func init() {
 	flags.Bool("show-raw", false, "show raw secret content in output")
 
 	addVerifyFlags(flags)
-	bindScanFlags(flags)
 }
 
 func runScanFs(cmd *cobra.Command, args []string) error {
@@ -71,7 +70,8 @@ func runScanFs(cmd *cobra.Command, args []string) error {
 
 	excludePaths, _ := cmd.Flags().GetStringSlice("exclude")
 
-	src := filesystem.New(absPath,
+	src := filesystem.New(
+		absPath,
 		filesystem.WithMaxFileSize(cfg.maxFileSize),
 		filesystem.WithExcludePaths(append(cfg.excludePaths, excludePaths...)),
 	)

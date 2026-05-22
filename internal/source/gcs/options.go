@@ -34,3 +34,12 @@ func WithProject(project string) Option {
 		s.project = project
 	}
 }
+
+// WithExcludePaths sets glob patterns for object names to exclude from scanning.
+// Patterns are matched against each object's name (the object's path within the
+// bucket), mirroring filesystem.WithExcludePaths semantics.
+func WithExcludePaths(patterns []string) Option {
+	return func(s *GCSSource) {
+		s.excludePaths = patterns
+	}
+}

@@ -24,3 +24,12 @@ func WithBufferSize(size int) Option {
 		s.bufferSize = size
 	}
 }
+
+// WithExcludePaths sets glob patterns for layer file paths to exclude from
+// scanning. Patterns are matched against each file's cleaned, slash-based path
+// within the layer, mirroring filesystem.WithExcludePaths semantics.
+func WithExcludePaths(patterns []string) Option {
+	return func(s *ContainerSource) {
+		s.excludePaths = patterns
+	}
+}

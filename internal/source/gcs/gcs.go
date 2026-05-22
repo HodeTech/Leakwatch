@@ -87,12 +87,13 @@ func (o *realObjectHandle) NewReader(ctx context.Context) (io.ReadCloser, error)
 
 // GCSSource scans objects in a Google Cloud Storage bucket for leaked secrets.
 type GCSSource struct {
-	bucket      string
-	prefix      string
-	project     string
-	maxFileSize int64
-	bufferSize  int
-	client      gcsClient
+	bucket       string
+	prefix       string
+	project      string
+	maxFileSize  int64
+	bufferSize   int
+	excludePaths []string
+	client       gcsClient
 }
 
 // New creates a new GCSSource for the given bucket.
@@ -213,9 +214,19 @@ func (s *GCSSource) listAndSendChunks(ctx context.Context, ch chan<- source.Chun
 			continue
 		}
 
+		// Skip objects matching exclude-path globs (relative key).
+		if filter.MatchesGlob(key, s.excludePaths) {
+			slog.Debug("skipping excluded path", "key", key)
+			continue
+		}
+
 		data, err := s.downloadObject(ctx, key)
 		if err != nil {
 			slog.Warn("gcs object download failed", "key", key, "error", err)
+			continue
+		}
+		if data == nil {
+			// Object exceeded the size limit and was skipped.
 			continue
 		}
 
@@ -249,9 +260,18 @@ func (s *GCSSource) downloadObject(ctx context.Context, key string) ([]byte, err
 	}
 	defer func() { _ = reader.Close() }()
 
-	data, err := io.ReadAll(reader)
+	// Bound the read to guard against OOM/DoS from objects whose listed size
+	// is stale, missing, or smaller than the actual body. Read one extra byte
+	// so an object that exactly fills maxFileSize can be distinguished from one
+	// that exceeds it.
+	data, err := io.ReadAll(io.LimitReader(reader, s.maxFileSize+1))
 	if err != nil {
 		return nil, fmt.Errorf("read object %q: %w", key, err)
+	}
+
+	if int64(len(data)) > s.maxFileSize {
+		slog.Debug("skipping oversize object", "key", key, "limit", s.maxFileSize)
+		return nil, nil
 	}
 
 	return data, nil

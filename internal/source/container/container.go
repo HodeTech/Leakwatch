@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -25,9 +26,10 @@ const defaultMaxFileSize int64 = 10 * 1024 * 1024
 
 // ContainerSource scans container image layers for secrets.
 type ContainerSource struct {
-	imageRef    string
-	maxFileSize int64
-	bufferSize  int
+	imageRef     string
+	maxFileSize  int64
+	bufferSize   int
+	excludePaths []string
 }
 
 // New creates a new ContainerSource for the given image reference.
@@ -92,7 +94,10 @@ func (s *ContainerSource) Chunks(ctx context.Context) <-chan source.Chunk {
 
 			digest, err := layer.Digest()
 			if err != nil {
-				slog.Warn("failed to get layer digest", "layer", idx, "error", err)
+				// Without a digest we cannot produce a meaningful layer ID
+				// (digest.String() would yield ":"), so skip the layer.
+				slog.Warn("failed to get layer digest, skipping layer", "layer", idx, "error", err)
+				continue
 			}
 			layerID := digest.String()
 
@@ -155,9 +160,14 @@ func (s *ContainerSource) scanTarLayer(ctx context.Context, ch chan<- source.Chu
 			continue
 		}
 
-		cleanPath := filepath.Clean(header.Name)
-		if strings.HasPrefix(cleanPath, "..") {
-			slog.Warn("skipping tar entry with path traversal", "path", header.Name)
+		cleanPath, ok := sanitizeTarPath(header.Name)
+		if !ok {
+			slog.Warn("skipping tar entry with unsafe path", "path", header.Name)
+			continue
+		}
+
+		// Skip files matching exclude-path globs (relative cleaned path).
+		if filter.MatchesGlob(cleanPath, s.excludePaths) {
 			continue
 		}
 
@@ -186,6 +196,30 @@ func (s *ContainerSource) scanTarLayer(ctx context.Context, ch chan<- source.Chu
 			return
 		}
 	}
+}
+
+// sanitizeTarPath validates a tar entry name and returns a cleaned, slash-based
+// relative path safe for use as a finding location. It rejects absolute paths
+// and any path that escapes the archive root via a leading ".." segment.
+// The boolean result is false when the entry must be skipped.
+func sanitizeTarPath(name string) (string, bool) {
+	// Normalize to forward slashes so segment checks are platform-independent.
+	slashed := filepath.ToSlash(name)
+
+	// Reject absolute paths (both Unix "/etc/..." and Windows "C:\...").
+	if path.IsAbs(slashed) || filepath.IsAbs(name) {
+		return "", false
+	}
+
+	clean := path.Clean(slashed)
+
+	// Reject traversal: a clean path of ".." or one beginning with "../"
+	// escapes the archive root.
+	if clean == ".." || strings.HasPrefix(clean, "../") {
+		return "", false
+	}
+
+	return clean, true
 }
 
 // shouldSkipContainerPath returns true for paths unlikely to contain secrets.

@@ -43,7 +43,6 @@ func init() {
 	flags.Bool("show-raw", false, "show raw secret content in output")
 
 	addVerifyFlags(flags)
-	bindScanFlags(flags)
 }
 
 func runScanImage(cmd *cobra.Command, args []string) error {
@@ -53,9 +52,12 @@ func runScanImage(cmd *cobra.Command, args []string) error {
 	}
 
 	cfg.scanTarget = args[0]
-	src := container.New(args[0],
-		container.WithMaxFileSize(cfg.maxFileSize),
-	)
+
+	opts := []container.Option{container.WithMaxFileSize(cfg.maxFileSize)}
+	if len(cfg.excludePaths) > 0 {
+		opts = append(opts, container.WithExcludePaths(cfg.excludePaths))
+	}
+	src := container.New(args[0], opts...)
 
 	return executeScan(cmd.Context(), cfg, src, nil)
 }

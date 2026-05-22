@@ -67,7 +67,8 @@ func TestS3Source_New_DefaultValues(t *testing.T) {
 }
 
 func TestS3Source_New_WithOptions(t *testing.T) {
-	s := New("my-bucket",
+	s := New(
+		"my-bucket",
 		WithPrefix("logs/"),
 		WithMaxFileSize(5*1024*1024),
 		WithBufferSize(32),
@@ -244,6 +245,79 @@ func TestS3Source_Chunks_SourceMetadata_Format(t *testing.T) {
 
 	assert.Equal(t, "s3", chunk.SourceMetadata.SourceType)
 	assert.Equal(t, "my-bucket/path/to/file.env", chunk.SourceMetadata.FilePath)
+}
+
+func TestS3Source_Chunks_BoundsReadToMaxFileSize(t *testing.T) {
+	// The listed size understates the real body so the listing-based size
+	// check passes, but the bounded read must still drop the oversize object.
+	bigBody := strings.Repeat("A", 2048)
+	mock := &mockS3Client{
+		objects: []types.Object{
+			{Key: ptr("small.txt"), Size: ptr(int64(5))},
+			{Key: ptr("liar.txt"), Size: ptr(int64(5))},
+		},
+		data: map[string]string{
+			"small.txt": "hello",
+			"liar.txt":  bigBody,
+		},
+	}
+
+	s := New("my-bucket", WithMaxFileSize(1024))
+	s.client = mock
+
+	ctx := context.Background()
+	var chunks []string
+	for chunk := range s.Chunks(ctx) {
+		chunks = append(chunks, chunk.SourceMetadata.FilePath)
+	}
+
+	assert.Len(t, chunks, 1)
+	assert.Equal(t, "my-bucket/small.txt", chunks[0])
+}
+
+func TestS3Source_DownloadObject_AtLimit_NotSkipped(t *testing.T) {
+	body := strings.Repeat("A", 1024)
+	mock := &mockS3Client{
+		data: map[string]string{"exact.txt": body},
+	}
+	s := New("my-bucket", WithMaxFileSize(1024))
+	s.client = mock
+
+	data, err := s.downloadObject(context.Background(), "exact.txt")
+	require.NoError(t, err)
+	assert.Len(t, data, 1024)
+}
+
+func TestS3Source_Chunks_WithExcludePaths_FiltersObjects(t *testing.T) {
+	mock := &mockS3Client{
+		objects: []types.Object{
+			{Key: ptr("src/app.go"), Size: ptr(int64(10))},
+			{Key: ptr("vendor/lib.go"), Size: ptr(int64(10))},
+			{Key: ptr("test/data.txt"), Size: ptr(int64(10))},
+		},
+		data: map[string]string{
+			"src/app.go":    "package app",
+			"vendor/lib.go": "package lib",
+			"test/data.txt": "fixture",
+		},
+	}
+
+	s := New("my-bucket", WithExcludePaths([]string{"vendor/**", "test/*"}))
+	s.client = mock
+
+	ctx := context.Background()
+	var chunks []string
+	for chunk := range s.Chunks(ctx) {
+		chunks = append(chunks, chunk.SourceMetadata.FilePath)
+	}
+
+	assert.Len(t, chunks, 1)
+	assert.Equal(t, "my-bucket/src/app.go", chunks[0])
+}
+
+func TestS3Source_New_WithExcludePaths_StoresPatterns(t *testing.T) {
+	s := New("my-bucket", WithExcludePaths([]string{"a/**", "b"}))
+	assert.Equal(t, []string{"a/**", "b"}, s.excludePaths)
 }
 
 func TestS3Source_Chunks_WithPrefix_FiltersObjects(t *testing.T) {
