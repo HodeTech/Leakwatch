@@ -598,9 +598,11 @@ const slackToken = "xoxb-example-token" // leakwatch:ignore:slack-token
 
 ### 6.3 Inline Ignore Rules
 
-- The comment must be on the same line as the finding
+- The comment must be on the same line that the finding reports.
+- For a multi-line secret (e.g. a private key block), the finding reports the **first line of the match**, so place the marker there — typically the `-----BEGIN ...-----` header line.
 - `# leakwatch:ignore` ignores all detectors
 - `# leakwatch:ignore:<detector-id>` ignores only the specified detector
+- The marker only suppresses the finding on its own line. If the same secret appears again elsewhere in the file without a marker, that occurrence is still reported.
 - The comment format varies by language (`#`, `//`, `/* */`, etc.)
 - Ignore comments work independently of `.leakwatchignore`
 
