@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -109,6 +110,9 @@ func initConfig() {
 	}
 
 	viper.SetEnvPrefix("LEAKWATCH")
+	// Map nested config keys to env vars: scan.concurrency -> LEAKWATCH_SCAN_CONCURRENCY,
+	// output.severity-threshold -> LEAKWATCH_OUTPUT_SEVERITY_THRESHOLD.
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err != nil {

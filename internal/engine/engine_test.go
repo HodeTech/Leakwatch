@@ -173,6 +173,196 @@ func TestScan_MultipleDetectors_ReturnsAllFindings(t *testing.T) {
 	assert.Len(t, result.Findings, 2)
 }
 
+func TestScan_ComputesLineNumber(t *testing.T) {
+	// "AKIATESTKEY" sits on line 2 of the chunk.
+	data := []byte("first line\nKEY = \"AKIATESTKEY\"\nthird line\n")
+	src := &mockSource{
+		chunks: []source.Chunk{
+			{Data: data, SourceMetadata: finding.SourceMetadata{FilePath: "config.txt"}},
+		},
+	}
+	det := &mockDetector{
+		id:       "det",
+		findings: []detector.RawFinding{{DetectorID: "det", Raw: []byte("AKIATESTKEY"), Redacted: "AKIA****"}},
+	}
+
+	eng := New(Config{Concurrency: 1, Detectors: []detector.Detector{det}, Clock: fixedClock})
+
+	result, err := eng.Scan(context.Background(), src)
+	require.NoError(t, err)
+	require.Len(t, result.Findings, 1)
+	assert.Equal(t, 2, result.Findings[0].SourceMetadata.Line, "match is on the second line")
+}
+
+func TestScan_LineNumber_FirstLineIsOne(t *testing.T) {
+	data := []byte("AKIATESTKEY at the very top\nsecond line\n")
+	src := &mockSource{
+		chunks: []source.Chunk{
+			{Data: data, SourceMetadata: finding.SourceMetadata{FilePath: "f.txt"}},
+		},
+	}
+	det := &mockDetector{
+		id:       "det",
+		findings: []detector.RawFinding{{DetectorID: "det", Raw: []byte("AKIATESTKEY"), Redacted: "AKIA****"}},
+	}
+
+	eng := New(Config{Concurrency: 1, Detectors: []detector.Detector{det}, Clock: fixedClock})
+
+	result, err := eng.Scan(context.Background(), src)
+	require.NoError(t, err)
+	require.Len(t, result.Findings, 1)
+	assert.Equal(t, 1, result.Findings[0].SourceMetadata.Line)
+}
+
+func TestScan_SourceProvidedLine_NotOverwritten(t *testing.T) {
+	data := []byte("line1\nAKIATESTKEY\nline3\n")
+	src := &mockSource{
+		chunks: []source.Chunk{
+			// Source already supplies a line number (e.g. a future line-aware source).
+			{Data: data, SourceMetadata: finding.SourceMetadata{FilePath: "f.txt", Line: 42}},
+		},
+	}
+	det := &mockDetector{
+		id:       "det",
+		findings: []detector.RawFinding{{DetectorID: "det", Raw: []byte("AKIATESTKEY"), Redacted: "AKIA****"}},
+	}
+
+	eng := New(Config{Concurrency: 1, Detectors: []detector.Detector{det}, Clock: fixedClock})
+
+	result, err := eng.Scan(context.Background(), src)
+	require.NoError(t, err)
+	require.Len(t, result.Findings, 1)
+	assert.Equal(t, 42, result.Findings[0].SourceMetadata.Line, "engine must not overwrite a source-provided line")
+}
+
+func TestScan_RepeatedSecret_DistinctLinesAndIDs(t *testing.T) {
+	// Same secret bytes on lines 1 and 3. The detector emits one RawFinding per
+	// occurrence (as regexp.FindAll would). Each must resolve to its own line
+	// and therefore its own ID — regression test for the "all repeats collapse
+	// onto the first occurrence's line" bug.
+	data := []byte("k=AKIATESTKEY\nx\nk=AKIATESTKEY\n")
+	src := &mockSource{
+		chunks: []source.Chunk{
+			{Data: data, SourceMetadata: finding.SourceMetadata{FilePath: "f.txt"}},
+		},
+	}
+	det := &mockDetector{
+		id: "det",
+		findings: []detector.RawFinding{
+			{DetectorID: "det", Raw: []byte("AKIATESTKEY"), Redacted: "AKIA****"},
+			{DetectorID: "det", Raw: []byte("AKIATESTKEY"), Redacted: "AKIA****"},
+		},
+	}
+
+	eng := New(Config{Concurrency: 1, Detectors: []detector.Detector{det}, Clock: fixedClock})
+
+	result, err := eng.Scan(context.Background(), src)
+	require.NoError(t, err)
+	require.Len(t, result.Findings, 2)
+
+	lines := []int{result.Findings[0].SourceMetadata.Line, result.Findings[1].SourceMetadata.Line}
+	assert.ElementsMatch(t, []int{1, 3}, lines, "the two occurrences must report distinct lines")
+	assert.NotEqual(t, result.Findings[0].ID, result.Findings[1].ID, "distinct lines must yield distinct IDs")
+}
+
+func TestScan_RepeatedSecret_FirstIgnored_SecondReported(t *testing.T) {
+	// Line 1 carries an ignore marker; line 3 is a real leak. The real leak
+	// MUST still be reported — regression test for the false-negative where an
+	// early ignored copy suppressed a later genuine secret.
+	data := []byte("k=AKIATESTKEY # leakwatch:ignore\nx\nk=AKIATESTKEY\n")
+	src := &mockSource{
+		chunks: []source.Chunk{
+			{Data: data, SourceMetadata: finding.SourceMetadata{FilePath: "f.txt"}},
+		},
+	}
+	det := &mockDetector{
+		id: "aws-access-key-id",
+		findings: []detector.RawFinding{
+			{DetectorID: "aws-access-key-id", Raw: []byte("AKIATESTKEY"), Redacted: "AKIA****"},
+			{DetectorID: "aws-access-key-id", Raw: []byte("AKIATESTKEY"), Redacted: "AKIA****"},
+		},
+	}
+
+	eng := New(Config{Concurrency: 1, Detectors: []detector.Detector{det}, Clock: fixedClock})
+
+	result, err := eng.Scan(context.Background(), src)
+	require.NoError(t, err)
+	require.Len(t, result.Findings, 1, "the un-ignored occurrence on line 3 must be reported")
+	assert.Equal(t, 3, result.Findings[0].SourceMetadata.Line)
+}
+
+func TestScan_RepeatedSecret_LateIgnore_OnlyThatOneSuppressed(t *testing.T) {
+	// Line 1 is a real leak; line 2 carries the ignore marker. Exactly one
+	// finding (line 1) must remain.
+	data := []byte("k=AKIATESTKEY\nk=AKIATESTKEY # leakwatch:ignore\n")
+	src := &mockSource{
+		chunks: []source.Chunk{
+			{Data: data, SourceMetadata: finding.SourceMetadata{FilePath: "f.txt"}},
+		},
+	}
+	det := &mockDetector{
+		id: "aws-access-key-id",
+		findings: []detector.RawFinding{
+			{DetectorID: "aws-access-key-id", Raw: []byte("AKIATESTKEY"), Redacted: "AKIA****"},
+			{DetectorID: "aws-access-key-id", Raw: []byte("AKIATESTKEY"), Redacted: "AKIA****"},
+		},
+	}
+
+	eng := New(Config{Concurrency: 1, Detectors: []detector.Detector{det}, Clock: fixedClock})
+
+	result, err := eng.Scan(context.Background(), src)
+	require.NoError(t, err)
+	require.Len(t, result.Findings, 1)
+	assert.Equal(t, 1, result.Findings[0].SourceMetadata.Line)
+}
+
+func TestScan_InlineIgnore_GenericMarker_SkipsFinding(t *testing.T) {
+	data := []byte("safe line\n" + `KEY = "AKIATESTKEY" # leakwatch:ignore` + "\n")
+	src := &mockSource{
+		chunks: []source.Chunk{
+			{Data: data, SourceMetadata: finding.SourceMetadata{FilePath: "config.txt"}},
+		},
+	}
+	det := &mockDetector{
+		id:       "aws-access-key-id",
+		findings: []detector.RawFinding{{DetectorID: "aws-access-key-id", Raw: []byte("AKIATESTKEY"), Redacted: "AKIA****"}},
+	}
+
+	eng := New(Config{Concurrency: 1, Detectors: []detector.Detector{det}, Clock: fixedClock})
+
+	result, err := eng.Scan(context.Background(), src)
+	require.NoError(t, err)
+	assert.Empty(t, result.Findings, "finding on a generic inline-ignore line must be skipped")
+}
+
+func TestScan_InlineIgnore_DetectorSpecific(t *testing.T) {
+	// Marker targets a different detector, so the finding must remain.
+	data := []byte(`KEY = "AKIATESTKEY" # leakwatch:ignore:some-other-detector` + "\n")
+	src := &mockSource{
+		chunks: []source.Chunk{
+			{Data: data, SourceMetadata: finding.SourceMetadata{FilePath: "config.txt"}},
+		},
+	}
+	det := &mockDetector{
+		id:       "aws-access-key-id",
+		findings: []detector.RawFinding{{DetectorID: "aws-access-key-id", Raw: []byte("AKIATESTKEY"), Redacted: "AKIA****"}},
+	}
+
+	eng := New(Config{Concurrency: 1, Detectors: []detector.Detector{det}, Clock: fixedClock})
+
+	result, err := eng.Scan(context.Background(), src)
+	require.NoError(t, err)
+	require.Len(t, result.Findings, 1, "marker for a different detector must not suppress this finding")
+
+	// Same line, matching detector ID — now it should be skipped.
+	det.id = "some-other-detector"
+	det.findings[0].DetectorID = "some-other-detector"
+	eng2 := New(Config{Concurrency: 1, Detectors: []detector.Detector{det}, Clock: fixedClock})
+	result2, err := eng2.Scan(context.Background(), src)
+	require.NoError(t, err)
+	assert.Empty(t, result2.Findings, "marker matching the detector ID must suppress the finding")
+}
+
 func TestScan_SameInput_ReturnsDeterministicID(t *testing.T) {
 	src := &mockSource{
 		chunks: []source.Chunk{

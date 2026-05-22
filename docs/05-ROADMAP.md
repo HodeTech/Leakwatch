@@ -474,29 +474,27 @@ These are not new phases — they are **work that the current `v1.5.0` release s
 
 **Source:** PR #6 (chore/docs-cleanup-and-sonar-alignment) verification pass and SonarCloud scan of `cemililik_Leakwatch` taken 2026-05-21.
 
-### P0 — Functional Bugs (documented features that do not work)
+### P0 — Functional Bugs (documented features that did not work) — ✅ RESOLVED
 
-Each of these is referenced in the public guides, but the corresponding wiring is missing from the scan pipeline. A user following the docs today will get silently incorrect behavior.
+All three were fixed in branch `fix/wire-custom-rules-and-inline-ignore` (PR #7). Each was a feature referenced in the public guides whose wiring was missing from the scan pipeline; each is now wired up, tested, and verified end-to-end with the real CLI.
 
-| # | Bug | Evidence | Fix sketch |
-|---|-----|----------|------------|
-| 1 | **YAML `custom-rules:` is never loaded** — `internal/detector/custom.RegisterCustomRules(...)` exists with tests, but no caller anywhere. `.leakwatch.yaml` with `custom-rules:` is silently ignored, breaking the entire Custom Rules feature documented in [custom-rules.md](guides/custom-rules.md) and in the README. **Note:** the `internal/detector/custom` package is also intentionally **not** blank-imported in [cmd/imports.go](../cmd/imports.go) — unlike the other 59 detector packages, `custom` has no `init()` function (it is wired at runtime via `RegisterCustomRules`), so a blank import would do nothing on its own. The fix below addresses both the missing import path and the missing wiring. | `grep -r RegisterCustomRules .` returns only the definition site and its test; never called from `cmd/`, `engine/`, or `config/`. | Extend `Config` (in [internal/config/config.go](../internal/config/config.go)) with `CustomRules []custom.RuleDef`, bind via Viper; in [cmd/scan_common.go](../cmd/scan_common.go) `executeScan`, add `import "github.com/cemililik/leakwatch/internal/detector/custom"` (non-blank, since we now call its exported function) and call `custom.RegisterCustomRules(cfg.CustomRules)` **before** engine construction. |
-| 2 | **Inline ignore (`# leakwatch:ignore` / `# leakwatch:ignore:<id>`) is not applied** — [internal/filter/inline.go](../internal/filter/inline.go) exposes `HasInlineIgnore`, `HasInlineIgnoreForDetector`, `FilterFindingsByInlineIgnore` with passing tests, but `executeScan` never invokes them. README, [configuration.md §6](guides/configuration.md), and [ci-cd-integration.md §7.3](guides/ci-cd-integration.md) all promise this works. | `grep -r FilterFindingsByInlineIgnore .` returns the definition + tests only. | Two viable approaches: (a) post-scan filter in `executeScan` using cached source data (requires engine to keep chunk text); (b) detector-level check inside the engine where `chunkData` and `lineNum` are already known. (b) is cleaner — extend the engine's `processChunk` to consult `inline.HasInlineIgnoreForDetector` before emitting a `RawFinding`. |
-| 3 | **`verification.*` YAML config is not bound** — `verification.enabled`, `verification.timeout`, `verification.concurrency`, `verification.rate-limit` are emitted into `.leakwatch.yaml` by `leakwatch init` (see [cmd/init.go](../cmd/init.go)) and documented in [configuration.md §2.1-§2.2](guides/configuration.md), but `internal/config/config.go` has no `VerificationConfig` struct. Users editing these values get no effect. | `grep -E "verification|VerificationConfig" internal/config/` is empty. | Add `VerificationConfig` to `Config` with fields `Enabled bool`, `Timeout time.Duration`, `Concurrency int`, `RateLimit float64`; bind keys in Viper init; flow through `addVerifyFlags` overrides in `cmd/scan_common.go` so CLI > env > config > defaults precedence holds. |
+| # | Bug | Resolution |
+|---|-----|------------|
+| 1 | **YAML `custom-rules:` was never loaded** — `custom.RegisterCustomRules` existed with tests but had no caller, so user-defined detectors were silently ignored. | `Config.CustomRules []custom.RuleDef` added and bound via Viper; `executeScan` now calls `custom.RegisterCustomRules` before `detector.All()`. Registration is **duplicate-safe**: `RegisterCustomRules` pre-checks `detector.Get(id)` and skips colliding IDs with an error instead of panicking (the registry panics on duplicate IDs). Verified: a `custom-rules:` block in `.leakwatch.yaml` now produces findings; a rule colliding with `aws-access-key-id` is skipped with a warning, no panic. |
+| 2 | **Inline ignore (`# leakwatch:ignore[:<id>]`) was not applied** — helpers existed but `executeScan` never invoked them; also impossible because no source set a line number. | Engine now computes line numbers (see below) and the worker drops any finding whose source line carries the marker, **before** verification. New exported helper `filter.LineHasInlineIgnore(data, lineNum, detectorID)` is shared by the worker and the existing `FilterFindingsByInlineIgnore` (DRY). Verified: a secret on a `# leakwatch:ignore` line is not reported; a `:<other-detector>` marker does not suppress unrelated detectors. |
+| 3 | **`verification.*` YAML config was not bound** — `verification.enabled/timeout/concurrency/rate-limit` were emitted by `leakwatch init` and documented but had no `VerificationConfig` struct. | `VerificationConfig` added with Viper binding + validation (positive timeout/concurrency/rate-limit); `executeScan` builds the `verifier.Config` from it. `--no-verify` still takes precedence. Verified: `verification.enabled: false` leaves findings `unverified` (no network call); an invalid `timeout: 0s` is rejected at load time. |
 
-**Suggested follow-up branch:** `fix/wire-custom-rules-and-inline-ignore` — bundle (1) and (2) since they share the same `executeScan` integration surface. (3) is independent and can go in a separate small PR.
+**Prerequisite delivered as part of the fix — line-number tracking:** no source (`filesystem`, `git`, …) ever set `SourceMetadata.Line`, so every finding reported `line: 0`. `engine.rawToFinding` now derives the 1-based line from the match's byte offset within the chunk (guarded by `Line == 0` so a future line-aware source is respected). This both powers inline ignore and fixes the long-standing `line: 0` gap in JSON/SARIF/CSV/table output.
 
-### P1 — Config Schema Drift
+### P1 — Config Schema Drift — ✅ MOSTLY RESOLVED
 
-`docs/guides/configuration.md` documents YAML keys beyond the three P0 items above; `internal/config/config.go` does not read them. They silently no-op today.
+Fixed in PR #7 alongside the P0 items (same "documented but no-op" category):
 
-| YAML key | Documented at | Current behavior |
-|---|---|---|
-| `output.severity-threshold` | configuration.md:143, 220 | Only `--min-severity` CLI flag is read. |
-| `filter.exclude-detectors` | configuration.md:120-122, 211 | Not bound; no detector-disable path exists in the engine. |
-| `slack.token`, `slack.channels`, `slack.exclude-channels`, `slack.include-dms`, `slack.include-files`, `slack.rate-limit` | configuration.md:239-255 | Only `--token` / `LEAKWATCH_SLACK_TOKEN` env is read; the other six knobs come from CLI flags exclusively. |
-
-**Plan:** either bind these keys in Viper and route them through `cmd/scan_*.go`, or remove them from `configuration.md` to stop over-promising. Recommend binding — they are useful config sources.
+| YAML key | Status |
+|---|---|
+| `output.severity-threshold` | ✅ Bound. `--min-severity` still takes precedence (verified). |
+| `filter.exclude-detectors` | ✅ Bound. Listed detector IDs are removed from the active set before scanning (verified: excluding `aws-access-key-id` yields zero AWS findings). |
+| `slack.token`, `slack.channels`, `slack.exclude-channels`, `slack.include-dms`, `slack.include-files`, `slack.rate-limit` | ⏳ **Still flag-only.** The `scan slack` command is fully functional via CLI flags / `LEAKWATCH_SLACK_TOKEN`; reading these from `.leakwatch.yaml` is a nice-to-have, not a correctness gap. Deferred — bind in a future `scan slack` config pass, or trim them from `configuration.md`. |
 
 ### P1 — SonarCloud Findings Still Open
 

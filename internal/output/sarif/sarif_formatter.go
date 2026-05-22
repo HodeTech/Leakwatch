@@ -2,6 +2,7 @@
 package sarif
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -67,11 +68,12 @@ type sarifMessage struct {
 
 // sarifResult represents a single SARIF result.
 type sarifResult struct {
-	RuleID    string          `json:"ruleId"`
-	RuleIndex int             `json:"ruleIndex"`
-	Level     string          `json:"level"`
-	Message   sarifMessage    `json:"message"`
-	Locations []sarifLocation `json:"locations,omitempty"`
+	RuleID              string            `json:"ruleId"`
+	RuleIndex           int               `json:"ruleIndex"`
+	Level               string            `json:"level"`
+	Message             sarifMessage      `json:"message"`
+	Locations           []sarifLocation   `json:"locations,omitempty"`
+	PartialFingerprints map[string]string `json:"partialFingerprints,omitempty"`
 }
 
 // sarifLocation represents a SARIF physical location.
@@ -100,6 +102,15 @@ type Formatter struct {
 	// ShowRaw, when true, includes the Raw field in the result message.
 	// When false, the Raw field is stripped for defense in depth.
 	ShowRaw bool
+}
+
+// locationStableFingerprint returns a fingerprint that survives line moves so
+// GitHub Code Scanning does not close and reopen an alert when surrounding code
+// shifts. It deliberately excludes the line number (and uses NUL separators to
+// avoid field-boundary collisions).
+func locationStableFingerprint(fd finding.Finding) string {
+	h := sha256.Sum256([]byte(fd.DetectorID + "\x00" + fd.Redacted + "\x00" + fd.SourceMetadata.FilePath))
+	return fmt.Sprintf("%x", h[:16])
 }
 
 // severityToLevel maps finding severity to SARIF result level.
@@ -165,6 +176,13 @@ func (f *Formatter) Format(w io.Writer, findings []finding.Finding) error {
 			RuleIndex: ruleIndex[fd.DetectorID],
 			Level:     severityToLevel(fd.Severity),
 			Message:   sarifMessage{Text: msg},
+			// Location-independent fingerprint so GitHub Code Scanning tracks
+			// the same alert when the secret moves to a different line. Derived
+			// from detector + redacted value + file path only (NOT the line),
+			// unlike Finding.ID which includes the line for in-tool dedup.
+			PartialFingerprints: map[string]string{
+				"leakwatch/v1": locationStableFingerprint(fd),
+			},
 		}
 
 		// Add location if file path is available.

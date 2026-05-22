@@ -97,6 +97,10 @@ func (d *CustomDetector) Scan(_ context.Context, data []byte) []detector.RawFind
 
 // RegisterCustomRules parses RuleDefs, creates detectors, and registers them.
 // Returns the count of successfully registered rules and any errors.
+//
+// A rule whose ID collides with an already-registered detector (a built-in
+// detector or a previously registered custom rule) is skipped with an error
+// rather than registered, because detector.Register panics on duplicate IDs.
 func RegisterCustomRules(rules []RuleDef) (int, []error) {
 	var errs []error
 	count := 0
@@ -107,7 +111,12 @@ func RegisterCustomRules(rules []RuleDef) (int, []error) {
 			errs = append(errs, err)
 			continue
 		}
-		detector.Register(det)
+		// RegisterIfAbsent checks-and-inserts atomically, so a colliding ID is
+		// rejected without the panic that detector.Register would raise.
+		if !detector.RegisterIfAbsent(det) {
+			errs = append(errs, fmt.Errorf("custom rule %q: ID already registered (built-in detector or duplicate custom rule)", det.ID()))
+			continue
+		}
 		count++
 	}
 

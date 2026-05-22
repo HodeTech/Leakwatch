@@ -2,15 +2,18 @@
 package engine
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/cemililik/leakwatch/internal/detector"
 	"github.com/cemililik/leakwatch/internal/entropy"
+	"github.com/cemililik/leakwatch/internal/filter"
 	"github.com/cemililik/leakwatch/internal/matcher"
 	"github.com/cemililik/leakwatch/internal/source"
 	"github.com/cemililik/leakwatch/internal/verifier"
@@ -186,8 +189,24 @@ func (e *Engine) worker(ctx context.Context, jobs <-chan source.Chunk, results c
 			}
 
 			rawFindings := det.Scan(ctx, chunk.Data)
+
+			// Track the search position per raw value so repeated matches of the
+			// same bytes resolve to distinct offsets. Detectors emit findings in
+			// left-to-right match order (regexp.FindAll guarantees this), so the
+			// Nth occurrence of a raw value maps to its Nth position in the chunk.
+			offsetCursor := make(map[string]int)
+
 			for _, raw := range rawFindings {
-				f := e.rawToFinding(raw, chunk, det)
+				offset := nextMatchOffset(chunk.Data, raw.Raw, offsetCursor)
+				f := e.rawToFinding(raw, chunk, det, offset)
+
+				// Honor inline ignore markers (# leakwatch:ignore[:<id>]) on the
+				// finding's source line. Skipped before verification so ignored
+				// secrets never trigger a network call.
+				if filter.LineHasInlineIgnore(chunk.Data, f.SourceMetadata.Line, det.ID()) {
+					continue
+				}
+
 				pair := verifier.VerifyPair{Finding: f, Raw: raw}
 				select {
 				case <-ctx.Done():
@@ -199,9 +218,35 @@ func (e *Engine) worker(ctx context.Context, jobs <-chan source.Chunk, results c
 	}
 }
 
+// nextMatchOffset returns the byte offset of the next occurrence of raw in
+// data, starting from the cursor position recorded for that raw value, and
+// advances the cursor past it. This makes repeated matches of the same bytes
+// resolve to distinct offsets (and therefore distinct line numbers) instead of
+// all collapsing onto the first occurrence. Returns -1 when raw is empty or no
+// further occurrence exists.
+func nextMatchOffset(data, raw []byte, cursor map[string]int) int {
+	if len(raw) == 0 {
+		return -1
+	}
+	key := string(raw)
+	from := cursor[key]
+	if from > len(data) {
+		return -1
+	}
+	idx := bytes.Index(data[from:], raw)
+	if idx < 0 {
+		return -1
+	}
+	abs := from + idx
+	cursor[key] = abs + 1 // next search starts just past this match
+	return abs
+}
+
 // rawToFinding converts a raw detector finding to an enriched Finding.
 // Generates a deterministic ID and optionally calculates entropy.
-func (e *Engine) rawToFinding(raw detector.RawFinding, chunk source.Chunk, det detector.Detector) finding.Finding {
+// offset is the byte position of this match within chunk.Data (-1 if unknown),
+// used to derive the line number.
+func (e *Engine) rawToFinding(raw detector.RawFinding, chunk source.Chunk, det detector.Detector, offset int) finding.Finding {
 	f := finding.Finding{
 		DetectorID:     det.ID(),
 		Severity:       det.Severity(),
@@ -222,8 +267,18 @@ func (e *Engine) rawToFinding(raw detector.RawFinding, chunk source.Chunk, det d
 		f.Entropy = entropy.Calculate(raw.Raw)
 	}
 
-	// Deterministik ID: detectorID + redacted + filePath
-	hash := sha256.Sum256([]byte(det.ID() + raw.Redacted + chunk.SourceMetadata.FilePath))
+	// Compute the 1-based line number from this match's offset when the source
+	// did not already provide one. This powers both human-readable output and
+	// inline ignore handling. For multi-line matches (e.g. private keys) this is
+	// the line where the match begins.
+	if f.SourceMetadata.Line == 0 && offset >= 0 {
+		f.SourceMetadata.Line = 1 + bytes.Count(chunk.Data[:offset], []byte{'\n'})
+	}
+
+	// Deterministic ID: detectorID + redacted + filePath + line. Including the
+	// line disambiguates two findings that share the same redacted value in the
+	// same file (e.g. two private keys whose redaction is identical).
+	hash := sha256.Sum256([]byte(det.ID() + raw.Redacted + chunk.SourceMetadata.FilePath + strconv.Itoa(f.SourceMetadata.Line)))
 	f.ID = fmt.Sprintf("%x", hash[:hashTruncateLen])
 
 	return f

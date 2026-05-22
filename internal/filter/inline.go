@@ -1,8 +1,6 @@
 package filter
 
 import (
-	"bufio"
-	"bytes"
 	"strings"
 
 	"github.com/cemililik/leakwatch/pkg/finding"
@@ -45,6 +43,22 @@ func HasInlineIgnoreForDetector(line string, detectorID string) bool {
 	return line[afterTag] != ':'
 }
 
+// LineHasInlineIgnore reports whether the 1-based lineNum in data carries an
+// inline ignore marker (generic or detector-specific) for detectorID.
+// It returns false when lineNum is out of range or non-positive, which lets
+// callers use it as a single guard regardless of whether line tracking is
+// available for a given source.
+func LineHasInlineIgnore(data []byte, lineNum int, detectorID string) bool {
+	if lineNum <= 0 {
+		return false
+	}
+	line := getLine(data, lineNum)
+	if line == "" {
+		return false
+	}
+	return HasInlineIgnoreForDetector(line, detectorID)
+}
+
 // FilterFindingsByInlineIgnore returns a filtered slice of findings, removing
 // any finding whose source line contains an inline ignore marker.
 // sourceData maps file paths to their raw content; findings whose file is
@@ -53,13 +67,11 @@ func FilterFindingsByInlineIgnore(findings []finding.Finding, sourceData map[str
 	var kept []finding.Finding
 	for _, f := range findings {
 		data, ok := sourceData[f.SourceMetadata.FilePath]
-		if !ok || f.SourceMetadata.Line <= 0 {
+		if !ok {
 			kept = append(kept, f)
 			continue
 		}
-
-		line := getLine(data, f.SourceMetadata.Line)
-		if HasInlineIgnoreForDetector(line, f.DetectorID) {
+		if LineHasInlineIgnore(data, f.SourceMetadata.Line, f.DetectorID) {
 			continue
 		}
 		kept = append(kept, f)
@@ -69,14 +81,36 @@ func FilterFindingsByInlineIgnore(findings []finding.Finding, sourceData map[str
 
 // getLine returns the content of the 1-based line number from data.
 // If the line number is out of range, an empty string is returned.
+// A trailing carriage return is stripped so CRLF files behave like LF files.
+// Implemented over raw bytes (not bufio.Scanner) so arbitrarily long lines —
+// e.g. minified single-line files — are handled without the 64KB token limit.
 func getLine(data []byte, lineNum int) string {
-	scanner := bufio.NewScanner(bytes.NewReader(data))
-	current := 0
-	for scanner.Scan() {
-		current++
-		if current == lineNum {
-			return scanner.Text()
+	if lineNum < 1 {
+		return ""
+	}
+	current := 1
+	start := 0
+	for i := 0; i < len(data); i++ {
+		if data[i] != '\n' {
+			continue
 		}
+		if current == lineNum {
+			return string(trimCR(data[start:i]))
+		}
+		current++
+		start = i + 1
+	}
+	// Last line (no trailing newline).
+	if current == lineNum {
+		return string(trimCR(data[start:]))
 	}
 	return ""
+}
+
+// trimCR removes a single trailing carriage return.
+func trimCR(b []byte) []byte {
+	if len(b) > 0 && b[len(b)-1] == '\r' {
+		return b[:len(b)-1]
+	}
+	return b
 }

@@ -13,10 +13,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/cemililik/leakwatch/internal/detector"
 	"github.com/cemililik/leakwatch/internal/engine"
+	"github.com/cemililik/leakwatch/internal/remediation"
 	gitsource "github.com/cemililik/leakwatch/internal/source/git"
-	"github.com/cemililik/leakwatch/internal/verifier"
 	"github.com/cemililik/leakwatch/pkg/finding"
 )
 
@@ -71,15 +70,12 @@ func runScanRepos(cmd *cobra.Command, args []string) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
-	// Collect detectors and configure verifier once.
-	detectors := detector.All()
-	if len(detectors) == 0 {
-		return fmt.Errorf("no registered detectors found")
-	}
-
-	verifierCfg := verifier.DefaultConfig()
-	if cfg.noVerify {
-		verifierCfg.Enabled = false
+	// Build the shared engine config once (registers custom-rules, applies
+	// exclude-detectors, and wires verification.* from config). The same
+	// immutable config is reused for every repo's engine.
+	engCfg, err := buildEngineConfig(cfg)
+	if err != nil {
+		return err
 	}
 
 	scanStart := time.Now()
@@ -110,17 +106,7 @@ func runScanRepos(cmd *cobra.Command, args []string) error {
 
 			src := gitsource.New(url, gitsource.WithMaxFileSize(cfg.maxFileSize))
 
-			eng := engine.New(engine.Config{
-				Concurrency:      cfg.concurrency,
-				Detectors:        detectors,
-				EnableEntropy:    cfg.enableEntropy,
-				EntropyThreshold: cfg.entropyThreshold,
-				ShowRaw:          cfg.showRaw,
-				VerifierConfig:   verifierCfg,
-				Verifiers:        verifier.All(),
-				OnlyVerified:     cfg.onlyVerified,
-				MinSeverity:      cfg.minSeverity,
-			})
+			eng := engine.New(engCfg)
 
 			result, err := eng.Scan(ctx, src)
 
@@ -149,6 +135,13 @@ func runScanRepos(cmd *cobra.Command, args []string) error {
 
 	for _, err := range scanErrors {
 		slog.Error("scan error", "error", err)
+	}
+
+	// Apply .leakwatchignore (from CWD) and remediation enrichment to the
+	// combined result, mirroring the single-source executeScan pipeline.
+	allFindings = applyLeakwatchIgnore(allFindings, "")
+	if cfg.enableRemediation {
+		allFindings = remediation.EnrichFindings(allFindings)
 	}
 
 	// Write output.

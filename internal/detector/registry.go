@@ -22,6 +22,20 @@ func Register(d Detector) {
 	detectors[d.ID()] = d
 }
 
+// RegisterIfAbsent registers d only if its ID is not already taken, atomically.
+// It returns true when the detector was registered and false when an entry with
+// the same ID already existed. Unlike Register it never panics, which makes it
+// safe for runtime-supplied detectors such as user-defined custom rules.
+func RegisterIfAbsent(d Detector) bool {
+	mu.Lock()
+	defer mu.Unlock()
+	if _, exists := detectors[d.ID()]; exists {
+		return false
+	}
+	detectors[d.ID()] = d
+	return true
+}
+
 // All returns all registered detectors sorted by ID.
 func All() []Detector {
 	mu.RLock()

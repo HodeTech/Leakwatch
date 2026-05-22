@@ -106,3 +106,34 @@ func TestFilterFindingsByInlineIgnore_MissingSourceData_KeepsFinding(t *testing.
 		t.Fatalf("expected 1 finding when source data missing, got %d", len(result))
 	}
 }
+
+func TestLineHasInlineIgnore(t *testing.T) {
+	data := []byte("line1 safe\n" + // line 1
+		`API_KEY = "AKIAEXAMPLE" # leakwatch:ignore` + "\n" + // line 2 generic
+		`TOKEN = "ghp_x" # leakwatch:ignore:github-token` + "\n" + // line 3 specific
+		"line4 safe\n") // line 4
+
+	tests := []struct {
+		name       string
+		lineNum    int
+		detectorID string
+		want       bool
+	}{
+		{"generic marker matches any detector", 2, "aws-access-key-id", true},
+		{"specific marker matches its detector", 3, "github-token", true},
+		{"specific marker ignores other detectors", 3, "aws-access-key-id", false},
+		{"clean line is not ignored", 1, "aws-access-key-id", false},
+		{"line zero is never ignored", 0, "aws-access-key-id", false},
+		{"negative line is never ignored", -5, "aws-access-key-id", false},
+		{"out-of-range line is not ignored", 999, "aws-access-key-id", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := LineHasInlineIgnore(data, tt.lineNum, tt.detectorID)
+			if got != tt.want {
+				t.Errorf("LineHasInlineIgnore(line=%d, %q) = %v, want %v", tt.lineNum, tt.detectorID, got, tt.want)
+			}
+		})
+	}
+}
