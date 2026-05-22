@@ -111,11 +111,12 @@ func RegisterCustomRules(rules []RuleDef) (int, []error) {
 			errs = append(errs, err)
 			continue
 		}
-		if _, exists := detector.Get(det.ID()); exists {
+		// RegisterIfAbsent checks-and-inserts atomically, so a colliding ID is
+		// rejected without the panic that detector.Register would raise.
+		if !detector.RegisterIfAbsent(det) {
 			errs = append(errs, fmt.Errorf("custom rule %q: ID already registered (built-in detector or duplicate custom rule)", det.ID()))
 			continue
 		}
-		detector.Register(det)
 		count++
 	}
 

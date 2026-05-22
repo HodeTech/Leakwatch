@@ -62,6 +62,50 @@ func TestLoadFrom_InvalidVerificationTimeout_ReturnsError(t *testing.T) {
 	assert.Contains(t, err.Error(), "verification timeout")
 }
 
+func TestLoadFrom_DisabledVerificationSkipsValidation(t *testing.T) {
+	// A disabled verification block with leftover non-positive values must still
+	// load (the values are inert), preserving backward compatibility.
+	v := newTestViper()
+	v.Set("verification.enabled", false)
+	v.Set("verification.timeout", "0s")
+	v.Set("verification.concurrency", 0)
+	v.Set("verification.rate-limit", 0.0)
+
+	cfg, err := LoadFrom(v)
+	require.NoError(t, err)
+	assert.False(t, cfg.Verification.Enabled)
+}
+
+func TestLoadFrom_UnitlessTimeoutRejected(t *testing.T) {
+	// A bare number decodes as nanoseconds (30 -> 30ns); the minimum-timeout
+	// guard rejects it so users don't silently get a 30ns timeout.
+	v := newTestViper()
+	v.Set("verification.timeout", 30)
+
+	_, err := LoadFrom(v)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "verification timeout")
+}
+
+func TestLoadFrom_InvalidSeverityThreshold_ReturnsError(t *testing.T) {
+	v := newTestViper()
+	v.Set("output.severity-threshold", "criticla") // typo
+
+	_, err := LoadFrom(v)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "severity-threshold")
+}
+
+func TestLoadFrom_ValidSeverityThreshold_Accepted(t *testing.T) {
+	for _, sev := range []string{"low", "medium", "high", "critical"} {
+		v := newTestViper()
+		v.Set("output.severity-threshold", sev)
+		cfg, err := LoadFrom(v)
+		require.NoError(t, err, "severity %q should be valid", sev)
+		assert.Equal(t, sev, cfg.Output.SeverityThreshold)
+	}
+}
+
 func TestLoadFrom_InvalidVerificationConcurrency_ReturnsError(t *testing.T) {
 	v := newTestViper()
 	v.Set("verification.concurrency", 0)

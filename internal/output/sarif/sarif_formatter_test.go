@@ -231,3 +231,37 @@ func TestFormatter_FileExtension_ReturnsSARIF(t *testing.T) {
 	f := &Formatter{}
 	assert.Equal(t, ".sarif", f.FileExtension())
 }
+
+func TestFormatter_Format_PartialFingerprints_LocationIndependent(t *testing.T) {
+	// The same secret in the same file on two different lines must produce the
+	// SAME partial fingerprint, so GitHub Code Scanning tracks one alert across
+	// line moves rather than churning it.
+	findings := []finding.Finding{
+		{
+			ID: "id-line-2", DetectorID: "aws-access-key-id", Severity: finding.SeverityCritical, Redacted: "AKIA****MPLE",
+			SourceMetadata: finding.SourceMetadata{FilePath: "a.txt", Line: 2},
+		},
+		{
+			ID: "id-line-9", DetectorID: "aws-access-key-id", Severity: finding.SeverityCritical, Redacted: "AKIA****MPLE",
+			SourceMetadata: finding.SourceMetadata{FilePath: "a.txt", Line: 9},
+		},
+		{
+			ID: "id-other", DetectorID: "aws-access-key-id", Severity: finding.SeverityCritical, Redacted: "AKIA****MPLE",
+			SourceMetadata: finding.SourceMetadata{FilePath: "b.txt", Line: 2},
+		},
+	}
+
+	var buf bytes.Buffer
+	require.NoError(t, (&Formatter{}).Format(&buf, findings))
+
+	var doc map[string]any
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &doc))
+	results := doc["runs"].([]any)[0].(map[string]any)["results"].([]any)
+
+	fp := func(i int) string {
+		return results[i].(map[string]any)["partialFingerprints"].(map[string]any)["leakwatch/v1"].(string)
+	}
+	assert.NotEmpty(t, fp(0))
+	assert.Equal(t, fp(0), fp(1), "same secret + same file, different line → same fingerprint")
+	assert.NotEqual(t, fp(0), fp(2), "different file → different fingerprint")
+}

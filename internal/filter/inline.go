@@ -1,8 +1,6 @@
 package filter
 
 import (
-	"bufio"
-	"bytes"
 	"strings"
 
 	"github.com/cemililik/leakwatch/pkg/finding"
@@ -83,14 +81,36 @@ func FilterFindingsByInlineIgnore(findings []finding.Finding, sourceData map[str
 
 // getLine returns the content of the 1-based line number from data.
 // If the line number is out of range, an empty string is returned.
+// A trailing carriage return is stripped so CRLF files behave like LF files.
+// Implemented over raw bytes (not bufio.Scanner) so arbitrarily long lines —
+// e.g. minified single-line files — are handled without the 64KB token limit.
 func getLine(data []byte, lineNum int) string {
-	scanner := bufio.NewScanner(bytes.NewReader(data))
-	current := 0
-	for scanner.Scan() {
-		current++
-		if current == lineNum {
-			return scanner.Text()
+	if lineNum < 1 {
+		return ""
+	}
+	current := 1
+	start := 0
+	for i := 0; i < len(data); i++ {
+		if data[i] != '\n' {
+			continue
 		}
+		if current == lineNum {
+			return string(trimCR(data[start:i]))
+		}
+		current++
+		start = i + 1
+	}
+	// Last line (no trailing newline).
+	if current == lineNum {
+		return string(trimCR(data[start:]))
 	}
 	return ""
+}
+
+// trimCR removes a single trailing carriage return.
+func trimCR(b []byte) []byte {
+	if len(b) > 0 && b[len(b)-1] == '\r' {
+		return b[:len(b)-1]
+	}
+	return b
 }

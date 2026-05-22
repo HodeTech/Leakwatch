@@ -182,53 +182,11 @@ func executeScan(parent context.Context, cfg *scanConfig, src source.Source, cl 
 		}()
 	}
 
-	// Register user-defined custom rules (from the `custom-rules:` config block)
-	// before snapshotting the detector set so they participate in the scan.
-	if len(cfg.customRules) > 0 {
-		count, errs := custom.RegisterCustomRules(cfg.customRules)
-		for _, e := range errs {
-			slog.Warn("custom rule registration skipped", "error", e)
-		}
-		slog.Info("custom rules registered", "count", count, "skipped", len(errs))
+	engCfg, err := buildEngineConfig(cfg)
+	if err != nil {
+		return err
 	}
-
-	detectors := detector.All()
-	if len(cfg.excludeDetectors) > 0 {
-		detectors = excludeDetectorsByID(detectors, cfg.excludeDetectors)
-	}
-	if len(detectors) == 0 {
-		return fmt.Errorf("no registered detectors found")
-	}
-	slog.Debug("detectors loaded", "count", len(detectors))
-
-	// Configure verification from the `verification:` config block.
-	// The --no-verify CLI flag takes precedence over the config value.
-	verifierCfg := verifier.Config{
-		Enabled:     cfg.verifyEnabled,
-		Timeout:     cfg.verifyTimeout,
-		Concurrency: cfg.verifyConcurrency,
-		RateLimit:   cfg.verifyRateLimit,
-	}
-	if cfg.noVerify {
-		verifierCfg.Enabled = false
-	}
-
-	// Warn if --only-verified is used with --no-verify.
-	if cfg.onlyVerified && cfg.noVerify {
-		slog.Warn("--only-verified has no effect when --no-verify is set")
-	}
-
-	eng := engine.New(engine.Config{
-		Concurrency:      cfg.concurrency,
-		Detectors:        detectors,
-		EnableEntropy:    cfg.enableEntropy,
-		EntropyThreshold: cfg.entropyThreshold,
-		ShowRaw:          cfg.showRaw,
-		VerifierConfig:   verifierCfg,
-		Verifiers:        verifier.All(),
-		OnlyVerified:     cfg.onlyVerified,
-		MinSeverity:      cfg.minSeverity,
-	})
+	eng := engine.New(engCfg)
 
 	ctx, cancel := signal.NotifyContext(parent, syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
@@ -239,27 +197,7 @@ func executeScan(parent context.Context, cfg *scanConfig, src source.Source, cl 
 	}
 
 	// Apply .leakwatchignore — search in scan root first, then CWD.
-	var ignoreRules *filter.IgnoreRules
-	for _, dir := range []string{cfg.scanRoot, "."} {
-		if dir == "" {
-			continue
-		}
-		ignorePath := filepath.Join(dir, ".leakwatchignore")
-		if rules, err := filter.LoadIgnoreFile(ignorePath); err == nil {
-			ignoreRules = rules
-			slog.Debug("loaded .leakwatchignore", "path", ignorePath)
-			break
-		}
-	}
-	if ignoreRules != nil {
-		var filtered []finding.Finding
-		for _, f := range result.Findings {
-			if !ignoreRules.ShouldIgnore(f.SourceMetadata.FilePath) {
-				filtered = append(filtered, f)
-			}
-		}
-		result.Findings = filtered
-	}
+	result.Findings = applyLeakwatchIgnore(result.Findings, cfg.scanRoot)
 
 	// Enrich findings with remediation guidance if enabled.
 	if cfg.enableRemediation {
@@ -325,6 +263,86 @@ func parseSeverity(s string) finding.Severity {
 	default:
 		return finding.SeverityLow
 	}
+}
+
+// buildEngineConfig registers custom rules, applies detector exclusions, and
+// assembles the engine.Config shared by every scan command (fs/git/image/s3/
+// gcs/slack and repos). Centralizing this guarantees that custom-rules,
+// verification.*, and exclude-detectors take effect uniformly — previously
+// `scan repos` built its own config and silently ignored all three.
+func buildEngineConfig(cfg *scanConfig) (engine.Config, error) {
+	// Register user-defined custom rules (from the `custom-rules:` config block)
+	// before snapshotting the detector set so they participate in the scan.
+	if len(cfg.customRules) > 0 {
+		count, errs := custom.RegisterCustomRules(cfg.customRules)
+		for _, e := range errs {
+			slog.Warn("custom rule registration skipped", "error", e)
+		}
+		slog.Info("custom rules registered", "count", count, "skipped", len(errs))
+	}
+
+	detectors := detector.All()
+	if len(cfg.excludeDetectors) > 0 {
+		detectors = excludeDetectorsByID(detectors, cfg.excludeDetectors)
+	}
+	if len(detectors) == 0 {
+		return engine.Config{}, fmt.Errorf("no registered detectors found")
+	}
+	slog.Debug("detectors loaded", "count", len(detectors))
+
+	// Configure verification from the `verification:` config block.
+	// The --no-verify CLI flag takes precedence over the config value.
+	verifierCfg := verifier.Config{
+		Enabled:     cfg.verifyEnabled,
+		Timeout:     cfg.verifyTimeout,
+		Concurrency: cfg.verifyConcurrency,
+		RateLimit:   cfg.verifyRateLimit,
+	}
+	if cfg.noVerify {
+		verifierCfg.Enabled = false
+	}
+	if cfg.onlyVerified && cfg.noVerify {
+		slog.Warn("--only-verified has no effect when --no-verify is set")
+	}
+
+	return engine.Config{
+		Concurrency:      cfg.concurrency,
+		Detectors:        detectors,
+		EnableEntropy:    cfg.enableEntropy,
+		EntropyThreshold: cfg.entropyThreshold,
+		ShowRaw:          cfg.showRaw,
+		VerifierConfig:   verifierCfg,
+		Verifiers:        verifier.All(),
+		OnlyVerified:     cfg.onlyVerified,
+		MinSeverity:      cfg.minSeverity,
+	}, nil
+}
+
+// applyLeakwatchIgnore filters findings through the first .leakwatchignore found
+// in scanRoot, then the current working directory. scanRoot may be empty.
+func applyLeakwatchIgnore(findings []finding.Finding, scanRoot string) []finding.Finding {
+	var ignoreRules *filter.IgnoreRules
+	for _, dir := range []string{scanRoot, "."} {
+		if dir == "" {
+			continue
+		}
+		ignorePath := filepath.Join(dir, ".leakwatchignore")
+		if rules, err := filter.LoadIgnoreFile(ignorePath); err == nil {
+			ignoreRules = rules
+			slog.Debug("loaded .leakwatchignore", "path", ignorePath)
+			break
+		}
+	}
+	if ignoreRules == nil {
+		return findings
+	}
+	filtered := make([]finding.Finding, 0, len(findings))
+	for _, f := range findings {
+		if !ignoreRules.ShouldIgnore(f.SourceMetadata.FilePath) {
+			filtered = append(filtered, f)
+		}
+	}
+	return filtered
 }
 
 // excludeDetectorsByID returns the detectors whose ID is not in the exclude list.

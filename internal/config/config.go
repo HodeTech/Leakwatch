@@ -19,6 +19,19 @@ var validFormats = map[string]bool{
 	"table": true,
 }
 
+// Supported severity levels for output.severity-threshold.
+var validSeverities = map[string]bool{
+	"low":      true,
+	"medium":   true,
+	"high":     true,
+	"critical": true,
+}
+
+// minVerificationTimeout is the smallest accepted verification timeout. It
+// guards against a bare number in YAML (e.g. `timeout: 30`) being silently
+// decoded as 30 nanoseconds instead of the intended duration.
+const minVerificationTimeout = time.Millisecond
+
 // Config represents the complete application configuration.
 type Config struct {
 	Scan         ScanConfig         `mapstructure:"scan"`
@@ -80,6 +93,11 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("verification.rate-limit", 10.0)
 	v.SetDefault("output.format", "json")
 	v.SetDefault("output.show-raw", false)
+	// Empty defaults register these keys with Viper so AutomaticEnv override
+	// works through Unmarshal (Viper only reads env vars for keys it knows
+	// about). The empty values keep behavior unchanged when nothing is set.
+	v.SetDefault("output.severity-threshold", "")
+	v.SetDefault("filter.exclude-detectors", []string{})
 }
 
 // Load reads configuration from the global Viper instance and returns a Config.
@@ -119,14 +137,21 @@ func (c *Config) validate() error {
 	if c.Detection.Entropy.Threshold < 0 || c.Detection.Entropy.Threshold > 8.0 {
 		return fmt.Errorf("invalid entropy threshold: %.2f (must be 0-8)", c.Detection.Entropy.Threshold)
 	}
-	if c.Verification.Timeout <= 0 {
-		return fmt.Errorf("invalid verification timeout: %s (must be positive)", c.Verification.Timeout)
+	if c.Output.SeverityThreshold != "" && !validSeverities[c.Output.SeverityThreshold] {
+		return fmt.Errorf("invalid output severity-threshold: %q (must be low, medium, high, or critical)", c.Output.SeverityThreshold)
 	}
-	if c.Verification.Concurrency < 1 {
-		return fmt.Errorf("invalid verification concurrency: %d (must be >= 1)", c.Verification.Concurrency)
-	}
-	if c.Verification.RateLimit <= 0 {
-		return fmt.Errorf("invalid verification rate-limit: %.2f (must be positive)", c.Verification.RateLimit)
+	// Verification settings are only enforced when verification is enabled, so a
+	// disabled block with leftover non-positive values still loads.
+	if c.Verification.Enabled {
+		if c.Verification.Timeout < minVerificationTimeout {
+			return fmt.Errorf("invalid verification timeout: %s (must be >= %s; a bare number is interpreted as nanoseconds, use a unit like \"10s\")", c.Verification.Timeout, minVerificationTimeout)
+		}
+		if c.Verification.Concurrency < 1 {
+			return fmt.Errorf("invalid verification concurrency: %d (must be >= 1)", c.Verification.Concurrency)
+		}
+		if c.Verification.RateLimit <= 0 {
+			return fmt.Errorf("invalid verification rate-limit: %.2f (must be positive)", c.Verification.RateLimit)
+		}
 	}
 	return nil
 }
