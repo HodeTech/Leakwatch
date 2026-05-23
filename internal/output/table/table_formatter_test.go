@@ -95,6 +95,49 @@ func TestFormatter_Format_ShowRawFalse_RawNotInOutput(t *testing.T) {
 		"ShowRaw=false must strip raw secret from table output")
 }
 
+func TestFormatter_Format_ShowRawFalse_NoRawColumn(t *testing.T) {
+	f := &Formatter{ShowRaw: false}
+	var buf bytes.Buffer
+
+	findings := []finding.Finding{
+		{
+			ID:         "test-1",
+			DetectorID: "generic-secret",
+			Redacted:   "sk_****abcd",
+			Raw:        "sk_live_supersecretvalue",
+		},
+	}
+
+	err := f.Format(&buf, findings)
+	require.NoError(t, err)
+
+	output := buf.String()
+	assert.NotContains(t, output, "RAW", "header must not include a RAW column when ShowRaw=false")
+	assert.NotContains(t, output, "sk_live_supersecretvalue")
+}
+
+func TestFormatter_Format_ShowRawTrue_AddsRawColumn(t *testing.T) {
+	f := &Formatter{ShowRaw: true}
+	var buf bytes.Buffer
+
+	findings := []finding.Finding{
+		{
+			ID:         "test-1",
+			DetectorID: "generic-secret",
+			Redacted:   "sk_****abcd",
+			Raw:        "sk_live_supersecretvalue",
+		},
+	}
+
+	err := f.Format(&buf, findings)
+	require.NoError(t, err)
+
+	output := buf.String()
+	assert.Contains(t, output, "RAW", "header must include a RAW column when ShowRaw=true")
+	assert.Contains(t, output, "sk_live_supersecretvalue",
+		"ShowRaw=true must include the raw secret value in table output")
+}
+
 func TestFormatter_Format_ShowRawFalse_DoesNotMutateOriginal(t *testing.T) {
 	f := &Formatter{ShowRaw: false}
 	var buf bytes.Buffer

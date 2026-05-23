@@ -6,18 +6,20 @@
 
 ## 1. Current State
 
-Leakwatch has **64 built-in detectors (60 packages)** and **54 verifiers (51 packages)** covering 84% of all detectors.
+Leakwatch has **63 built-in detectors (60 packages)** and **54 verifiers (51 packages)** covering 85.7% of all detectors.
 
-| Metric | Value |
-|--------|-------|
-| Total Detectors | 64 (60 packages) |
-| Verifiers Implemented | 54 (51 packages) |
-| Verification Coverage | 54/64 (84%) |
-| Live API Verifiers | 48 |
-| Format Validators | 5 |
-| Not Verifiable | 10 |
-| Verifier Architecture | `init()` + compile-time registration via `verifier.Register()` |
-| Verification Interface | `Verifier.Verify(ctx, RawFinding) VerificationResult` |
+All counts are verified by inspecting `detector.Register(` and `verifier.Register(` call sites (2026-05-22).
+
+| Metric | Value | Source |
+|--------|-------|--------|
+| Total Detectors | 63 (60 packages) | `grep -r "detector.Register" internal/detector/` |
+| Verifiers Implemented | 54 (51 packages) | `grep -r "verifier.Register" internal/verifier/` |
+| Verification Coverage | 54/63 (85.7%) | |
+| Live API Verifiers | 49 | Make real network/SDK calls |
+| Format-Only Verifiers | 5 | Structural/format checks only |
+| Detectors Without Verifiers | 9 | Listed in section 2 |
+| Verifier Architecture | `init()` + compile-time registration via `verifier.Register()` | |
+| Verification Interface | `Verifier.Verify(ctx context.Context, raw detector.RawFinding) finding.VerificationResult` | `internal/verifier/verifier.go` |
 
 ### Existing Verifier Patterns
 
@@ -29,7 +31,7 @@ All current verifiers follow a consistent pattern:
 
 ## 2. Verifier Classification
 
-All 64 detectors are classified into four tiers based on verification feasibility.
+All 63 detectors are classified into tiers based on verification feasibility. **All 54 verifiers listed in Tiers 1–3 are implemented and registered** (verified against source as of 2026-05-22).
 
 ### Tier 1 --- Easy (Simple API call, single credential, no extra context)
 
@@ -37,8 +39,8 @@ These detectors can be verified with a single HTTP request using only the detect
 
 | # | Detector ID | API Endpoint | Method | Auth Header | Complexity | Priority | Notes |
 |---|-------------|-------------|--------|-------------|------------|----------|-------|
-| 1 | `github-token` | `https://api.github.com/user` | GET | `Bearer {token}` | Easy | P0 | **Already implemented** |
-| 2 | `slack-token` | `https://slack.com/api/auth.test` | POST | `Bearer {token}` | Easy | P0 | **Already implemented** |
+| 1 | `github-token` | `https://api.github.com/user` | GET | `Bearer {token}` | Easy | P0 | Returns login username on success |
+| 2 | `slack-token` | `https://slack.com/api/auth.test` | POST | `Bearer {token}` | Easy | P0 | Returns team/user metadata on success |
 | 3 | `openai-api-key` | `https://api.openai.com/v1/models` | GET | `Bearer {token}` | Easy | P0 | Returns model list; 401 if invalid |
 | 4 | `anthropic-api-key` | `https://api.anthropic.com/v1/models` | GET | `x-api-key: {token}` | Easy | P0 | Requires `anthropic-version` header |
 | 5 | `gitlab-pat` | `https://gitlab.com/api/v4/user` | GET | `PRIVATE-TOKEN: {token}` | Easy | P0 | Returns user info; 401 if invalid |
@@ -68,7 +70,7 @@ These detectors can be verified with a single HTTP request using only the detect
 | 29 | `deepseek-api-key` | `https://api.deepseek.com/models` | GET | `Bearer {token}` | Easy | P2 | Returns model list; 401 if invalid |
 | 30 | `launchdarkly-sdk-key` | `https://app.launchdarkly.com/api/v2/caller-identity` | GET | `Authorization: {key}` | Easy | P2 | Returns caller identity |
 
-**Total Tier 1: 30 detectors (28 new + 2 already implemented)**
+**Total Tier 1: 30 detectors (all implemented)**
 
 ### Tier 2 --- Medium (Needs extra context, specific auth flow, or domain extraction)
 
@@ -76,7 +78,7 @@ These require either extracting additional information from the finding context 
 
 | # | Detector ID | API Endpoint | Method | Auth | Complexity | Priority | Notes |
 |---|-------------|-------------|--------|------|------------|----------|-------|
-| 1 | `aws-access-key-id` | AWS STS `GetCallerIdentity` | SDK | HMAC-signed | Medium | P0 | **Already implemented**. Needs both Access Key ID + Secret Access Key |
+| 1 | `aws-access-key-id` | AWS STS `GetCallerIdentity` | SDK | HMAC-signed | Medium | P0 | Needs both Access Key ID (`Raw`) + Secret Access Key (`RawV2`) |
 | 2 | `stripe-api-key-live` | `https://api.stripe.com/v1/charges?limit=1` | GET | Basic `{key}:` | Medium | P0 | Live key -- verification must be read-only; use minimal-scope endpoint |
 | 3 | `stripe-api-key-test` | `https://api.stripe.com/v1/charges?limit=1` | GET | Basic `{key}:` | Medium | P1 | Test key -- lower risk but same flow as live |
 | 4 | `twilio-api-key` | `https://api.twilio.com/2010-04-01/Accounts.json` | GET | Basic `{sid}:{token}` | Medium | P1 | Needs Account SID + Auth Token pair |
@@ -88,169 +90,86 @@ These require either extracting additional information from the finding context 
 | 10 | `auth0-management-token` | `https://{domain}/api/v2/users?per_page=1` | GET | `Bearer {token}` | Medium | P2 | JWT-format; needs Auth0 domain extracted from token `iss` claim |
 | 11 | `coinbase-api-key` | `https://api.coinbase.com/v2/user` | GET | HMAC signature | Medium | P2 | Requires API key + secret + timestamp-based HMAC signing |
 | 12 | `datadog-api-key` | `https://api.datadoghq.com/api/v1/validate` | GET | `DD-API-KEY: {key}` | Medium | P2 | Dedicated validate endpoint; may also need Application Key for full validation |
-| 13 | `hashicorp-vault-token` | `https://{vault-addr}/v1/auth/token/lookup-self` | GET | `X-Vault-Token: {token}` | Medium | P2 | Requires Vault server address from context |
-| 14 | `terraform-cloud-token` | `https://app.terraform.io/api/v2/account/details` | GET | `Bearer {token}` | Medium | P2 | Standard Bearer auth; some tokens may be for Terraform Enterprise (custom URL) |
-| 15 | `supabase-service-key` | `https://{project-ref}.supabase.co/rest/v1/` | GET | `apikey: {key}` + `Authorization: Bearer {key}` | Medium | P2 | Needs project ref from context; JWT format may contain project ref |
-| 16 | `rubygems-api-key` | `https://rubygems.org/api/v1/api_key.json` | GET | `Authorization: {key}` | Medium | P2 | Returns key metadata |
-| 17 | `bitbucket-app-password` | `https://api.bitbucket.org/2.0/user` | GET | Basic `{username}:{app-password}` | Medium | P2 | Requires username from context |
-| 18 | `dockerhub-pat` | `https://hub.docker.com/v2/user/login` | POST | Token exchange | Medium | P2 | Need to exchange PAT for JWT via login endpoint |
+| 13 | `terraform-cloud-token` | `https://app.terraform.io/api/v2/account/details` | GET | `Bearer {token}` | Medium | P2 | Standard Bearer auth; some tokens may be for Terraform Enterprise (custom URL) |
+| 14 | `supabase-service-key` | `https://{project-ref}.supabase.co/rest/v1/` | GET | `apikey: {key}` + `Authorization: Bearer {key}` | Medium | P2 | Needs project ref from context; JWT format may contain project ref |
+| 15 | `rubygems-api-key` | `https://rubygems.org/api/v1/api_key.json` | GET | `Authorization: {key}` | Medium | P2 | Returns key metadata |
+| 16 | `bitbucket-app-password` | `https://api.bitbucket.org/2.0/user` | GET | Basic `{username}:{app-password}` | Medium | P2 | Requires username from context |
+| 17 | `dockerhub-pat` | `https://hub.docker.com/v2/user/login` | POST | Token exchange | Medium | P2 | Need to exchange PAT for JWT via login endpoint |
+| 18 | `teams-webhook` | `POST {webhookURL}` | POST | None (URL is the credential) | Medium | P1 | Sends minimal payload; 400 treated as active (valid URL, empty payload rejected). Live probe — no real message content posted. |
+| 19 | `infura-api-key` | `https://mainnet.infura.io/v3/{token}` | POST | Token in URL path | Medium | P1 | JSON-RPC `web3_clientVersion` call. Consumes a small amount of API quota. |
 
-**Total Tier 2: 18 detectors (17 new + 1 already implemented)**
+**Total Tier 2: 19 detectors (all implemented)**
 
-### Tier 3 --- Hard (Complex auth flow, needs second credential, or high risk)
+> **Note:** `hashicorp-vault-token` was previously listed in this tier (Tier 2 P2) but has no verifier implementation. It has been moved to Tier 4 (no verifier). See section 2 Tier 4 for rationale.
 
-These detectors require complex authentication flows, secondary credentials that are typically not available in the finding context, or carry significant risk if verified incorrectly.
+### Tier 3 --- Format-Only (Implemented; validates structure but cannot confirm liveness)
 
-| # | Detector ID | Potential Approach | Complexity | Priority | Challenges |
-|---|-------------|-------------------|------------|----------|------------|
-| 1 | `azure-storage-key` | Azure Storage REST API with HMAC-SHA256 signed request | Hard | P2 | Requires storage account name + constructing HMAC-signed `Authorization` header per Azure REST API spec |
-| 2 | `azure-entra-secret` | Microsoft Graph `https://graph.microsoft.com/v1.0/me` | Hard | P2 | Client secret requires OAuth2 client_credentials flow with tenant ID + client ID + secret to get access token first |
-| 3 | `gcp-service-account` | Google OAuth2 token endpoint via JWT assertion | Hard | P2 | JSON key file contains private key; must construct signed JWT, exchange for access token, then call `https://www.googleapis.com/oauth2/v1/tokeninfo` |
-| 4 | `snowflake-credentials` | Snowflake SQL REST API | Hard | P3 | Requires account identifier + username + password; connection string format varies significantly |
-| 5 | `jwt` | Decode and check `exp` claim | Hard | P3 | Cannot verify signature without knowing the signing key; can only check expiry and structural validity |
+These detectors have verifier implementations that perform structural/format validation. A live network check is either impractical (requires secondary credentials or non-HTTP protocol) or was deferred.
 
-**Total Tier 3: 5 detectors**
+| # | Detector ID | Verifier | Approach | Notes |
+|---|-------------|----------|----------|-------|
+| 1 | `azure-storage-key` | `internal/verifier/azure` (`StorageVerifier`) | Parses `AccountName`/`AccountKey` from connection string; validates AccountKey is valid base64 | Live check requires HMAC-SHA256 signed Azure REST API call |
+| 2 | `azure-entra-secret` | `internal/verifier/azure` (`EntraVerifier`) | Regex format check (34-40 char alphanum) | Live check requires OAuth2 client_credentials flow with tenant ID + client ID |
+| 3 | `gcp-service-account` | `internal/verifier/gcp` | JSON structure validation (type, project_id, private_key_id, client_email) | Live check requires JWT assertion to Google OAuth2 endpoint |
+| 4 | `snowflake-credentials` | `internal/verifier/snowflake` | Non-empty credentials check only | Live check requires direct database connection (JDBC/ODBC) |
+| 5 | `rabbitmq-connection-string` | `internal/verifier/rabbitmq` | AMQP URL scheme + user + host validation | Live check requires network access to the broker |
 
-### Tier 4 --- Not Verifiable (No public API, format-only, or infrastructure-dependent)
+**Total Tier 3 (Format-Only): 5 verifiers**
 
-These detectors identify secrets that cannot be verified through a public API call, either because the service has no verification endpoint, the secret requires infrastructure access, or the detection is format-based only.
+### Tier 4 --- No Verifier Implemented
 
-| # | Detector ID | Reason Not Verifiable |
-|---|-------------|----------------------|
-| 1 | `private-key` | Private keys (RSA, SSH, DSA, EC, PGP) have no remote verification endpoint. Validity depends on the system they are deployed to. Could theoretically parse and validate structure, but not liveness. |
-| 2 | `generic-api-key` | Catches generic patterns like `api_key=`, `apikey:`, etc. No way to determine which service the key belongs to, so no API to call. |
-| 3 | `database-connection-string` | PostgreSQL, MySQL, MSSQL, MongoDB connection strings. Verification would require direct database connection, which is intrusive and may trigger security alerts. Not safe for automated verification. |
-| 4 | `redis-connection-string` | Redis connection URIs (`redis://`). Verification requires direct network connection to the Redis instance, which is typically not internet-accessible. |
-| 5 | `rabbitmq-connection-string` | AMQP connection URIs (`amqp://`). Same as Redis -- requires direct network connection to the broker. |
-| 6 | `ftp-credentials` | FTP/SFTP URIs with embedded credentials. Verification requires direct connection to potentially internal FTP servers. |
-| 7 | `ldap-credentials` | LDAP bind credentials (`ldap://`). Verification requires direct connection to LDAP directory server, typically internal. |
-| 8 | `slack-webhook` | Webhook URLs (`https://hooks.slack.com/services/...`). Could POST a message, but that would be a **side effect** (sends actual message to a channel). Read-only verification is not possible. |
-| 9 | `teams-webhook` | Microsoft Teams webhook URLs. Same as Slack webhook -- verification would send a message, causing a side effect. |
-| 10 | `infura-api-key` | Infura project IDs/keys are embedded in Ethereum RPC URLs. Could make an `eth_blockNumber` call, but this uses the API quota and the key format has high false-positive overlap with generic hex strings. |
+These 9 detectors currently have no verifier. The reasons range from "no public API" to "side effects on verification" to "planned but not yet built."
 
-**Total Tier 4: 10 detectors**
+| # | Detector ID | Reason / Status |
+|---|-------------|-----------------|
+| 1 | `private-key` | No remote verification endpoint. RSA/SSH/DSA/EC/PGP keys are validated by the target system, not via a public API. |
+| 2 | `generic-api-key` | Catches generic patterns (`api_key=`, `apikey:`, etc.). No way to determine the owning service, so no API to call. |
+| 3 | `database-connection-string` | PostgreSQL, MySQL, MSSQL, MongoDB connection strings. Verification requires direct DB connection — intrusive and may trigger security alerts. |
+| 4 | `redis-connection-string` | Redis connection URIs (`redis://`). Verification requires direct TCP connection to a typically internal host. |
+| 5 | `ftp-credentials` | FTP/SFTP URIs with embedded credentials. Verification requires direct connection to potentially internal FTP servers. |
+| 6 | `ldap-credentials` | LDAP bind credentials (`ldap://`). Verification requires direct connection to an internal LDAP directory. |
+| 7 | `slack-webhook` | Webhook URLs (`https://hooks.slack.com/services/...`). Any call would POST a message to a real channel (side effect). Read-only verification is not possible. |
+| 8 | `jwt` | JSON Web Tokens. Cannot verify the signature without the signing key. Can only check expiry and structural validity — no live state can be confirmed. Planned. |
+| 9 | `hashicorp-vault-token` | Vault tokens. Live check requires the Vault server address extracted from context, which is typically not available in a static finding. Planned. |
 
-### Summary
+**Total Tier 4: 9 detectors (no verifier)**
 
-| Tier | Count | Description | Verification Coverage |
-|------|-------|-------------|----------------------|
-| Tier 1 (Easy) | 30 | Simple Bearer/API-key auth, single request | High confidence |
-| Tier 2 (Medium) | 18 | Needs context extraction or multi-step auth | Medium confidence |
-| Tier 3 (Hard) | 5 | Complex auth flows or second credential | Low confidence |
-| Tier 4 (Not Verifiable) | 10 | No public API or side-effect-only | Not possible |
-| **Total** | **64** | | |
+### Verified Tier Summary (Measured 2026-05-22)
 
-**Maximum achievable verification coverage: 54/64 (84.4%)**
+| Tier | Count | Description |
+|------|-------|-------------|
+| Tier 1 — Live (Easy) | 30 | Simple Bearer/API-key, single HTTP request |
+| Tier 2 — Live (Medium) | 14 | Context extraction, multi-step auth, or SDK |
+| Tier 2b — Live (Side-effect probe) | 2 | `teams-webhook`, `infura-api-key` — live but consume quota or trigger side effects |
+| Tier 3 — Format-Only | 5 | Structural validation; no network call |
+| Tier 4 — No Verifier | 9 | Not implemented |
+| **Total Detectors** | **63** | |
+| **Total Verifiers** | **54** | Live: 49 · Format-only: 5 |
+
+> **Coverage:** 54/63 = **85.7%**
+
+**Notes:**
+- `teams-webhook` (`internal/verifier/teams`): Live HTTP POST probe. A 400 response (valid URL but empty payload rejected) is treated as active. This is a deliberate non-destructive probe — no readable message is posted.
+- `infura-api-key` (`internal/verifier/infura`): Live JSON-RPC POST (`web3_clientVersion`). This does consume a small amount of API quota; the call is read-only and non-destructive.
+- `rabbitmq-connection-string` (`internal/verifier/rabbitmq`): Format-only (Tier 3). AMQP URL structure validated; no network connection attempted.
 
 ## 3. Implementation Roadmap (COMPLETED)
 
-All 5 sprints have been completed as of 2026-03-25. Verification coverage reached the target of 84% (54/64).
+All 5 sprints have been completed. Two additional verifiers (`teams-webhook`, `infura-api-key`) were added outside the original roadmap. Actual verification coverage as of 2026-05-22: **54/63 = 85.7%**.
 
-### Sprint 1 --- High-Value Easy Wins (P0, Tier 1) -- COMPLETED
+> **Roadmap note corrections (2026-05-22):** The original roadmap counted 64 detectors (correct count is 63) and included `hashicorp-vault-token` in Sprint 4 and `jwt` in Sprint 5. Neither verifier was implemented. Both remain in Tier 4 (no verifier). The sprint descriptions below have been updated to reflect what was actually built.
 
-**Goal:** Increase coverage from 4.8% to 17.5% (11/64)
+### Sprints 1–5 Summary
 
-| Verifier | Detector ID | Estimated Effort |
-|----------|-------------|-----------------|
-| OpenAI | `openai-api-key` | 0.5 day |
-| Anthropic | `anthropic-api-key` | 0.5 day |
-| GitLab | `gitlab-pat` | 0.5 day |
-| SendGrid | `sendgrid-api-key` | 0.5 day |
-| DigitalOcean | `digitalocean-token` | 0.5 day |
-| Cloudflare | `cloudflare-api-token` | 0.5 day |
-| Telegram | `telegram-bot-token` | 0.5 day |
-| Discord | `discord-bot-token` | 0.5 day |
-
-**Estimated total: 4 days**
-
-### Sprint 2 --- Tier 1 Continued (P1) -- COMPLETED
-
-**Goal:** Increase coverage to 34.4% (22/64)
-
-| Verifier | Detector ID | Estimated Effort |
-|----------|-------------|-----------------|
-| New Relic | `newrelic-api-key` | 0.5 day |
-| Heroku | `heroku-api-key` | 0.5 day |
-| Notion | `notion-token` | 0.5 day |
-| Sentry | `sentry-token` | 0.5 day |
-| PagerDuty | `pagerduty-api-key` | 0.5 day |
-| Vercel | `vercel-token` | 0.5 day |
-| Linear | `linear-api-key` | 0.5 day |
-| CircleCI | `circleci-token` | 0.5 day |
-| NPM | `npm-token` | 0.5 day |
-| Hugging Face | `huggingface-token` | 0.5 day |
-| Airtable | `airtable-pat` | 0.5 day |
-
-**Estimated total: 5.5 days**
-
-### Sprint 3 --- Remaining Tier 1 + Key Tier 2 (P1-P2) -- COMPLETED
-
-**Goal:** Increase coverage to 51.6% (33/64)
-
-| Verifier | Detector ID | Estimated Effort |
-|----------|-------------|-----------------|
-| Snyk | `snyk-api-key` | 0.5 day |
-| Figma | `figma-pat` | 0.5 day |
-| Postmark | `postmark-server-token` | 0.5 day |
-| Grafana | `grafana-api-key` | 0.5 day |
-| Doppler | `doppler-token` | 0.5 day |
-| SonarCloud | `sonarcloud-token` | 0.5 day |
-| DeepSeek | `deepseek-api-key` | 0.5 day |
-| LaunchDarkly | `launchdarkly-sdk-key` | 0.5 day |
-| Stripe Live | `stripe-api-key-live` | 1 day |
-| Stripe Test | `stripe-api-key-test` | 0.5 day |
-| Twilio | `twilio-api-key` | 1 day |
-
-**Estimated total: 6 days**
-
-### Sprint 4 --- Tier 2 Medium-Priority -- COMPLETED
-
-**Goal:** Increase coverage to 68.8% (44/64)
-
-| Verifier | Detector ID | Estimated Effort |
-|----------|-------------|-----------------|
-| Mailgun | `mailgun-api-key` | 0.5 day |
-| Shopify | `shopify-access-token` | 1 day |
-| Okta | `okta-api-token` | 1 day |
-| Databricks | `databricks-token` | 1 day |
-| GitHub OAuth | `github-oauth-token` | 0.5 day |
-| PyPI | `pypi-api-token` | 1 day |
-| Auth0 | `auth0-management-token` | 1.5 days |
-| Coinbase | `coinbase-api-key` | 1.5 days |
-| Datadog | `datadog-api-key` | 1 day |
-| Terraform | `terraform-cloud-token` | 0.5 day |
-| Vault | `hashicorp-vault-token` | 1 day |
-
-**Estimated total: 10 days**
-
-### Sprint 5 --- Remaining Tier 2 + Tier 3 -- COMPLETED
-
-**Goal:** Increase coverage to 84.4% (54/64)
-
-| Verifier | Detector ID | Estimated Effort |
-|----------|-------------|-----------------|
-| Supabase | `supabase-service-key` | 1 day |
-| RubyGems | `rubygems-api-key` | 0.5 day |
-| Bitbucket | `bitbucket-app-password` | 1 day |
-| Docker Hub | `dockerhub-pat` | 1 day |
-| Azure Storage | `azure-storage-key` | 2 days |
-| Azure Entra | `azure-entra-secret` | 2 days |
-| GCP | `gcp-service-account` | 2 days |
-| Snowflake | `snowflake-credentials` | 1.5 days |
-| JWT | `jwt` | 1 day |
-
-**Estimated total: 12 days**
-
-### Total Roadmap Summary
-
-| Sprint | New Verifiers | Cumulative Coverage | Effort |
-|--------|--------------|---------------------|--------|
-| Sprint 1 | 8 | 11/64 (17.2%) | 4 days |
-| Sprint 2 | 11 | 22/64 (34.4%) | 5.5 days |
-| Sprint 3 | 11 | 33/64 (51.6%) | 6 days |
-| Sprint 4 | 11 | 44/64 (68.8%) | 10 days |
-| Sprint 5 | 9 | 54/64 (84.4%) | 12 days |
-| **Total** | **50** | **54/64 (84.4%)** | **37.5 days** |
+| Sprint | New Verifiers | Cumulative Coverage (of 63) | Notes |
+|--------|--------------|------------------------------|-------|
+| Sprint 1 (Tier 1 P0) | 8 | 11/63 (17.5%) | github, slack, openai, anthropic, gitlab, sendgrid, digitalocean, cloudflare, telegram, discord, newrelic |
+| Sprint 2 (Tier 1 P1) | 11 | 22/63 (34.9%) | heroku, notion, sentry, pagerduty, vercel, linear, circleci, npm, huggingface, airtable |
+| Sprint 3 (Tier 1 P2 + Tier 2 P1) | 11 | 33/63 (52.4%) | snyk, figma, postmark, grafana, doppler, sonarcloud, deepseek, launchdarkly, stripe×2, twilio |
+| Sprint 4 (Tier 2) | 10 | 43/63 (68.3%) | mailgun, shopify, okta, databricks, github-oauth, pypi, auth0, coinbase, datadog, terraform |
+| Sprint 5 (Tier 2 + Tier 3) | 9 | 52/63 (82.5%) | supabase, rubygems, bitbucket, dockerhub, azure-storage, azure-entra, gcp, snowflake, rabbitmq |
+| Post-roadmap additions | 2 | 54/63 (85.7%) | teams-webhook, infura-api-key (live probes added in fix/wire-custom-rules-and-inline-ignore) |
+| **Total** | **51** | **54/63 (85.7%)** | |
 
 ## 4. Security Considerations
 

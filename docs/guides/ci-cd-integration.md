@@ -64,17 +64,18 @@ Leakwatch provides a ready-to-use GitHub Action. The parameters supported by the
 | `scan-type` | `fs` | Scan type: `fs`, `git`, or `image` |
 | `path` | `.` | Path or image reference to scan |
 | `format` | `sarif` | Output format: `json`, `sarif`, `csv`, `table` |
-| `only-verified` | `false` | Report only verified secrets |
-| `no-verify` | `true` | Disable secret verification |
+| `only-verified` | `false` | Report only verified active secrets. Has no effect when `no-verify: true` (the default) — set `no-verify: false` to enable verification first |
+| `no-verify` | `true` | Disable secret verification. Default is `true` (verification off) |
 | `min-severity` | `low` | Minimum severity level: `low`, `medium`, `high`, `critical` |
 | `sarif-upload` | `false` | Upload SARIF results to GitHub Code Scanning |
+| `fail-on-findings` | `true` | Fail the workflow step when secrets are found (exit code 1). When `false`, a `::warning::` annotation is emitted but the step still succeeds. Hard errors (exit code >= 2) always fail the step |
 | `version` | `latest` | Leakwatch version to use |
 
 **Outputs:**
 
 | Output | Description |
 |--------|-------------|
-| `findings-count` | Number of secrets found |
+| `findings-count` | Exit-code mirror: `0` when no secrets found, `1` when secrets were found. This is not a raw count of findings |
 | `sarif-file` | Path to the SARIF output file |
 
 ### 2.2 Basic Usage
@@ -468,7 +469,7 @@ Using the Docker image without requiring Go installation:
 leakwatch-docker-scan:
   stage: security
   image:
-    name: cemililik/leakwatch:latest
+    name: ghcr.io/cemililik/leakwatch:latest
     entrypoint: [""]
   script:
     - leakwatch scan fs /builds/$CI_PROJECT_PATH --format sarif --output leakwatch-results.sarif
@@ -553,7 +554,7 @@ pipeline {
 pipeline {
     agent {
         docker {
-            image 'cemililik/leakwatch:latest'
+            image 'ghcr.io/cemililik/leakwatch:latest'
             args '-v ${WORKSPACE}:/scan'
         }
     }
@@ -663,21 +664,21 @@ The Leakwatch Docker image can be used in any CI/CD environment without requirin
 
 ### 6.1 Docker Image
 
-The Leakwatch Docker image is published on Docker Hub as `cemililik/leakwatch`. The image is based on Alpine Linux and has a minimal size.
+The Leakwatch Docker image is published on GitHub Container Registry as `ghcr.io/cemililik/leakwatch`. The image is based on Alpine Linux and has a minimal size.
 
 ```bash
-# Yerel dizini tara
-docker run --rm -v "$(pwd):/scan" cemililik/leakwatch:latest scan fs /scan
+# Scan a local directory
+docker run --rm -v "$(pwd):/scan" ghcr.io/cemililik/leakwatch:latest scan fs /scan
 
-# Git deposunu tara
-docker run --rm -v "$(pwd):/scan" cemililik/leakwatch:latest scan git /scan
+# Scan a Git repository
+docker run --rm -v "$(pwd):/scan" ghcr.io/cemililik/leakwatch:latest scan git /scan
 
-# SARIF ciktisi al
-docker run --rm -v "$(pwd):/scan" cemililik/leakwatch:latest \
+# SARIF output
+docker run --rm -v "$(pwd):/scan" ghcr.io/cemililik/leakwatch:latest \
   scan fs /scan --format sarif --output /scan/results.sarif
 
-# Sadece dogrulanmis sirlari goster
-docker run --rm -v "$(pwd):/scan" cemililik/leakwatch:latest \
+# Show only verified active secrets
+docker run --rm -v "$(pwd):/scan" ghcr.io/cemililik/leakwatch:latest \
   scan fs /scan --only-verified
 ```
 
@@ -687,7 +688,7 @@ You can perform secret scanning during the build stage within your own Dockerfil
 
 ```dockerfile
 # Build stage
-FROM golang:1.24-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 RUN apk add --no-cache git
 
@@ -696,7 +697,7 @@ COPY . .
 RUN go build -o myapp .
 
 # Security scan stage
-FROM cemililik/leakwatch:latest AS security
+FROM ghcr.io/cemililik/leakwatch:latest AS security
 COPY --from=builder /app /scan
 RUN leakwatch scan fs /scan --min-severity high
 
@@ -710,17 +711,14 @@ In this approach, if a secret is found, `leakwatch` returns a non-zero exit code
 
 ### 6.3 Container Image Scanning
 
-To scan existing container images for secrets:
+To scan container images for secrets, provide the full registry reference. Leakwatch pulls the image directly from the registry using `go-containerregistry` — no Docker daemon or socket mount is required:
 
 ```bash
-# Docker Hub'daki bir imaji tara
-docker run --rm cemililik/leakwatch:latest scan image nginx:latest
+# Scan a Docker Hub image
+docker run --rm ghcr.io/cemililik/leakwatch:latest scan image nginx:latest
 
-# Yerel imaji tara (Docker socket'i bagla)
-docker run --rm \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  cemililik/leakwatch:latest \
-  scan image myapp:latest
+# Scan a GHCR image
+docker run --rm ghcr.io/cemililik/leakwatch:latest scan image ghcr.io/myorg/myapp:latest
 ```
 
 ---
@@ -752,7 +750,7 @@ leakwatch scan fs . --min-severity critical
 
 ### 7.2 Reducing False Positives with `--only-verified`
 
-Leakwatch ships with 54 verifiers (51 packages) covering 84% of all detector types, confirming whether discovered secrets are still active via API calls. With the `--only-verified` parameter, you can report only verified (active) secrets:
+Leakwatch ships with 54 verifiers (51 packages) covering 85.7% of all detector types, confirming whether discovered secrets are still active via API calls. With the `--only-verified` parameter, you can report only verified (active) secrets:
 
 ```bash
 # Sadece dogrulanmis sirlari raporla
@@ -762,7 +760,9 @@ leakwatch scan git . --only-verified
 leakwatch scan git . --since-commit HEAD~1 --only-verified --min-severity medium
 ```
 
-**Note:** With 54 verifiers (51 packages) and 84% coverage, `--only-verified` is effective for most secret types. However, the remaining 16% of detectors (e.g., generic private keys) do not have verifiers, so those findings will not be reported. For full coverage, periodically run a full scan without `--only-verified`.
+**Note:** With 54 verifiers (51 packages) and 85.7% coverage, `--only-verified` is effective for most secret types. However, the remaining ~14% of detectors (e.g., generic private keys) do not have verifiers, so those findings will not be reported. For full coverage, periodically run a full scan without `--only-verified`.
+
+> **Important:** `--only-verified` has **no effect** when `--no-verify` is also set (or when `verification.enabled: false` in config), because verification is disabled and all findings remain in the `unverified` state. To use `--only-verified` meaningfully, ensure verification is enabled by omitting `--no-verify` and setting `verification.enabled: true` in your config.
 
 ### 7.3 Excluding Known Values with `.leakwatchignore`
 
@@ -906,19 +906,14 @@ Use CI/CD notification mechanisms to inform the team when secrets are found:
 Leakwatch prints a scan summary to stderr after every scan. This summary is valuable in CI/CD logs for tracking scan metadata without parsing the structured output:
 
 ```
-Scan Summary
-============
-Source:       filesystem
-Path:         /home/runner/work/my-app/my-app
-Duration:     2.34s
-Files:        1,247
-Chunks:       3,891
-Findings:     3
-  Critical:   1
-  High:       1
-  Medium:     1
-  Low:        0
-Verified:     2 / 3
+── Scan Summary ─────────────────────────────────
+  Date:            2026-04-08 14:22:00
+  Source:          filesystem
+  Target:          /home/runner/work/my-app/my-app
+  Files scanned:   1247
+  Duration:        2.34s
+  Findings:        3
+─────────────────────────────────────────────────
 ```
 
 Because the summary is written to stderr, it appears in the CI log even when stdout is redirected to a file (e.g., `--output results.sarif`). This makes it easy to review scan metrics at a glance in GitHub Actions, GitLab CI, or Jenkins build logs without opening the artifact.

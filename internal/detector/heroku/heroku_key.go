@@ -38,13 +38,11 @@ func (d *Detector) Scan(_ context.Context, data []byte) []detector.RawFinding {
 		if len(match) < 2 {
 			continue
 		}
-		uuid := string(match[1])
-		redacted := uuid[:8] + "****"
 		findings = append(findings, detector.RawFinding{
 			DetectorID: d.ID(),
 			Raw:        match[1],
 			RawV2:      match[0],
-			Redacted:   redacted,
+			Redacted:   detector.RedactBytes(match[1]),
 		})
 	}
 	return findings

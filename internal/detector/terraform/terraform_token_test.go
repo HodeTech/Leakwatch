@@ -34,13 +34,13 @@ func TestDetector_Scan_MatchesValidTokens(t *testing.T) {
 			name:     "valid token with 67 char suffix",
 			input:    prefix14 + ".atlasv1." + suffix67,
 			expected: 1,
-			redacted: prefix14[:8] + "****",
+			redacted: "****" + suffix67[len(suffix67)-4:],
 		},
 		{
 			name:     "valid token with longer suffix",
 			input:    prefix14 + ".atlasv1." + suffix80,
 			expected: 1,
-			redacted: prefix14[:8] + "****",
+			redacted: "****" + suffix80[len(suffix80)-4:],
 		},
 		{
 			name:     "token embedded in env var",

@@ -31,37 +31,37 @@ func TestDetector_Scan_MatchesValidKeys(t *testing.T) {
 			name:     "INFURA_API_KEY with equals",
 			input:    "INFURA_API_KEY=" + hexKey32,
 			expected: 1,
-			redacted: hexKey32[:8] + "****",
+			redacted: "****" + hexKey32[len(hexKey32)-4:],
 		},
 		{
 			name:     "infura_api_key lowercase with equals",
 			input:    "infura_api_key=" + hexKey32,
 			expected: 1,
-			redacted: hexKey32[:8] + "****",
+			redacted: "****" + hexKey32[len(hexKey32)-4:],
 		},
 		{
 			name:     "infura with colon separator",
 			input:    "infura: " + hexKey32,
 			expected: 1,
-			redacted: hexKey32[:8] + "****",
+			redacted: "****" + hexKey32[len(hexKey32)-4:],
 		},
 		{
 			name:     "INFURA_API_KEY with single quotes",
 			input:    "INFURA_API_KEY='" + hexKey32 + "'",
 			expected: 1,
-			redacted: hexKey32[:8] + "****",
+			redacted: "****" + hexKey32[len(hexKey32)-4:],
 		},
 		{
 			name:     "INFURA_API_KEY with double quotes",
 			input:    `INFURA_API_KEY="` + hexKey32 + `"`,
 			expected: 1,
-			redacted: hexKey32[:8] + "****",
+			redacted: "****" + hexKey32[len(hexKey32)-4:],
 		},
 		{
 			name:     "spaces around equals",
 			input:    "INFURA_API_KEY = " + hexKey32,
 			expected: 1,
-			redacted: hexKey32[:8] + "****",
+			redacted: "****" + hexKey32[len(hexKey32)-4:],
 		},
 	}
 

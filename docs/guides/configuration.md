@@ -78,11 +78,15 @@ detection:
     # Default: true
     enabled: true
 
-    # Minimum entropy threshold (between 0.0 - 8.0).
-    # Higher value = more selective (fewer findings, fewer false positives)
-    # Lower value = more inclusive (more findings, more false positives)
-    # Recommended range: 3.5 - 4.5
-    # Default: 4.0
+    # Shannon entropy threshold (float64, 0.0–8.0). Default: 4.0
+    #
+    # NOTE — this value is currently display-only for built-in detectors.
+    # The engine computes and attaches entropy scores to findings for context,
+    # but does NOT gate or filter built-in detector findings on this threshold.
+    # Engine-level gating is planned — see the ROADMAP
+    # "Documented-but-Unimplemented Gaps" §4 (Engine-level entropy-threshold gating).
+    #
+    # Per-rule entropy thresholds in `custom-rules:` DO filter custom-rule matches.
     threshold: 4.0
 
 # ── Verification Settings ─────────────────────────────────────────
@@ -144,7 +148,7 @@ output:
 
 # ── Custom Rules ──────────────────────────────────────────────
 custom-rules:
-  # Leakwatch ships with 64 detectors (60 packages). Use YAML custom rules
+  # Leakwatch ships with 63 detectors (60 packages). Use YAML custom rules
   # to detect secrets not covered by built-in detectors.
   # Each rule can contain the following fields:
   - id: "internal-api-key"
@@ -158,8 +162,9 @@ custom-rules:
       - "INTERNAL_KEY_"
     # Severity level: low, medium, high, critical
     severity: high
-    # Should entropy check be applied?
-    entropy: true
+    # Minimum entropy threshold for this rule (float64, 0.0–8.0).
+    # Matches below this value are skipped. Set to 0 to disable entropy filtering.
+    entropy: 3.5
 ```
 
 ### 2.2 Field Details
@@ -176,7 +181,7 @@ custom-rules:
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `enabled` | bool | `true` | Enable/disable entropy analysis |
-| `threshold` | float64 | `4.0` | Minimum entropy threshold (0.0-8.0) |
+| `threshold` | float64 | `4.0` | Entropy threshold (0.0–8.0). Display-only for built-in detectors; filters custom-rule matches only |
 
 **What is entropy?** Shannon entropy measures the degree of randomness in a text. Secrets typically have high entropy (4.0+) because they consist of random characters. Normal code has lower entropy.
 
@@ -228,33 +233,38 @@ flowchart LR
 | `regex` | string | Yes | Capture regex pattern |
 | `keywords` | []string | Yes | Aho-Corasick pre-filter keywords |
 | `severity` | string | Yes | `low`, `medium`, `high`, `critical` |
-| `entropy` | bool | No | Whether to apply entropy check (default: false) |
+| `entropy` | float64 | No | Minimum entropy threshold for this rule (0.0–8.0). Matches below this value are skipped. Set to `0` to disable (default: `0`) |
 
-#### `slack` -- Slack Workspace Scanning
+#### `scan slack` -- Slack Workspace Scanning
 
-Configuration for scanning Slack workspaces via `scan slack`.
+Slack scanning is configured entirely via CLI flags and environment variables. There is no `slack:` key in `.leakwatch.yaml`; YAML support for Slack options is planned for a future release.
 
-```yaml
-# .leakwatch.yaml
-slack:
-  token: ""                    # Or use LEAKWATCH_SLACK_TOKEN env var
-  channels: []                 # Channel names to scan (empty = all)
-  exclude_channels: []         # Channels to skip
-  include_dms: false           # Scan direct messages
-  include_files: true          # Scan uploaded files
-  rate_limit: 20               # Max API requests per second
+Use CLI flags directly when running `scan slack`:
+
+```bash
+# Provide the token via the environment variable (recommended — avoids storing it in config)
+export LEAKWATCH_SLACK_TOKEN=xoxb-your-token-here
+
+leakwatch scan slack \
+  --channels "engineering,devops" \
+  --exclude-channels "random" \
+  --since "2026-01-01" \
+  --include-files \
+  --rate-limit 20 \
+  --min-severity medium
 ```
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `token` | string | `""` | Slack Bot token (`xoxb-...`). Prefer the `LEAKWATCH_SLACK_TOKEN` env var to avoid storing tokens in config files |
-| `channels` | []string | `[]` | Channel names to scan. Empty list scans all accessible channels |
-| `exclude_channels` | []string | `[]` | Channel names to exclude from scanning |
-| `include_dms` | bool | `false` | Whether to scan direct messages (requires appropriate token scopes) |
-| `include_files` | bool | `true` | Whether to scan content of uploaded files |
-| `rate_limit` | int | `20` | Maximum Slack API requests per second to avoid rate limiting |
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--token` | `""` | Slack Bot token (`xoxb-...`). Prefer `LEAKWATCH_SLACK_TOKEN` env var |
+| `--channels` | all | Comma-separated channel names to scan |
+| `--exclude-channels` | none | Comma-separated channel names to skip |
+| `--since` | none | Scan messages posted after this date (`YYYY-MM-DD`) |
+| `--include-dms` | `false` | Scan direct messages (requires `im:history` / `mpim:history` scopes) |
+| `--include-files` | `true` | Scan uploaded file content |
+| `--rate-limit` | `20` | Maximum Slack API requests per second |
 
-> **Security note:** Always provide the Slack token via the `LEAKWATCH_SLACK_TOKEN` environment variable rather than hardcoding it in `.leakwatch.yaml`. If the token must be in the config file, ensure the file is excluded from version control.
+> **Security note:** Always provide the Slack token via the `LEAKWATCH_SLACK_TOKEN` environment variable rather than the `--token` flag in automated environments, to avoid token exposure in process listings or CI logs.
 
 ---
 
@@ -438,7 +448,7 @@ custom-rules:
     keywords:
       - "MYCOMPANY_SECRET_"
     severity: critical
-    entropy: false
+    entropy: 0
 ```
 
 ---

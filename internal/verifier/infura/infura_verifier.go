@@ -3,16 +3,14 @@
 package infura
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 
 	"github.com/cemililik/leakwatch/internal/detector"
 	"github.com/cemililik/leakwatch/internal/verifier"
+	"github.com/cemililik/leakwatch/internal/verifier/internal/httpx"
 	"github.com/cemililik/leakwatch/pkg/finding"
 )
 
@@ -20,6 +18,9 @@ const detectorID = "infura-api-key"
 
 // defaultAPIURL is the base URL for the Infura JSON-RPC API.
 const defaultAPIURL = "https://mainnet.infura.io/v3"
+
+// rpcProbe is the JSON-RPC body sent to exercise the key without side effects.
+var rpcProbe = []byte(`{"jsonrpc":"2.0","method":"web3_clientVersion","params":[],"id":1}`)
 
 // Verifier checks whether an Infura API key is active by calling the
 // Infura JSON-RPC endpoint. It NEVER logs or persists raw key values.
@@ -40,71 +41,31 @@ func (v *Verifier) Type() string {
 }
 
 // Verify checks if the detected Infura API key is valid/active.
-// Raw contains the key value.
+// The key is embedded in the request URL, so it is set as Redact to keep it out
+// of any transport error text.
 func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.VerificationResult {
 	token := string(raw.Raw)
-	if token == "" {
-		return finding.VerificationResult{
-			Status:  finding.StatusUnverified,
-			Message: "empty token",
-		}
-	}
+	apiURL := httpx.BaseURL(v.apiURL, defaultAPIURL)
 
-	apiURL := v.apiURL
-	if apiURL == "" {
-		apiURL = defaultAPIURL
-	}
-
-	requestBody := []byte(`{"jsonrpc":"2.0","method":"web3_clientVersion","params":[],"id":1}`)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, apiURL+"/"+token, bytes.NewReader(requestBody))
-	if err != nil {
-		slog.ErrorContext(ctx, "infura verifier: failed to create request", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("failed to create request: %v", err),
-		}
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "leakwatch-verifier")
-
-	client := v.httpClient
-	if client == nil {
-		client = http.DefaultClient
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		slog.ErrorContext(ctx, "infura verifier: request failed", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("request failed: %v", err),
-		}
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	switch resp.StatusCode {
-	case http.StatusOK:
-		return handleActiveKey(ctx, resp.Body)
-	case http.StatusUnauthorized, http.StatusForbidden:
-		slog.DebugContext(ctx, "infura verifier: API key is inactive")
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedInactive,
-			Message: "Infura API key is invalid or revoked",
-		}
-	default:
-		slog.ErrorContext(ctx, "infura verifier: unexpected status code",
-			slog.Int("status_code", resp.StatusCode),
-		)
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("unexpected status code: %d", resp.StatusCode),
-		}
-	}
+	return httpx.VerifyToken(ctx, v.httpClient, token, httpx.TokenSpec{
+		Name: "infura",
+		Request: httpx.Request{
+			Method: http.MethodPost,
+			URL:    apiURL + "/" + token,
+			Body:   rpcProbe,
+			Header: map[string]string{"Content-Type": "application/json"},
+		},
+		Redact:           token,
+		InactiveStatuses: []int{http.StatusUnauthorized, http.StatusForbidden},
+		ActiveMessage:    "Infura API key is active",
+		InactiveMessage:  "Infura API key is invalid or revoked",
+		Decode:           decodeClientVersion,
+	})
 }
 
-// handleActiveKey parses the Infura JSON-RPC response for a valid key.
-func handleActiveKey(ctx context.Context, body io.Reader) finding.VerificationResult {
+// decodeClientVersion downgrades a 200 response to inactive when the JSON-RPC
+// body carries an error or an empty result.
+func decodeClientVersion(body io.Reader) (map[string]string, string, error) {
 	var rpcResp struct {
 		Result string `json:"result"`
 		Error  *struct {
@@ -112,37 +73,11 @@ func handleActiveKey(ctx context.Context, body io.Reader) finding.VerificationRe
 			Message string `json:"message"`
 		} `json:"error"`
 	}
-
 	if err := json.NewDecoder(body).Decode(&rpcResp); err != nil {
-		slog.ErrorContext(ctx, "infura verifier: failed to decode response", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: "failed to decode JSON-RPC response",
-		}
+		return nil, "", err
 	}
-
-	if rpcResp.Error != nil {
-		slog.DebugContext(ctx, "infura verifier: API key returned error response",
-			slog.String("error_message", rpcResp.Error.Message),
-		)
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedInactive,
-			Message: "Infura API key is invalid or revoked",
-		}
+	if rpcResp.Error != nil || rpcResp.Result == "" {
+		return nil, "Infura API key is invalid or revoked", nil
 	}
-
-	if rpcResp.Result == "" {
-		slog.DebugContext(ctx, "infura verifier: API key returned empty result")
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedInactive,
-			Message: "Infura API key is invalid or revoked",
-		}
-	}
-
-	slog.InfoContext(ctx, "infura verifier: API key is active")
-
-	return finding.VerificationResult{
-		Status:  finding.StatusVerifiedActive,
-		Message: "Infura API key is active",
-	}
+	return nil, "", nil
 }

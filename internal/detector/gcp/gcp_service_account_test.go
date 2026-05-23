@@ -2,6 +2,7 @@ package gcp
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/cemililik/leakwatch/pkg/finding"
@@ -88,6 +89,70 @@ func TestDetector_Scan_MatchesValidServiceAccount(t *testing.T) {
 			}
 		})
 	}
+}
+
+// fakePEM is a clearly fake, redacted private key body. It contains no real key
+// material and is only used to assert that the PEM is never leaked into findings.
+const fakePEM = `-----BEGIN PRIVATE KEY-----\nFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKE\n-----END PRIVATE KEY-----\n`
+
+func TestDetector_Scan_TwoAccounts_ReturnsDistinctFindingsWithoutKeyLeak(t *testing.T) {
+	// A JSON array holding two distinct service accounts, each with its own
+	// (fake) private_key, private_key_id, and client_email.
+	twoAccounts := `[
+  {
+    "type": "service_account",
+    "project_id": "project-one",
+    "private_key_id": "1111111111111111111111111111111111111111",
+    "private_key": "` + fakePEM + `",
+    "client_email": "svc-one@project-one.iam.gserviceaccount.com"
+  },
+  {
+    "type": "service_account",
+    "project_id": "project-two",
+    "private_key_id": "2222222222222222222222222222222222222222",
+    "private_key": "` + fakePEM + `",
+    "client_email": "svc-two@project-two.iam.gserviceaccount.com"
+  }
+]`
+
+	d := &Detector{}
+	findings := d.Scan(context.Background(), []byte(twoAccounts))
+
+	require.Len(t, findings, 2)
+
+	// Each finding must carry its OWN private_key_id and client_email, not the
+	// first account's fields repeated.
+	keyIDs := []string{
+		findings[0].ExtraData["private_key_id"],
+		findings[1].ExtraData["private_key_id"],
+	}
+	emails := []string{
+		findings[0].ExtraData["client_email"],
+		findings[1].ExtraData["client_email"],
+	}
+	assert.ElementsMatch(t, []string{
+		"1111111111111111111111111111111111111111",
+		"2222222222222222222222222222222222222222",
+	}, keyIDs)
+	assert.ElementsMatch(t, []string{
+		"svc-one@project-one.iam.gserviceaccount.com",
+		"svc-two@project-two.iam.gserviceaccount.com",
+	}, emails)
+	assert.NotEqual(t, keyIDs[0], keyIDs[1], "findings must have distinct key IDs")
+
+	// No finding may leak the private_key PEM body in Raw, RawV2, or Redacted,
+	// and RawV2 must be scoped to a single account (never the whole file).
+	for i, f := range findings {
+		assert.NotContains(t, string(f.Raw), "PRIVATE KEY", "finding %d Raw", i)
+		assert.NotContains(t, string(f.RawV2), "FAKEFAKE", "finding %d RawV2 PEM body", i)
+		assert.NotContains(t, f.Redacted, "PRIVATE KEY", "finding %d Redacted", i)
+		// RawV2 should contain exactly one service_account marker.
+		assert.Equal(t, 1, strings.Count(string(f.RawV2), "service_account"),
+			"finding %d RawV2 should be scoped to one account", i)
+	}
+
+	// The two RawV2 blocks must differ (distinct account data).
+	assert.NotEqual(t, string(findings[0].RawV2), string(findings[1].RawV2))
 }
 
 func TestDetector_Scan_RejectsInvalidInput(t *testing.T) {

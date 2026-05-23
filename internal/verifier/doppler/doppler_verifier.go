@@ -4,12 +4,11 @@ package doppler
 
 import (
 	"context"
-	"fmt"
-	"log/slog"
 	"net/http"
 
 	"github.com/cemililik/leakwatch/internal/detector"
 	"github.com/cemililik/leakwatch/internal/verifier"
+	"github.com/cemililik/leakwatch/internal/verifier/internal/httpx"
 	"github.com/cemililik/leakwatch/pkg/finding"
 )
 
@@ -40,64 +39,15 @@ func (v *Verifier) Type() string {
 // Raw contains the token value.
 func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.VerificationResult {
 	token := string(raw.Raw)
-	if token == "" {
-		return finding.VerificationResult{
-			Status:  finding.StatusUnverified,
-			Message: "empty token",
-		}
-	}
+	apiURL := httpx.BaseURL(v.apiURL, defaultAPIURL)
 
-	apiURL := v.apiURL
-	if apiURL == "" {
-		apiURL = defaultAPIURL
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL+"/v3/me", nil)
-	if err != nil {
-		slog.ErrorContext(ctx, "doppler verifier: failed to create request", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("failed to create request: %v", err),
-		}
-	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("User-Agent", "leakwatch-verifier")
-
-	client := v.httpClient
-	if client == nil {
-		client = http.DefaultClient
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		slog.ErrorContext(ctx, "doppler verifier: request failed", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("request failed: %v", err),
-		}
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	switch resp.StatusCode {
-	case http.StatusOK:
-		slog.InfoContext(ctx, "doppler verifier: token is active")
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedActive,
-			Message: "Doppler token is active",
-		}
-	case http.StatusUnauthorized:
-		slog.DebugContext(ctx, "doppler verifier: token is inactive")
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedInactive,
-			Message: "Doppler token is invalid or revoked",
-		}
-	default:
-		slog.ErrorContext(ctx, "doppler verifier: unexpected status code",
-			slog.Int("status_code", resp.StatusCode),
-		)
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("unexpected status code: %d", resp.StatusCode),
-		}
-	}
+	return httpx.VerifyToken(ctx, v.httpClient, token, httpx.TokenSpec{
+		Name: "doppler",
+		Request: httpx.Request{
+			URL:    apiURL + "/v3/me",
+			Header: map[string]string{"Authorization": "Bearer " + token},
+		},
+		ActiveMessage:   "Doppler token is active",
+		InactiveMessage: "Doppler token is invalid or revoked",
+	})
 }

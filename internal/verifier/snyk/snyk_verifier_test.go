@@ -16,6 +16,8 @@ import (
 func TestVerify_ValidKey_ReturnsActive(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/rest/self", r.URL.Path)
+		// The Snyk REST API requires the version as a query parameter.
+		assert.Equal(t, "2024-04-29", r.URL.Query().Get("version"))
 		assert.Equal(t, "token test-snyk-api-key-abcdef1234567890", r.Header.Get("Authorization"))
 		assert.Equal(t, "2024-04-29", r.Header.Get("Version"))
 

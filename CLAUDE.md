@@ -18,7 +18,7 @@ leakwatch/
 │   ├── init.go             # leakwatch init command (generates .leakwatch.yaml)
 ├── internal/               # Internal packages — all business logic lives here
 │   ├── engine/             # Scan engine (worker pool, pipeline)
-│   ├── detector/           # Secret detectors (60 detector packages, 64 detectors total)
+│   ├── detector/           # Secret detectors (60 detector packages, 63 detectors total)
 │   │   ├── aws/            # AWS Access Key detector
 │   │   ├── openai/         # OpenAI API Key detector
 │   │   ├── ...             # 58 more detector packages
@@ -30,11 +30,10 @@ leakwatch/
 │   │   ├── s3/             # AWS S3 bucket source
 │   │   ├── gcs/            # Google Cloud Storage source
 │   │   └── slack/          # Slack workspace source
-│   ├── verifier/           # Secret verification (54 verifiers (51 packages), 84% coverage)
+│   ├── verifier/           # Secret verification (54 verifiers, 51 packages, 85.7% coverage)
 │   │   ├── aws/            # AWS STS verifier
 │   │   ├── github/         # GitHub API verifier
-│   │   ├── ...             # 51 more verifier packages (live API + format validation)
-│   │   └── jwt/            # JWT format validator
+│   │   └── ...             # 49 more verifier packages (live API + format validation)
 │   ├── entropy/            # Shannon entropy calculation
 │   ├── matcher/            # Aho-Corasick keyword pre-filtering
 │   ├── output/             # Output formatters (Formatter interface)

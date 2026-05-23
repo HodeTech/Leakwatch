@@ -34,7 +34,7 @@ func (d *Detector) Scan(_ context.Context, data []byte) []detector.RawFinding {
 		findings = append(findings, detector.RawFinding{
 			DetectorID: d.ID(),
 			Raw:        match,
-			Redacted:   string(match[:12]) + "****",
+			Redacted:   detector.RedactBytes(match),
 		})
 	}
 	return findings

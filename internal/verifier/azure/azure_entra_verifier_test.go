@@ -11,7 +11,7 @@ import (
 	"github.com/cemililik/leakwatch/pkg/finding"
 )
 
-func TestEntraVerify_ValidSecret_ReturnsActive(t *testing.T) {
+func TestEntraVerify_ValidSecret_ReturnsUnverified(t *testing.T) {
 	v := &EntraVerifier{}
 
 	raw := detector.RawFinding{
@@ -22,11 +22,11 @@ func TestEntraVerify_ValidSecret_ReturnsActive(t *testing.T) {
 
 	result := v.Verify(context.Background(), raw)
 
-	require.Equal(t, finding.StatusVerifiedActive, result.Status)
-	assert.Equal(t, "Format validated (live verification requires OAuth2 flow with client_id and tenant_id)", result.Message)
+	require.Equal(t, finding.StatusUnverified, result.Status)
+	assert.Contains(t, result.Message, "format valid")
 }
 
-func TestEntraVerify_ValidSecretWithSpecialChars_ReturnsActive(t *testing.T) {
+func TestEntraVerify_ValidSecretWithSpecialChars_ReturnsUnverified(t *testing.T) {
 	v := &EntraVerifier{}
 
 	// 38-character secret with hyphens, underscores, periods, tildes.
@@ -38,10 +38,10 @@ func TestEntraVerify_ValidSecretWithSpecialChars_ReturnsActive(t *testing.T) {
 
 	result := v.Verify(context.Background(), raw)
 
-	require.Equal(t, finding.StatusVerifiedActive, result.Status)
+	require.Equal(t, finding.StatusUnverified, result.Status)
 }
 
-func TestEntraVerify_TooShort_ReturnsInactive(t *testing.T) {
+func TestEntraVerify_TooShort_ReturnsUnverified(t *testing.T) {
 	v := &EntraVerifier{}
 
 	raw := detector.RawFinding{
@@ -52,11 +52,11 @@ func TestEntraVerify_TooShort_ReturnsInactive(t *testing.T) {
 
 	result := v.Verify(context.Background(), raw)
 
-	assert.Equal(t, finding.StatusVerifiedInactive, result.Status)
-	assert.Equal(t, "secret does not match Azure Entra client secret format", result.Message)
+	assert.Equal(t, finding.StatusUnverified, result.Status)
+	assert.Contains(t, result.Message, "format invalid")
 }
 
-func TestEntraVerify_TooLong_ReturnsInactive(t *testing.T) {
+func TestEntraVerify_TooLong_ReturnsUnverified(t *testing.T) {
 	v := &EntraVerifier{}
 
 	raw := detector.RawFinding{
@@ -67,11 +67,11 @@ func TestEntraVerify_TooLong_ReturnsInactive(t *testing.T) {
 
 	result := v.Verify(context.Background(), raw)
 
-	assert.Equal(t, finding.StatusVerifiedInactive, result.Status)
-	assert.Equal(t, "secret does not match Azure Entra client secret format", result.Message)
+	assert.Equal(t, finding.StatusUnverified, result.Status)
+	assert.Contains(t, result.Message, "format invalid")
 }
 
-func TestEntraVerify_InvalidChars_ReturnsInactive(t *testing.T) {
+func TestEntraVerify_InvalidChars_ReturnsUnverified(t *testing.T) {
 	v := &EntraVerifier{}
 
 	raw := detector.RawFinding{
@@ -82,8 +82,8 @@ func TestEntraVerify_InvalidChars_ReturnsInactive(t *testing.T) {
 
 	result := v.Verify(context.Background(), raw)
 
-	assert.Equal(t, finding.StatusVerifiedInactive, result.Status)
-	assert.Equal(t, "secret does not match Azure Entra client secret format", result.Message)
+	assert.Equal(t, finding.StatusUnverified, result.Status)
+	assert.Contains(t, result.Message, "format invalid")
 }
 
 func TestEntraVerify_EmptySecret_ReturnsUnverified(t *testing.T) {
@@ -106,7 +106,7 @@ func TestEntraVerify_Type_ReturnsCorrectID(t *testing.T) {
 	assert.Equal(t, "azure-entra-secret", v.Type())
 }
 
-func TestEntraVerify_ExactLength34_ReturnsActive(t *testing.T) {
+func TestEntraVerify_ExactLength34_ReturnsUnverified(t *testing.T) {
 	v := &EntraVerifier{}
 
 	raw := detector.RawFinding{
@@ -117,10 +117,10 @@ func TestEntraVerify_ExactLength34_ReturnsActive(t *testing.T) {
 
 	result := v.Verify(context.Background(), raw)
 
-	assert.Equal(t, finding.StatusVerifiedActive, result.Status)
+	assert.Equal(t, finding.StatusUnverified, result.Status)
 }
 
-func TestEntraVerify_ExactLength40_ReturnsActive(t *testing.T) {
+func TestEntraVerify_ExactLength40_ReturnsUnverified(t *testing.T) {
 	v := &EntraVerifier{}
 
 	raw := detector.RawFinding{
@@ -131,5 +131,5 @@ func TestEntraVerify_ExactLength40_ReturnsActive(t *testing.T) {
 
 	result := v.Verify(context.Background(), raw)
 
-	assert.Equal(t, finding.StatusVerifiedActive, result.Status)
+	assert.Equal(t, finding.StatusUnverified, result.Status)
 }

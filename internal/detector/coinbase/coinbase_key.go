@@ -45,7 +45,7 @@ func (d *Detector) Scan(_ context.Context, data []byte) []detector.RawFinding {
 			DetectorID: d.ID(),
 			Raw:        apiKey,
 			RawV2:      fullMatch,
-			Redacted:   string(apiKey[:8]) + "****",
+			Redacted:   detector.RedactBytes(apiKey),
 		})
 	}
 	return findings

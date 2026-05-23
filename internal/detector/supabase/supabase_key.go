@@ -31,11 +31,10 @@ func (d *Detector) Scan(_ context.Context, data []byte) []detector.RawFinding {
 
 	findings := make([]detector.RawFinding, 0, len(matches))
 	for _, match := range matches {
-		s := string(match)
 		findings = append(findings, detector.RawFinding{
 			DetectorID: d.ID(),
 			Raw:        match,
-			Redacted:   "sbp_****" + s[len(s)-4:],
+			Redacted:   detector.RedactBytes(match),
 		})
 	}
 	return findings

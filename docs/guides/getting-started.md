@@ -12,9 +12,9 @@ Leakwatch is a high-performance, open source (MIT) security tool that detects, v
 
 **Key features:**
 
-- **64 detectors (60 packages) + unlimited YAML custom rules** -- Covers major cloud providers, AI platforms, CI/CD tools, databases, and SaaS services out of the box, with YAML custom rules for anything else
+- **63 detectors (60 packages) + unlimited YAML custom rules** -- Covers major cloud providers, AI platforms, CI/CD tools, databases, and SaaS services out of the box, with YAML custom rules for anything else
 - **Hybrid detection engine** -- Aho-Corasick pre-filter, regex validation, and Shannon entropy analysis for a low false positive rate
-- **Secret verification** -- 54 verifiers (51 packages) with 84% verification coverage confirm whether discovered secrets are still active via API calls (AWS, GitHub, Slack, Stripe, and more)
+- **Secret verification** -- 54 verifiers (51 packages) with 85.7% verification coverage confirm whether discovered secrets are still active via API calls (AWS, GitHub, Slack, Stripe, and more)
 - **Multi-source support** -- Filesystem, Git repository, container images, S3, GCS, parallel multi-repo, and Slack
 - **Flexible output** -- JSON, SARIF, CSV, and table formats
 - **Single binary, zero dependencies** -- Runs on every platform, no Docker daemon required
@@ -36,7 +36,7 @@ flowchart LR
         E3["Entropy\nAnalysis"]
     end
 
-    subgraph Verification["Secret Verification\n(54 verifiers (51 packages), 84% coverage)"]
+    subgraph Verification["Secret Verification\n(54 verifiers (51 packages), 85.7% coverage)"]
         V1["AWS STS"]
         V2["GitHub API"]
         V3["Slack API"]
@@ -77,8 +77,18 @@ brew install cemililik/tap/leakwatch
 You can download the binary suitable for your platform from the GitHub Releases page:
 
 ```bash
-# Download with automatic platform detection
-curl -sSfL https://github.com/cemililik/Leakwatch/releases/latest/download/leakwatch_$(uname -s)_$(uname -m).tar.gz | tar xz
+# Release archives follow the naming pattern:
+#   leakwatch_<version>_<Os>_<Arch>.tar.gz
+# Examples:
+#   leakwatch_v0.1.0_Linux_x86_64.tar.gz
+#   leakwatch_v0.1.0_Darwin_arm64.tar.gz
+#   leakwatch_v0.1.0_Windows_x86_64.zip
+#
+# Download the archive for your platform from the Releases page:
+# https://github.com/cemililik/Leakwatch/releases/latest
+#
+# Example for Linux x86_64 (replace v0.1.0 with the actual release version):
+curl -sSfL https://github.com/cemililik/Leakwatch/releases/latest/download/leakwatch_v0.1.0_Linux_x86_64.tar.gz | tar xz
 
 # Move binary to PATH
 sudo mv leakwatch /usr/local/bin/
@@ -147,13 +157,14 @@ leakwatch scan fs /path/to/project --output results.json
 Every scan prints a summary to stderr. Example output:
 
 ```
-[Scan Summary]
-  Date     : 2026-04-08 14:22:00
-  Source   : filesystem
-  Target   : /path/to/project
-  Files    : 342
-  Duration : 1.24s
-  Findings : 3
+── Scan Summary ─────────────────────────────────
+  Date:            2026-04-08 14:22:00
+  Source:          filesystem
+  Target:          /path/to/project
+  Files scanned:   342
+  Duration:        1.24s
+  Findings:        3
+─────────────────────────────────────────────────
 ```
 
 **When to use:**

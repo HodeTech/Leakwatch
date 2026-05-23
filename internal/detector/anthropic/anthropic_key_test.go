@@ -34,13 +34,13 @@ func TestDetector_Scan_MatchAndReject(t *testing.T) {
 			name:     "valid key with 85 char suffix",
 			input:    "sk-ant-" + suffix85,
 			expected: 1,
-			redacted: "sk-ant-Abc1A****",
+			redacted: "****" + ("sk-ant-" + suffix85)[len("sk-ant-"+suffix85)-4:],
 		},
 		{
 			name:     "valid key with longer suffix",
 			input:    "sk-ant-" + suffix100,
 			expected: 1,
-			redacted: "sk-ant-Abc1A****",
+			redacted: "****" + ("sk-ant-" + suffix100)[len("sk-ant-"+suffix100)-4:],
 		},
 		{
 			name:     "key embedded in env var",

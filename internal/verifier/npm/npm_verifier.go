@@ -5,13 +5,12 @@ package npm
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 
 	"github.com/cemililik/leakwatch/internal/detector"
 	"github.com/cemililik/leakwatch/internal/verifier"
+	"github.com/cemililik/leakwatch/internal/verifier/internal/httpx"
 	"github.com/cemililik/leakwatch/pkg/finding"
 )
 
@@ -42,89 +41,27 @@ func (v *Verifier) Type() string {
 // Raw contains the token value.
 func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.VerificationResult {
 	token := string(raw.Raw)
-	if token == "" {
-		return finding.VerificationResult{
-			Status:  finding.StatusUnverified,
-			Message: "empty token",
-		}
-	}
+	apiURL := httpx.BaseURL(v.apiURL, defaultAPIURL)
 
-	apiURL := v.apiURL
-	if apiURL == "" {
-		apiURL = defaultAPIURL
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL+"/-/whoami", nil)
-	if err != nil {
-		slog.ErrorContext(ctx, "npm verifier: failed to create request", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("failed to create request: %v", err),
-		}
-	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("User-Agent", "leakwatch-verifier")
-
-	client := v.httpClient
-	if client == nil {
-		client = http.DefaultClient
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		slog.ErrorContext(ctx, "npm verifier: request failed", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("request failed: %v", err),
-		}
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	switch resp.StatusCode {
-	case http.StatusOK:
-		return handleActiveToken(ctx, resp.Body)
-	case http.StatusUnauthorized:
-		slog.DebugContext(ctx, "npm verifier: token is inactive")
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedInactive,
-			Message: "npm token is invalid or revoked",
-		}
-	default:
-		slog.ErrorContext(ctx, "npm verifier: unexpected status code",
-			slog.Int("status_code", resp.StatusCode),
-		)
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("unexpected status code: %d", resp.StatusCode),
-		}
-	}
+	return httpx.VerifyToken(ctx, v.httpClient, token, httpx.TokenSpec{
+		Name: "npm",
+		Request: httpx.Request{
+			URL:    apiURL + "/-/whoami",
+			Header: map[string]string{"Authorization": "Bearer " + token},
+		},
+		ActiveMessage:   "npm token is active",
+		InactiveMessage: "npm token is invalid or revoked",
+		Decode:          decodeWhoami,
+	})
 }
 
-// handleActiveToken parses the npm registry response for a valid token.
-func handleActiveToken(ctx context.Context, body io.Reader) finding.VerificationResult {
+// decodeWhoami reports the account name as username.
+func decodeWhoami(body io.Reader) (map[string]string, string, error) {
 	var whoami struct {
 		Username string `json:"username"`
 	}
-
 	if err := json.NewDecoder(body).Decode(&whoami); err != nil {
-		slog.ErrorContext(ctx, "npm verifier: failed to decode response", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedActive,
-			Message: "npm token is active (could not parse user info)",
-		}
+		return nil, "", err
 	}
-
-	extra := map[string]string{
-		"username": whoami.Username,
-	}
-
-	slog.InfoContext(ctx, "npm verifier: token is active",
-		slog.String("username", whoami.Username),
-	)
-
-	return finding.VerificationResult{
-		Status:    finding.StatusVerifiedActive,
-		Message:   "npm token is active",
-		ExtraData: extra,
-	}
+	return map[string]string{"username": whoami.Username}, "", nil
 }

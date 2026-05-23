@@ -7,10 +7,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var (
@@ -89,39 +87,15 @@ func Execute() int {
 }
 
 func init() {
-	cobra.OnInitialize(initConfig, initLogger)
+	// Config discovery is performed per-command in an isolated Viper instance
+	// (see newScanViper in scan_common.go); the global Viper is intentionally not
+	// populated here. Binding every scan command's flags to the same global keys
+	// caused the last init() to win, so one command's flag defaults masked the
+	// active command's flags (SYS-07a/b). Only the logger is initialized globally.
+	cobra.OnInitialize(initLogger)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default: .leakwatch.yaml)")
 	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "warn", "log level (debug, info, warn, error)")
-}
-
-func initConfig() {
-	if cfgFile != "" {
-		viper.SetConfigFile(cfgFile)
-	} else {
-		viper.SetConfigName(".leakwatch")
-		viper.SetConfigType("yaml")
-		viper.AddConfigPath(".")
-
-		home, err := os.UserHomeDir()
-		if err == nil {
-			viper.AddConfigPath(home)
-		}
-	}
-
-	viper.SetEnvPrefix("LEAKWATCH")
-	// Map nested config keys to env vars: scan.concurrency -> LEAKWATCH_SCAN_CONCURRENCY,
-	// output.severity-threshold -> LEAKWATCH_OUTPUT_SEVERITY_THRESHOLD.
-	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
-	viper.AutomaticEnv()
-
-	if err := viper.ReadInConfig(); err != nil {
-		// File not found is acceptable; parse errors are not.
-		var notFound viper.ConfigFileNotFoundError
-		if !errors.As(err, &notFound) && viper.ConfigFileUsed() != "" {
-			slog.Warn("failed to parse config file", "file", viper.ConfigFileUsed(), "error", err)
-		}
-	}
 }
 
 func initLogger() {

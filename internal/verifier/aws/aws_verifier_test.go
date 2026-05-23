@@ -3,10 +3,12 @@ package aws
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
+	smithy "github.com/aws/smithy-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -87,6 +89,83 @@ func TestVerify_InvalidCredentials_ReturnsInactive(t *testing.T) {
 	result := v.Verify(context.Background(), raw)
 
 	assert.Equal(t, finding.StatusVerifiedInactive, result.Status)
+}
+
+func TestVerify_TypedAuthError_ReturnsInactive(t *testing.T) {
+	mock := &mockSTSClient{
+		err: &smithy.OperationError{
+			ServiceID:     "STS",
+			OperationName: "GetCallerIdentity",
+			Err: &smithy.GenericAPIError{
+				Code:    "InvalidClientTokenId",
+				Message: "The security token included in the request is invalid",
+			},
+		},
+	}
+	v := &Verifier{client: mock}
+
+	raw := detector.RawFinding{
+		DetectorID: detectorID,
+		Raw:        []byte("AKIAIOSFODNN7EXAMPLE"),
+		RawV2:      []byte("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"),
+		Redacted:   "AKIA****MPLE",
+	}
+
+	result := v.Verify(context.Background(), raw)
+
+	assert.Equal(t, finding.StatusVerifiedInactive, result.Status)
+}
+
+// TestVerify_AccessDenied_ReturnsVerifyError ensures AccessDenied is NOT
+// classified as an authentication failure: the credentials authenticated but
+// lacked permission, so they are active, not inactive. Because the verifier
+// cannot read the caller identity it returns a verify error rather than
+// falsely claiming the key is inactive.
+func TestVerify_AccessDenied_ReturnsVerifyError(t *testing.T) {
+	mock := &mockSTSClient{
+		err: &smithy.OperationError{
+			ServiceID:     "STS",
+			OperationName: "GetCallerIdentity",
+			Err: &smithy.GenericAPIError{
+				Code:    "AccessDenied",
+				Message: "User is not authorized to perform sts:GetCallerIdentity",
+			},
+		},
+	}
+	v := &Verifier{client: mock}
+
+	raw := detector.RawFinding{
+		DetectorID: detectorID,
+		Raw:        []byte("AKIAIOSFODNN7EXAMPLE"),
+		RawV2:      []byte("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"),
+		Redacted:   "AKIA****MPLE",
+	}
+
+	result := v.Verify(context.Background(), raw)
+
+	assert.NotEqual(t, finding.StatusVerifiedInactive, result.Status)
+	assert.Equal(t, finding.StatusVerifyError, result.Status)
+}
+
+func TestIsAuthError_ExactCodeMatching(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{"invalid token code", &smithy.GenericAPIError{Code: "InvalidClientTokenId"}, true},
+		{"expired token code", &smithy.GenericAPIError{Code: "ExpiredToken"}, true},
+		{"signature mismatch", &smithy.GenericAPIError{Code: "SignatureDoesNotMatch"}, true},
+		{"access denied is not auth error", &smithy.GenericAPIError{Code: "AccessDenied"}, false},
+		{"throttling is not auth error", &smithy.GenericAPIError{Code: "Throttling"}, false},
+		{"plain invalid token message", errors.New("operation error STS: InvalidClientTokenId: bad"), true},
+		{"plain network error", fmt.Errorf("dial tcp: %w", errors.New("timeout")), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, isAuthError(tt.err))
+		})
+	}
 }
 
 func TestVerify_OtherError_ReturnsVerifyError(t *testing.T) {

@@ -5,7 +5,6 @@ package matcher
 
 import (
 	"bytes"
-	"log/slog"
 	"strings"
 
 	"github.com/cloudflare/ahocorasick"
@@ -63,6 +62,13 @@ func New(detectors []detector.Detector) *Matcher {
 
 // Match returns the subset of detectors whose keywords appear in the data.
 // Detectors without keywords are always included.
+//
+// Match is safe for concurrent use by multiple goroutines: a single Matcher is
+// shared across all engine workers, so the underlying Aho-Corasick automaton is
+// queried via the thread-safe MatchThreadSafe entry point (see below). The
+// non-thread-safe Match method of the ahocorasick library mutates shared trie
+// node counters and would otherwise cause a data race and silently drop matches
+// (missed secrets) under concurrent calls.
 func (m *Matcher) Match(data []byte) []detector.Detector {
 	matchedIDs := make(map[string]bool)
 
@@ -80,18 +86,22 @@ func (m *Matcher) Match(data []byte) []detector.Detector {
 		return result
 	}
 
-	// Run Aho-Corasick on lowercased data.
+	// Run Aho-Corasick on lowercased data. MatchThreadSafe (not Match) is used
+	// because this Matcher is shared across concurrent engine workers; the plain
+	// Match method is documented by the library as not thread-safe.
 	lower := bytes.ToLower(data)
-	hits := m.machine.Match(lower)
+	hits := m.machine.MatchThreadSafe(lower)
 
 	for _, idx := range hits {
+		// idx is an index into the keyword dictionary the automaton was built
+		// from (m.keywords), so it is always in range. The bounds check is a
+		// silent defensive guard; it must not log on this hot path (called per
+		// chunk per worker) to avoid log spam.
 		if idx < len(m.keywords) {
 			kw := m.keywords[idx]
 			for _, detID := range m.keywordToDet[kw] {
 				matchedIDs[detID] = true
 			}
-		} else {
-			slog.Warn("unexpected match index", "index", idx, "max", len(m.keywords))
 		}
 	}
 

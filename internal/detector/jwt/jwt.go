@@ -35,16 +35,12 @@ func (d *JWT) Scan(_ context.Context, data []byte) []detector.RawFinding {
 
 	findings := make([]detector.RawFinding, 0, len(matches))
 	for _, match := range matches {
-		s := string(match)
-		// Redact to only show a short prefix to avoid exposing header+payload.
-		redacted := s
-		if len(s) > 10 {
-			redacted = s[:10] + "****"
-		}
+		// Reveal only the trailing characters to avoid exposing the JWT
+		// header, payload, or signature.
 		findings = append(findings, detector.RawFinding{
 			DetectorID: d.ID(),
 			Raw:        match,
-			Redacted:   redacted,
+			Redacted:   detector.RedactBytes(match),
 		})
 	}
 	return findings

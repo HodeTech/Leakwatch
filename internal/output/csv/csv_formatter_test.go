@@ -195,6 +195,116 @@ func TestFormatter_Format_WithoutRemediation_CSVHasEmptyRemediationColumn(t *tes
 	assert.Equal(t, "", records[1][7])
 }
 
+func TestFormatter_Format_ShowRawFalse_NoRawColumn(t *testing.T) {
+	f := &Formatter{ShowRaw: false}
+	var buf bytes.Buffer
+
+	findings := []finding.Finding{
+		{
+			ID:       "test-1",
+			Redacted: "sk_****abcd",
+			Raw:      "sk_live_supersecretvalue",
+		},
+	}
+
+	err := f.Format(&buf, findings)
+	require.NoError(t, err)
+
+	reader := csv.NewReader(bytes.NewReader(buf.Bytes()))
+	records, err := reader.ReadAll()
+	require.NoError(t, err)
+
+	require.Len(t, records, 2)
+	assert.Len(t, records[0], 8, "header must not include a raw column when ShowRaw=false")
+	assert.NotContains(t, records[0], "raw")
+}
+
+func TestFormatter_Format_ShowRawTrue_AddsRawColumn(t *testing.T) {
+	f := &Formatter{ShowRaw: true}
+	var buf bytes.Buffer
+
+	findings := []finding.Finding{
+		{
+			ID:       "test-1",
+			Redacted: "sk_****abcd",
+			Raw:      "sk_live_supersecretvalue",
+		},
+	}
+
+	err := f.Format(&buf, findings)
+	require.NoError(t, err)
+
+	reader := csv.NewReader(bytes.NewReader(buf.Bytes()))
+	records, err := reader.ReadAll()
+	require.NoError(t, err)
+
+	require.Len(t, records, 2)
+	require.Len(t, records[0], 9, "header must include a trailing raw column when ShowRaw=true")
+	assert.Equal(t, "raw", records[0][8])
+	assert.Equal(t, "sk_live_supersecretvalue", records[1][8])
+}
+
+func TestFormatter_Format_FormulaInjection_CellsArePrefixed(t *testing.T) {
+	f := &Formatter{ShowRaw: true}
+	var buf bytes.Buffer
+
+	findings := []finding.Finding{
+		{
+			ID:         "=cmd|' /c calc'!A1",
+			DetectorID: "+SUM(1,2)",
+			Redacted:   "-2+3",
+			Raw:        "@evil",
+			SourceMetadata: finding.SourceMetadata{
+				FilePath: "\tleading-tab",
+			},
+			Remediation: &finding.Remediation{
+				Title: "\rcarriage",
+			},
+		},
+	}
+
+	err := f.Format(&buf, findings)
+	require.NoError(t, err)
+
+	reader := csv.NewReader(bytes.NewReader(buf.Bytes()))
+	records, err := reader.ReadAll()
+	require.NoError(t, err)
+
+	require.Len(t, records, 2)
+	row := records[1]
+	assert.Equal(t, "'=cmd|' /c calc'!A1", row[0], "= cell must be quote-prefixed")
+	assert.Equal(t, "'+SUM(1,2)", row[1], "+ cell must be quote-prefixed")
+	assert.Equal(t, "'-2+3", row[3], "- cell must be quote-prefixed")
+	assert.Equal(t, "'\tleading-tab", row[4], "tab-leading cell must be quote-prefixed")
+	assert.Equal(t, "'\rcarriage", row[7], "CR-leading cell must be quote-prefixed")
+	assert.Equal(t, "'@evil", row[8], "@ cell must be quote-prefixed")
+}
+
+func TestFormatter_Format_FormulaInjection_SafeCellsUntouched(t *testing.T) {
+	f := &Formatter{}
+	var buf bytes.Buffer
+
+	findings := []finding.Finding{
+		{
+			ID:         "safe-id",
+			DetectorID: "aws-access-key-id",
+			Redacted:   "AKIA****MPLE",
+		},
+	}
+
+	err := f.Format(&buf, findings)
+	require.NoError(t, err)
+
+	reader := csv.NewReader(bytes.NewReader(buf.Bytes()))
+	records, err := reader.ReadAll()
+	require.NoError(t, err)
+
+	require.Len(t, records, 2)
+	assert.Equal(t, "safe-id", records[1][0])
+	assert.Equal(t, "aws-access-key-id", records[1][1])
+	assert.Equal(t, "AKIA****MPLE", records[1][3])
+}
+
 func TestFormatter_FileExtension_ReturnsCSV(t *testing.T) {
 	f := &Formatter{}
 	assert.Equal(t, ".csv", f.FileExtension())

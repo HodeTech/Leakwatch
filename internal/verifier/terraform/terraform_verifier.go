@@ -5,13 +5,12 @@ package terraform
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 
 	"github.com/cemililik/leakwatch/internal/detector"
 	"github.com/cemililik/leakwatch/internal/verifier"
+	"github.com/cemililik/leakwatch/internal/verifier/internal/httpx"
 	"github.com/cemililik/leakwatch/pkg/finding"
 )
 
@@ -42,66 +41,22 @@ func (v *Verifier) Type() string {
 // Raw contains the token value.
 func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.VerificationResult {
 	token := string(raw.Raw)
-	if token == "" {
-		return finding.VerificationResult{
-			Status:  finding.StatusUnverified,
-			Message: "empty token",
-		}
-	}
+	apiURL := httpx.BaseURL(v.apiURL, defaultAPIURL)
 
-	apiURL := v.apiURL
-	if apiURL == "" {
-		apiURL = defaultAPIURL
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL+"/api/v2/account/details", nil)
-	if err != nil {
-		slog.ErrorContext(ctx, "terraform verifier: failed to create request", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("failed to create request: %v", err),
-		}
-	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("User-Agent", "leakwatch-verifier")
-
-	client := v.httpClient
-	if client == nil {
-		client = http.DefaultClient
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		slog.ErrorContext(ctx, "terraform verifier: request failed", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("request failed: %v", err),
-		}
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	switch resp.StatusCode {
-	case http.StatusOK:
-		return handleActiveToken(ctx, resp.Body)
-	case http.StatusUnauthorized:
-		slog.DebugContext(ctx, "terraform verifier: API token is inactive")
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedInactive,
-			Message: "Terraform Cloud API token is invalid or revoked",
-		}
-	default:
-		slog.ErrorContext(ctx, "terraform verifier: unexpected status code",
-			slog.Int("status_code", resp.StatusCode),
-		)
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("unexpected status code: %d", resp.StatusCode),
-		}
-	}
+	return httpx.VerifyToken(ctx, v.httpClient, token, httpx.TokenSpec{
+		Name: "terraform",
+		Request: httpx.Request{
+			URL:    apiURL + "/api/v2/account/details",
+			Header: map[string]string{"Authorization": "Bearer " + token},
+		},
+		ActiveMessage:   "Terraform Cloud API token is active",
+		InactiveMessage: "Terraform Cloud API token is invalid or revoked",
+		Decode:          decodeAccount,
+	})
 }
 
-// handleActiveToken parses the Terraform Cloud API response for a valid token.
-func handleActiveToken(ctx context.Context, body io.Reader) finding.VerificationResult {
+// decodeAccount reports the account name as username.
+func decodeAccount(body io.Reader) (map[string]string, string, error) {
 	var account struct {
 		Data struct {
 			Attributes struct {
@@ -109,26 +64,8 @@ func handleActiveToken(ctx context.Context, body io.Reader) finding.Verification
 			} `json:"attributes"`
 		} `json:"data"`
 	}
-
 	if err := json.NewDecoder(body).Decode(&account); err != nil {
-		slog.ErrorContext(ctx, "terraform verifier: failed to decode response", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedActive,
-			Message: "Terraform Cloud API token is active (could not parse account details)",
-		}
+		return nil, "", err
 	}
-
-	extra := map[string]string{
-		"username": account.Data.Attributes.Username,
-	}
-
-	slog.InfoContext(ctx, "terraform verifier: API token is active",
-		slog.String("username", account.Data.Attributes.Username),
-	)
-
-	return finding.VerificationResult{
-		Status:    finding.StatusVerifiedActive,
-		Message:   "Terraform Cloud API token is active",
-		ExtraData: extra,
-	}
+	return map[string]string{"username": account.Data.Attributes.Username}, "", nil
 }

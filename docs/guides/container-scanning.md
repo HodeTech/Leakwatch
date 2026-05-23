@@ -216,14 +216,21 @@ Since Leakwatch scans each layer independently, files deleted in upper layers ar
 
 ```json
 {
-  "source_type": "container",
-  "image": "myapp:latest",
-  "layer": "sha256:a1b2c3d4...",
-  "layer_idx": 2,
-  "file_path": "app/credentials.json",
-  "detector": "generic-api-key",
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "detector_id": "generic-api-key",
   "severity": "high",
-  "verified": false
+  "redacted": "ABCD****wxyz",
+  "source": {
+    "source_type": "container",
+    "image": "myapp:latest",
+    "layer": "sha256:a1b2c3d4...",
+    "layer_idx": 2,
+    "file_path": "app/credentials.json"
+  },
+  "verification": {
+    "status": "unverified"
+  },
+  "detected_at": "2026-04-08T14:22:00Z"
 }
 ```
 
@@ -234,7 +241,7 @@ The `layer_idx` field indicates which layer the secret was found in. This inform
 **Scenario 1: SSH key added and deleted during build**
 
 ```dockerfile
-FROM golang:1.22 AS builder
+FROM golang:1.25-alpine AS builder
 COPY id_rsa /root/.ssh/id_rsa
 RUN go mod download
 RUN rm /root/.ssh/id_rsa
@@ -398,10 +405,13 @@ jobs:
           load: true
           tags: myapp:${{ github.sha }}
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
       - name: Install Leakwatch
-        run: |
-          curl -sSfL https://github.com/cemililik/Leakwatch/releases/latest/download/leakwatch_Linux_x86_64.tar.gz | tar xz
-          sudo mv leakwatch /usr/local/bin/
+        run: go install github.com/cemililik/leakwatch@latest
 
       - name: Scan container image
         run: |
@@ -439,9 +449,8 @@ container-scan:
     DOCKER_TLS_CERTDIR: "/certs"
   script:
     - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA .
-    - |
-      wget -qO- https://github.com/cemililik/Leakwatch/releases/latest/download/leakwatch_Linux_x86_64.tar.gz | tar xz
-    - ./leakwatch scan image $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA --format json --output results.json
+    - go install github.com/cemililik/leakwatch@latest
+    - leakwatch scan image $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA --format json --output results.json
   artifacts:
     reports:
       security: results.json
@@ -509,7 +518,7 @@ The default value is the number of CPU cores on the system (`runtime.NumCPU()`).
 
 ```dockerfile
 # Build stage — secrets may remain here but do not pass to the final image
-FROM golang:1.22 AS builder
+FROM golang:1.25-alpine AS builder
 RUN --mount=type=secret,id=github_token \
     GITHUB_TOKEN=$(cat /run/secrets/github_token) go mod download
 RUN CGO_ENABLED=0 go build -o /app

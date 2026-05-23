@@ -247,31 +247,47 @@ api_key = "AKIAIOSFODNN7EXAMPLE"  # leakwatch:ignore
 
 ## 9. Custom Rules Integration
 
-To use custom detection rules with the VS Code extension:
+Custom detection rules are defined inside a `.leakwatch.yaml` configuration file under the `custom-rules:` key (not in a separate standalone file). The Leakwatch CLI loads them when you pass that config file via `--config`.
 
-1. Create a custom rules YAML file (e.g., `.leakwatch-rules.yaml`) in your workspace:
+### Step 1 — Define custom rules in `.leakwatch.yaml`
+
+Add a `custom-rules:` block to your project's `.leakwatch.yaml` (or create a dedicated config file):
 
 ```yaml
-rules:
+# .leakwatch.yaml (or a dedicated config such as .leakwatch-dev.yaml)
+custom-rules:
   - id: internal-service-token
     description: "Internal service authentication token"
-    severity: high
+    regex: 'X-Internal-Token:\s*[A-Za-z0-9]{32,}'
     keywords:
       - "X-Internal-Token"
-    pattern: 'X-Internal-Token:\s*[A-Za-z0-9]{32,}'
+    severity: high
+    entropy: 3.5   # float64 minimum entropy threshold; set to 0 to disable
 ```
 
-2. Set the `leakwatch.customRulesPath` setting to point to this file:
+Each rule requires an `id`, a `regex` pattern, and `keywords` for the Aho-Corasick pre-filter. The `entropy` field is a `float64` minimum threshold (0–8.0); set it to `0` to skip entropy filtering for this rule.
+
+### Step 2 — Point the extension at the config file
+
+Set `leakwatch.customRulesPath` to the **full `.leakwatch.yaml` path**. The extension passes this path to the CLI as `--config`:
 
 ```json
 {
-  "leakwatch.customRulesPath": "${workspaceFolder}/.leakwatch-rules.yaml"
+  "leakwatch.customRulesPath": "${workspaceFolder}/.leakwatch.yaml"
 }
 ```
 
-3. Custom rules are applied during every scan (both scan-on-save and manual scans).
+The CLI is then invoked as:
 
-For the full custom rules specification, see the [Configuration Guide](./configuration.md).
+```
+leakwatch scan fs <workspace> --config <leakwatch.customRulesPath>
+```
+
+Custom rules in that file are registered before the scan and applied alongside all built-in detectors during every scan (both scan-on-save and manual scans).
+
+> **Note:** The `leakwatch.customRulesPath` setting must point to a complete `.leakwatch.yaml` file — not a standalone rules-only file. All other config keys in that file (scan, output, filter, etc.) also take effect when the file is loaded.
+
+For the full custom-rules specification and field reference, see the [Configuration Guide](./configuration.md).
 
 ---
 

@@ -101,7 +101,8 @@ func TestGCSSource_New_DefaultValues(t *testing.T) {
 }
 
 func TestGCSSource_New_WithOptions(t *testing.T) {
-	s := New("my-bucket",
+	s := New(
+		"my-bucket",
 		WithPrefix("logs/"),
 		WithMaxFileSize(5*1024*1024),
 		WithBufferSize(32),
@@ -323,6 +324,94 @@ func TestGCSSource_Chunks_SourceMetadata_Format(t *testing.T) {
 
 	assert.Equal(t, "gcs", chunk.SourceMetadata.SourceType)
 	assert.Equal(t, "my-bucket/path/to/file.env", chunk.SourceMetadata.FilePath)
+}
+
+func TestGCSSource_Chunks_BoundsReadToMaxFileSize(t *testing.T) {
+	// The listed size understates the real body so the listing-based size
+	// check passes, but the bounded read must still drop the oversize object.
+	bigBody := strings.Repeat("A", 2048)
+	mock := &mockGCSClient{
+		buckets: map[string]*mockBucketHandle{
+			"my-bucket": {
+				name: "my-bucket",
+				objects: []*gcsstorage.ObjectAttrs{
+					{Name: "small.txt", Size: 5},
+					{Name: "liar.txt", Size: 5},
+				},
+				data: map[string]string{
+					"small.txt": "hello",
+					"liar.txt":  bigBody,
+				},
+			},
+		},
+	}
+
+	s := New("my-bucket", WithMaxFileSize(1024))
+	s.client = mock
+
+	ctx := context.Background()
+	var chunks []string
+	for chunk := range s.Chunks(ctx) {
+		chunks = append(chunks, chunk.SourceMetadata.FilePath)
+	}
+
+	assert.Len(t, chunks, 1)
+	assert.Equal(t, "my-bucket/small.txt", chunks[0])
+}
+
+func TestGCSSource_DownloadObject_AtLimit_NotSkipped(t *testing.T) {
+	body := strings.Repeat("A", 1024)
+	mock := &mockGCSClient{
+		buckets: map[string]*mockBucketHandle{
+			"my-bucket": {
+				name: "my-bucket",
+				data: map[string]string{"exact.txt": body},
+			},
+		},
+	}
+	s := New("my-bucket", WithMaxFileSize(1024))
+	s.client = mock
+
+	data, err := s.downloadObject(context.Background(), "exact.txt")
+	require.NoError(t, err)
+	assert.Len(t, data, 1024)
+}
+
+func TestGCSSource_Chunks_WithExcludePaths_FiltersObjects(t *testing.T) {
+	mock := &mockGCSClient{
+		buckets: map[string]*mockBucketHandle{
+			"my-bucket": {
+				name: "my-bucket",
+				objects: []*gcsstorage.ObjectAttrs{
+					{Name: "src/app.go", Size: 10},
+					{Name: "vendor/lib.go", Size: 10},
+					{Name: "test/data.txt", Size: 10},
+				},
+				data: map[string]string{
+					"src/app.go":    "package app",
+					"vendor/lib.go": "package lib",
+					"test/data.txt": "fixture",
+				},
+			},
+		},
+	}
+
+	s := New("my-bucket", WithExcludePaths([]string{"vendor/**", "test/*"}))
+	s.client = mock
+
+	ctx := context.Background()
+	var chunks []string
+	for chunk := range s.Chunks(ctx) {
+		chunks = append(chunks, chunk.SourceMetadata.FilePath)
+	}
+
+	assert.Len(t, chunks, 1)
+	assert.Equal(t, "my-bucket/src/app.go", chunks[0])
+}
+
+func TestGCSSource_New_WithExcludePaths_StoresPatterns(t *testing.T) {
+	s := New("my-bucket", WithExcludePaths([]string{"a/**", "b"}))
+	assert.Equal(t, []string{"a/**", "b"}, s.excludePaths)
 }
 
 func TestGCSSource_Chunks_WithPrefix_FiltersObjects(t *testing.T) {

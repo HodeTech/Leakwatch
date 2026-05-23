@@ -1,5 +1,16 @@
 // Package teams provides a verifier for Microsoft Teams webhook URLs.
-// It sends a minimal POST request to the webhook endpoint to check validity.
+//
+// Security note: a Teams incoming webhook is a write-only endpoint — the only
+// way to interact with it is to POST a message, which would deliver a visible
+// card to a (possibly customer-owned) channel. Delivering a message during a
+// scan is a destructive side effect and violates the project's secret-safety
+// rules. Therefore this verifier performs a NON-DESTRUCTIVE probe: it POSTs a
+// deliberately empty JSON object ("{}"), which Teams rejects as a bad payload
+// (HTTP 400) WITHOUT rendering a card. That 400 distinguishes a real, active
+// webhook from a deleted/disabled one (HTTP 404) or an invalid host
+// (connection error). Ambiguous responses (for example a 2xx, which a genuine
+// Teams webhook never returns for an empty payload) fall back to Unverified
+// rather than risk a false positive.
 package teams
 
 import (
@@ -11,13 +22,15 @@ import (
 
 	"github.com/cemililik/leakwatch/internal/detector"
 	"github.com/cemililik/leakwatch/internal/verifier"
+	"github.com/cemililik/leakwatch/internal/verifier/internal/httpx"
 	"github.com/cemililik/leakwatch/pkg/finding"
 )
 
 const detectorID = "teams-webhook"
 
 // Verifier checks whether a Microsoft Teams webhook URL is active by sending
-// a minimal POST request. It NEVER logs or persists raw webhook URLs.
+// a non-destructive probe. It NEVER logs or persists raw webhook URLs and it
+// NEVER delivers a visible message to the target channel.
 type Verifier struct {
 	// httpClient overrides the default HTTP client (for testing).
 	httpClient *http.Client
@@ -32,8 +45,14 @@ func (v *Verifier) Type() string {
 	return detectorID
 }
 
-// Verify checks if the detected Teams webhook URL is valid/active.
-// Raw contains the full webhook URL.
+// Verify probes the detected Teams webhook URL without delivering a message.
+//
+// It POSTs an empty JSON object so that a real webhook rejects it as a bad
+// payload (no card is rendered). The status code is then mapped:
+//
+//   - 400 Bad Request -> active (the endpoint exists and validated our payload)
+//   - 404 Not Found    -> inactive (webhook deleted or disabled)
+//   - anything else     -> unverified (cannot decide non-destructively)
 func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.VerificationResult {
 	webhookURL := string(raw.Raw)
 	if webhookURL == "" {
@@ -43,15 +62,20 @@ func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.
 		}
 	}
 
-	// Send a minimal message payload to verify the webhook is active.
-	payload := []byte(`{"type":"message","text":""}`)
+	// An empty JSON object is a syntactically valid but semantically invalid
+	// Teams payload (no "text"/"summary"): Teams returns 400 "Bad payload"
+	// without delivering a card, so the probe is non-destructive.
+	payload := []byte(`{}`)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, webhookURL, bytes.NewReader(payload))
 	if err != nil {
-		slog.ErrorContext(ctx, "teams verifier: failed to create request", slog.String("error", err.Error()))
+		// The webhook URL is itself the secret and may appear in the error text;
+		// redact it before logging or returning.
+		safeErr := httpx.RedactError(err, webhookURL)
+		slog.ErrorContext(ctx, "teams verifier: failed to create request", slog.String("error", safeErr))
 		return finding.VerificationResult{
 			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("failed to create request: %v", err),
+			Message: fmt.Sprintf("failed to create request: %s", safeErr),
 		}
 	}
 	req.Header.Set("Content-Type", "application/json")
@@ -59,33 +83,39 @@ func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.
 
 	client := v.httpClient
 	if client == nil {
-		client = http.DefaultClient
+		client = httpx.Client()
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		slog.ErrorContext(ctx, "teams verifier: request failed", slog.String("error", err.Error()))
+		// A *url.Error from the transport embeds the full request URL, which is
+		// the webhook secret; redact it before logging or returning.
+		safeErr := httpx.RedactError(err, webhookURL)
+		slog.ErrorContext(ctx, "teams verifier: request failed", slog.String("error", safeErr))
 		return finding.VerificationResult{
 			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("request failed: %v", err),
+			Message: fmt.Sprintf("request failed: %s", safeErr),
 		}
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	switch resp.StatusCode {
-	case http.StatusOK, http.StatusAccepted:
-		slog.InfoContext(ctx, "teams verifier: webhook is active")
+	// The shared client does not follow redirects; a redirect from a webhook
+	// endpoint means the URL is wrong, never that the webhook is active.
+	if httpx.IsRedirect(resp.StatusCode) {
 		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedActive,
-			Message: "Teams webhook is active",
+			Status:  finding.StatusVerifyError,
+			Message: fmt.Sprintf("unexpected redirect (status %d)", resp.StatusCode),
 		}
+	}
+
+	switch resp.StatusCode {
 	case http.StatusBadRequest:
-		// 400 with a valid endpoint means the webhook exists but rejected our
-		// empty payload — treat as active since the URL is reachable.
-		slog.InfoContext(ctx, "teams verifier: webhook responded with bad request, treating as active")
+		// A real Teams webhook rejects our empty payload with 400 without
+		// rendering a card. This is the positive, non-destructive signal.
+		slog.InfoContext(ctx, "teams verifier: webhook rejected empty payload, treating as active")
 		return finding.VerificationResult{
 			Status:  finding.StatusVerifiedActive,
-			Message: "Teams webhook is active (rejected empty payload)",
+			Message: "Teams webhook is active (rejected non-destructive empty payload)",
 		}
 	case http.StatusNotFound:
 		slog.DebugContext(ctx, "teams verifier: webhook is inactive")
@@ -94,12 +124,16 @@ func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.
 			Message: "Teams webhook URL is not found or disabled",
 		}
 	default:
-		slog.ErrorContext(ctx, "teams verifier: unexpected status code",
+		// A genuine Teams webhook never accepts an empty payload (2xx), and any
+		// other status is ambiguous. Avoid claiming active/inactive when we
+		// cannot decide non-destructively.
+		slog.DebugContext(
+			ctx, "teams verifier: inconclusive response to non-destructive probe",
 			slog.Int("status_code", resp.StatusCode),
 		)
 		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("unexpected status code: %d", resp.StatusCode),
+			Status:  finding.StatusUnverified,
+			Message: fmt.Sprintf("inconclusive response to non-destructive probe (status %d)", resp.StatusCode),
 		}
 	}
 }

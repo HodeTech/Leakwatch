@@ -36,19 +36,19 @@ func TestDetector_Scan_MatchesValidTokens(t *testing.T) {
 			name:     "valid token standalone",
 			input:    token,
 			expected: 1,
-			redacted: token[:8] + "****",
+			redacted: "****" + token[len(token)-4:],
 		},
 		{
 			name:     "token embedded in config",
 			input:    "AIRTABLE_API_KEY=" + token,
 			expected: 1,
-			redacted: token[:8] + "****",
+			redacted: "****" + token[len(token)-4:],
 		},
 		{
 			name:     "token in environment variable",
 			input:    "export AIRTABLE_TOKEN='" + token + "'",
 			expected: 1,
-			redacted: token[:8] + "****",
+			redacted: "****" + token[len(token)-4:],
 		},
 		{
 			name:     "multiple tokens",

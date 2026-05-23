@@ -6,13 +6,12 @@ package pagerduty
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 
 	"github.com/cemililik/leakwatch/internal/detector"
 	"github.com/cemililik/leakwatch/internal/verifier"
+	"github.com/cemililik/leakwatch/internal/verifier/internal/httpx"
 	"github.com/cemililik/leakwatch/pkg/finding"
 )
 
@@ -43,91 +42,29 @@ func (v *Verifier) Type() string {
 // Raw contains the key value.
 func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.VerificationResult {
 	token := string(raw.Raw)
-	if token == "" {
-		return finding.VerificationResult{
-			Status:  finding.StatusUnverified,
-			Message: "empty token",
-		}
-	}
+	apiURL := httpx.BaseURL(v.apiURL, defaultAPIURL)
 
-	apiURL := v.apiURL
-	if apiURL == "" {
-		apiURL = defaultAPIURL
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL+"/users/me", nil)
-	if err != nil {
-		slog.ErrorContext(ctx, "pagerduty verifier: failed to create request", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("failed to create request: %v", err),
-		}
-	}
-	req.Header.Set("Authorization", "Token token="+token)
-	req.Header.Set("User-Agent", "leakwatch-verifier")
-
-	client := v.httpClient
-	if client == nil {
-		client = http.DefaultClient
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		slog.ErrorContext(ctx, "pagerduty verifier: request failed", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("request failed: %v", err),
-		}
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	switch resp.StatusCode {
-	case http.StatusOK:
-		return handleActiveKey(ctx, resp.Body)
-	case http.StatusUnauthorized:
-		slog.DebugContext(ctx, "pagerduty verifier: API key is inactive")
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedInactive,
-			Message: "PagerDuty API key is invalid or revoked",
-		}
-	default:
-		slog.ErrorContext(ctx, "pagerduty verifier: unexpected status code",
-			slog.Int("status_code", resp.StatusCode),
-		)
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("unexpected status code: %d", resp.StatusCode),
-		}
-	}
+	return httpx.VerifyToken(ctx, v.httpClient, token, httpx.TokenSpec{
+		Name: "pagerduty",
+		Request: httpx.Request{
+			URL:    apiURL + "/users/me",
+			Header: map[string]string{"Authorization": "Token token=" + token},
+		},
+		ActiveMessage:   "PagerDuty API key is active",
+		InactiveMessage: "PagerDuty API key is invalid or revoked",
+		Decode:          decodeUser,
+	})
 }
 
-// handleActiveKey parses the PagerDuty API response for a valid key.
-func handleActiveKey(ctx context.Context, body io.Reader) finding.VerificationResult {
+// decodeUser reports the account name as user_name.
+func decodeUser(body io.Reader) (map[string]string, string, error) {
 	var resp struct {
 		User struct {
 			Name string `json:"name"`
 		} `json:"user"`
 	}
-
 	if err := json.NewDecoder(body).Decode(&resp); err != nil {
-		slog.ErrorContext(ctx, "pagerduty verifier: failed to decode response", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedActive,
-			Message: "PagerDuty API key is active (could not parse user info)",
-		}
+		return nil, "", err
 	}
-
-	extra := map[string]string{
-		"user_name": resp.User.Name,
-	}
-
-	slog.InfoContext(ctx, "pagerduty verifier: API key is active",
-		slog.String("user_name", resp.User.Name),
-	)
-
-	return finding.VerificationResult{
-		Status:    finding.StatusVerifiedActive,
-		Message:   "PagerDuty API key is active",
-		ExtraData: extra,
-	}
+	return map[string]string{"user_name": resp.User.Name}, "", nil
 }

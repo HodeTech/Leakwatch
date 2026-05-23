@@ -19,8 +19,9 @@ const storageDetectorID = "azure-storage-key"
 // that the required fields (AccountName, AccountKey) are present and
 // the AccountKey is valid base64. It NEVER logs or persists raw key values.
 //
-// Note: This is a format-check verifier. Live verification would require
-// the Azure SDK to perform HMAC-SHA256 signed requests.
+// Note: This is a format-check verifier; it performs no live verification.
+// The result is therefore always StatusUnverified. Live verification would
+// require the Azure SDK to perform HMAC-SHA256 signed requests.
 type StorageVerifier struct{}
 
 func init() {
@@ -48,27 +49,28 @@ func (v *StorageVerifier) Verify(ctx context.Context, raw detector.RawFinding) f
 	if accountName == "" {
 		slog.DebugContext(ctx, "azure storage verifier: AccountName not found in connection string")
 		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedInactive,
-			Message: "AccountName not found in connection string",
+			Status:  finding.StatusUnverified,
+			Message: "format invalid (AccountName not found in connection string); live verification not supported",
 		}
 	}
 
 	if accountKey == "" {
 		slog.DebugContext(ctx, "azure storage verifier: AccountKey not found in connection string")
 		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedInactive,
-			Message: "AccountKey not found in connection string",
+			Status:  finding.StatusUnverified,
+			Message: "format invalid (AccountKey not found in connection string); live verification not supported",
 		}
 	}
 
 	// Validate that AccountKey is valid base64.
 	if _, err := base64.StdEncoding.DecodeString(accountKey); err != nil {
-		slog.DebugContext(ctx, "azure storage verifier: AccountKey is not valid base64",
+		slog.DebugContext(
+			ctx, "azure storage verifier: AccountKey is not valid base64",
 			slog.String("error", err.Error()),
 		)
 		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedInactive,
-			Message: "AccountKey is not valid base64",
+			Status:  finding.StatusUnverified,
+			Message: "format invalid (AccountKey is not valid base64); live verification not supported",
 		}
 	}
 
@@ -76,13 +78,14 @@ func (v *StorageVerifier) Verify(ctx context.Context, raw detector.RawFinding) f
 		"account_name": accountName,
 	}
 
-	slog.InfoContext(ctx, "azure storage verifier: connection string format is valid",
+	slog.DebugContext(
+		ctx, "azure storage verifier: connection string format is valid",
 		slog.String("account_name", accountName),
 	)
 
 	return finding.VerificationResult{
-		Status:    finding.StatusVerifiedActive,
-		Message:   "Format validated (live verification requires Azure SDK)",
+		Status:    finding.StatusUnverified,
+		Message:   "format valid; live verification not supported (requires Azure SDK)",
 		ExtraData: extra,
 	}
 }

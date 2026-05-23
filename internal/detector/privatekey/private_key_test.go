@@ -86,3 +86,44 @@ func TestDetector_Scan(t *testing.T) {
 		})
 	}
 }
+
+// TestDetector_Scan_CapturesBlockRegionWithoutLeakingBody verifies DETB-M-02:
+// the detector measures the full BEGIN..END block region but never stores the
+// key body in Raw, RawV2, or Redacted. The body below is clearly fake.
+func TestDetector_Scan_CapturesBlockRegionWithoutLeakingBody(t *testing.T) {
+	body := "FAKEBODYLINE1FAKEBODYLINE2FAKEBODYLINE3"
+	pem := "-----BEGIN RSA PRIVATE KEY-----\n" + body + "\n-----END RSA PRIVATE KEY-----"
+
+	d := &Detector{}
+	findings := d.Scan(context.Background(), []byte(pem))
+
+	assert.Len(t, findings, 1)
+	f := findings[0]
+
+	// The PEM body must never appear in any stored field.
+	assert.NotContains(t, string(f.Raw), "FAKEBODY")
+	assert.NotContains(t, string(f.RawV2), "FAKEBODY")
+	assert.NotContains(t, f.Redacted, "FAKEBODY")
+
+	// The block region length must span the whole BEGIN..END block.
+	assert.Equal(t, "block_bytes", firstKey(f.ExtraData))
+	assert.Equal(t, len(pem), blockBytes(t, f.ExtraData))
+}
+
+func firstKey(m map[string]string) string {
+	for k := range m {
+		return k
+	}
+	return ""
+}
+
+func blockBytes(t *testing.T, m map[string]string) int {
+	t.Helper()
+	v, ok := m["block_bytes"]
+	assert.True(t, ok, "block_bytes must be present")
+	n := 0
+	for _, c := range v {
+		n = n*10 + int(c-'0')
+	}
+	return n
+}

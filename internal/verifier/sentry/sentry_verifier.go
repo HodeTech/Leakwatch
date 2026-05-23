@@ -1,15 +1,17 @@
 // Package sentry provides a verifier for Sentry authentication tokens.
-// It uses the Sentry API GET /api/0/ endpoint to check token validity.
+// It uses the auth-required Sentry API GET /api/0/organizations/ endpoint to
+// check token validity. The API root (/api/0/) responds 200 without
+// authentication, so it cannot distinguish a valid token from an invalid one
+// and must not be used for verification.
 package sentry
 
 import (
 	"context"
-	"fmt"
-	"log/slog"
 	"net/http"
 
 	"github.com/cemililik/leakwatch/internal/detector"
 	"github.com/cemililik/leakwatch/internal/verifier"
+	"github.com/cemililik/leakwatch/internal/verifier/internal/httpx"
 	"github.com/cemililik/leakwatch/pkg/finding"
 )
 
@@ -40,64 +42,18 @@ func (v *Verifier) Type() string {
 // Raw contains the token value.
 func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.VerificationResult {
 	token := string(raw.Raw)
-	if token == "" {
-		return finding.VerificationResult{
-			Status:  finding.StatusUnverified,
-			Message: "empty token",
-		}
-	}
+	apiURL := httpx.BaseURL(v.apiURL, defaultAPIURL)
 
-	apiURL := v.apiURL
-	if apiURL == "" {
-		apiURL = defaultAPIURL
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL+"/api/0/", nil)
-	if err != nil {
-		slog.ErrorContext(ctx, "sentry verifier: failed to create request", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("failed to create request: %v", err),
-		}
-	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("User-Agent", "leakwatch-verifier")
-
-	client := v.httpClient
-	if client == nil {
-		client = http.DefaultClient
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		slog.ErrorContext(ctx, "sentry verifier: request failed", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("request failed: %v", err),
-		}
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	switch resp.StatusCode {
-	case http.StatusOK:
-		slog.InfoContext(ctx, "sentry verifier: token is active")
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedActive,
-			Message: "Sentry token is active",
-		}
-	case http.StatusUnauthorized:
-		slog.DebugContext(ctx, "sentry verifier: token is inactive")
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedInactive,
-			Message: "Sentry token is invalid or revoked",
-		}
-	default:
-		slog.ErrorContext(ctx, "sentry verifier: unexpected status code",
-			slog.Int("status_code", resp.StatusCode),
-		)
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("unexpected status code: %d", resp.StatusCode),
-		}
-	}
+	// Use an auth-required endpoint: /api/0/ responds 200 without authentication
+	// (false positive), whereas /api/0/organizations/ returns 401 for an invalid
+	// token.
+	return httpx.VerifyToken(ctx, v.httpClient, token, httpx.TokenSpec{
+		Name: "sentry",
+		Request: httpx.Request{
+			URL:    apiURL + "/api/0/organizations/",
+			Header: map[string]string{"Authorization": "Bearer " + token},
+		},
+		ActiveMessage:   "Sentry token is active",
+		InactiveMessage: "Sentry token is invalid or revoked",
+	})
 }

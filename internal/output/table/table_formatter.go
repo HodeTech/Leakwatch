@@ -21,8 +21,8 @@ const (
 
 // Formatter outputs findings as a human-readable table for terminal display.
 type Formatter struct {
-	// ShowRaw, when true, includes the Raw field in output.
-	// When false, the Raw field is stripped for defense in depth.
+	// ShowRaw, when true, appends a trailing RAW column holding the unredacted
+	// secret value. When false, no RAW column is emitted at all.
 	ShowRaw bool
 
 	// ColorEnabled, when true, wraps severity text with ANSI color codes.
@@ -32,32 +32,29 @@ type Formatter struct {
 
 // Format writes findings as a formatted table to the given writer.
 // Columns: SEVERITY | DETECTOR | FILE | REDACTED | STATUS | REMEDIATION
+// When ShowRaw is true, a trailing RAW column is appended.
 // A summary line is appended at the bottom.
-// When ShowRaw is false, the Raw field is actively stripped from the output.
 func (f *Formatter) Format(w io.Writer, findings []finding.Finding) error {
-	output := make([]finding.Finding, len(findings))
-	copy(output, findings)
-
-	if !f.ShowRaw {
-		for i := range output {
-			output[i].Raw = ""
-		}
-	}
-
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 
 	// Write header.
-	if _, err := fmt.Fprintln(tw, "SEVERITY\tDETECTOR\tFILE\tREDACTED\tSTATUS\tREMEDIATION"); err != nil {
+	header := "SEVERITY\tDETECTOR\tFILE\tREDACTED\tSTATUS\tREMEDIATION"
+	separator := "--------\t--------\t----\t--------\t------\t-----------"
+	if f.ShowRaw {
+		header += "\tRAW"
+		separator += "\t---"
+	}
+	if _, err := fmt.Fprintln(tw, header); err != nil {
 		return fmt.Errorf("failed to write table header: %w", err)
 	}
 
 	// Write separator.
-	if _, err := fmt.Fprintln(tw, "--------\t--------\t----\t--------\t------\t-----------"); err != nil {
+	if _, err := fmt.Fprintln(tw, separator); err != nil {
 		return fmt.Errorf("failed to write table separator: %w", err)
 	}
 
 	// Write rows.
-	for _, fd := range output {
+	for _, fd := range findings {
 		remediation := "-"
 		if fd.Remediation != nil && fd.Remediation.Title != "" {
 			remediation = fd.Remediation.Title
@@ -68,7 +65,8 @@ func (f *Formatter) Format(w io.Writer, findings []finding.Finding) error {
 			sevText = f.colorizeSeverity(fd.Severity, sevText)
 		}
 
-		line := fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t%s",
+		line := fmt.Sprintf(
+			"%s\t%s\t%s\t%s\t%s\t%s",
 			sevText,
 			fd.DetectorID,
 			fd.SourceMetadata.FilePath,
@@ -76,6 +74,9 @@ func (f *Formatter) Format(w io.Writer, findings []finding.Finding) error {
 			fd.Verification.Status.String(),
 			remediation,
 		)
+		if f.ShowRaw {
+			line += "\t" + fd.Raw
+		}
 		if _, err := fmt.Fprintln(tw, line); err != nil {
 			return fmt.Errorf("failed to write table row: %w", err)
 		}
@@ -86,7 +87,7 @@ func (f *Formatter) Format(w io.Writer, findings []finding.Finding) error {
 	}
 
 	// Write summary line.
-	summary := f.buildSummary(output)
+	summary := f.buildSummary(findings)
 	if _, err := fmt.Fprintln(w, ""); err != nil {
 		return fmt.Errorf("failed to write table summary: %w", err)
 	}

@@ -363,7 +363,7 @@ jobs:
 ```yaml
 secret-scan:
   stage: test
-  image: golang:1.22
+  image: golang:1.25-alpine
   before_script:
     - go install github.com/cemililik/leakwatch@latest
   script:

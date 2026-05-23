@@ -6,11 +6,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
+	"io"
 	"net/http"
 
 	"github.com/cemililik/leakwatch/internal/detector"
 	"github.com/cemililik/leakwatch/internal/verifier"
+	"github.com/cemililik/leakwatch/internal/verifier/internal/httpx"
 	"github.com/cemililik/leakwatch/pkg/finding"
 )
 
@@ -38,54 +39,31 @@ func (v *Verifier) Type() string {
 }
 
 // Verify checks if the detected Slack token is valid/active.
+// Slack always answers auth.test with 200 and reports validity via the "ok"
+// field, so no status code maps to inactive (InactiveStatuses is empty).
 func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.VerificationResult {
 	token := string(raw.Raw)
-	if token == "" {
-		return finding.VerificationResult{
-			Status:  finding.StatusUnverified,
-			Message: "empty token",
-		}
-	}
+	apiURL := httpx.BaseURL(v.apiURL, defaultAPIURL)
 
-	apiURL := v.apiURL
-	if apiURL == "" {
-		apiURL = defaultAPIURL
-	}
+	return httpx.VerifyToken(ctx, v.httpClient, token, httpx.TokenSpec{
+		Name: "slack",
+		Request: httpx.Request{
+			Method: http.MethodPost,
+			URL:    apiURL + "/auth.test",
+			Header: map[string]string{
+				"Authorization": "Bearer " + token,
+				"Content-Type":  "application/json; charset=utf-8",
+			},
+		},
+		InactiveStatuses: []int{},
+		ActiveMessage:    "Slack token is active",
+		Decode:           decodeAuthTest,
+	})
+}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, apiURL+"/auth.test", nil)
-	if err != nil {
-		slog.ErrorContext(ctx, "slack verifier: failed to create request", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("failed to create request: %v", err),
-		}
-	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	req.Header.Set("User-Agent", "leakwatch-verifier")
-
-	client := v.httpClient
-	if client == nil {
-		client = http.DefaultClient
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		slog.ErrorContext(ctx, "slack verifier: request failed", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("request failed: %v", err),
-		}
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("unexpected status code: %d", resp.StatusCode),
-		}
-	}
-
+// decodeAuthTest reports team and user on success and downgrades to inactive
+// when the response body reports ok=false.
+func decodeAuthTest(body io.Reader) (map[string]string, string, error) {
 	var result struct {
 		OK    bool   `json:"ok"`
 		Error string `json:"error"`
@@ -93,21 +71,11 @@ func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.
 		User  string `json:"user"`
 		URL   string `json:"url"`
 	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		slog.ErrorContext(ctx, "slack verifier: failed to decode response", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("failed to decode response: %v", err),
-		}
+	if err := json.NewDecoder(body).Decode(&result); err != nil {
+		return nil, "", err
 	}
-
 	if !result.OK {
-		slog.DebugContext(ctx, "slack verifier: token is inactive", slog.String("error", result.Error))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedInactive,
-			Message: fmt.Sprintf("Slack token is invalid: %s", result.Error),
-		}
+		return nil, fmt.Sprintf("Slack token is invalid: %s", result.Error), nil
 	}
 
 	extra := map[string]string{}
@@ -117,15 +85,5 @@ func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.
 	if result.User != "" {
 		extra["user"] = result.User
 	}
-
-	slog.InfoContext(ctx, "slack verifier: token is active",
-		slog.String("team", result.Team),
-		slog.String("user", result.User),
-	)
-
-	return finding.VerificationResult{
-		Status:    finding.StatusVerifiedActive,
-		Message:   "Slack token is active",
-		ExtraData: extra,
-	}
+	return extra, "", nil
 }

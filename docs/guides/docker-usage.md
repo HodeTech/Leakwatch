@@ -59,26 +59,21 @@ docker run --rm \
 
 ### Scan Summary
 
-Every scan prints a summary to stderr showing source, duration, file count, findings, and verification stats. When writing output to a file with `--output`, the summary still appears in the terminal:
+Every scan prints a summary to stderr showing source, duration, file count, and findings count. When writing output to a file with `--output`, the summary still appears in the terminal:
 
 ```bash
 docker run --rm -v "$(pwd):/scan:ro" ghcr.io/cemililik/leakwatch:latest scan fs /scan
 ```
 
 ```
-Scan Summary
-============
-Source:       filesystem
-Path:         /scan
-Duration:     1.87s
-Files:        934
-Chunks:       2,610
-Findings:     2
-  Critical:   0
-  High:       1
-  Medium:     1
-  Low:        0
-Verified:     1 / 2
+── Scan Summary ─────────────────────────────────
+  Date:            2026-04-08 14:22:00
+  Source:          filesystem
+  Target:          /scan
+  Files scanned:   934
+  Duration:        1.87s
+  Findings:        2
+─────────────────────────────────────────────────
 ```
 
 ---
@@ -189,17 +184,24 @@ docker run --rm ghcr.io/cemililik/leakwatch:latest scan image \
   123456789.dkr.ecr.eu-west-1.amazonaws.com/my-app:latest
 ```
 
-### Local Images (Docker Socket)
+### Local Images
 
-To scan images available in the local Docker daemon, mount the Docker socket:
+The `scan image` command uses `go-containerregistry`'s `remote.Image` to pull images directly from registries. It does **not** interact with a local Docker daemon, so scanning a locally-built image requires pushing it to a registry first (or using a local registry such as `registry:2`):
 
 ```bash
-docker run --rm \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  ghcr.io/cemililik/leakwatch:latest scan image my-local-app:dev
+# Option 1: push to a local registry and scan from there
+docker run -d -p 5000:5000 --name registry registry:2
+docker tag my-local-app:dev localhost:5000/my-local-app:dev
+docker push localhost:5000/my-local-app:dev
+leakwatch scan image localhost:5000/my-local-app:dev
+
+# Option 2: scan directly from GHCR or another remote registry after pushing
+docker tag my-local-app:dev ghcr.io/myorg/my-local-app:dev
+docker push ghcr.io/myorg/my-local-app:dev
+leakwatch scan image ghcr.io/myorg/my-local-app:dev
 ```
 
-> **Security note:** Mounting the Docker socket gives the container access to the Docker daemon. Use this only in trusted environments.
+> **Note:** Mounting the Docker socket (`/var/run/docker.sock`) is not needed and not supported by the container source. The daemonless design is intentional — it avoids the privilege escalation risk associated with Docker socket access.
 
 ### Private Registry Authentication
 
@@ -478,7 +480,7 @@ flowchart TD
         subgraph LW["Leakwatch Process (non-root)"]
             CMD["CLI Command\n(scan fs/git/image/s3/gcs)"]
             ENG["Detection Engine\n(Aho-Corasick + Regex + Entropy)"]
-            VER["Verification Engine\n(54 verifiers (51 packages), 84% coverage)"]
+            VER["Verification Engine\n(54 verifiers (51 packages), 85.7% coverage)"]
             FMT["Output Formatter"]
         end
     end

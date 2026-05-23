@@ -95,7 +95,7 @@ func TestAPIKeyDetector_Scan_RedactsValue(t *testing.T) {
 	findings := d.Scan(context.Background(), []byte(input))
 	require.Len(t, findings, 1)
 
-	assert.Equal(t, "abcd****7890", findings[0].Redacted)
+	assert.Equal(t, "****7890", findings[0].Redacted)
 	assert.Equal(t, "api_key", findings[0].ExtraData["key_name"])
 }
 

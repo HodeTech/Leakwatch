@@ -14,7 +14,7 @@ Secret scanning requires matching thousands of different patterns (regex) agains
 
 1. **Primary:** Fixed keyword pre-filtering with the Aho-Corasick algorithm (single pass, O(n))
 2. **Secondary:** Regex validation only on chunks where Aho-Corasick matches occur, and only for the matching detectors
-3. **Tertiary:** Shannon entropy for additional confidence scoring
+3. **Tertiary:** Shannon entropy score attached to each finding for human review. At the engine level this is **display-only** — the engine never gates or suppresses findings based on the entropy value. Threshold gating is active only for custom rules (the `entropy:` field in a YAML rule definition). A global entropy gate for built-in detectors is planned but not yet implemented (see ROADMAP "Known Gaps & Follow-up Work").
 
 ### Rationale
 

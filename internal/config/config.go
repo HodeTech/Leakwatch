@@ -100,14 +100,10 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("filter.exclude-detectors", []string{})
 }
 
-// Load reads configuration from the global Viper instance and returns a Config.
-func Load() (*Config, error) {
-	setDefaults(viper.GetViper())
-	return unmarshalAndValidate(viper.GetViper())
-}
-
-// LoadFrom reads configuration from a specific Viper instance.
-// This is useful for testing with isolated Viper state.
+// LoadFrom reads configuration from a specific Viper instance and returns a
+// validated Config. Each scan command builds its own isolated Viper (see
+// cmd/scan_common.go) and passes it here, which keeps one command's bound flag
+// defaults from leaking into another command's resolved configuration.
 func LoadFrom(v *viper.Viper) (*Config, error) {
 	setDefaults(v)
 	return unmarshalAndValidate(v)

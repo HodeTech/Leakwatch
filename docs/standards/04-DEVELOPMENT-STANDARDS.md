@@ -1,8 +1,8 @@
 # Leakwatch - Development Standards and Infrastructure
 
-> **Document Version:** 1.0
-> **Date:** 2026-03-24
-> **Status:** Draft
+> **Document Version:** 1.1
+> **Date:** 2026-05-22
+> **Status:** Approved
 
 ---
 
@@ -145,7 +145,9 @@ block-beta
 | `internal/entropy/*` | 95% |
 | `internal/matcher/*` | 90% |
 | `internal/output/*` | 85% |
-| **Overall Target** | **80%+** |
+| **Overall Target** | **70%+ (enforced by CI)** |
+
+> These per-package figures are aspirational targets; CI enforces only the overall 70% floor.
 
 ### 3.3 Test Writing Rules
 
@@ -237,7 +239,7 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
   pull_request:
     branches: [main]
 
@@ -442,44 +444,51 @@ v1.0.0 — Stable API, production-ready
 
 ## 6. Linter Configuration (.golangci.yml)
 
+The project uses **golangci-lint v2** (`version: "2"` schema). The canonical file is `.golangci.yml` in the repo root. An authoritative excerpt:
+
 ```yaml
+version: "2"
+
+formatters:
+  enable:
+    - gofumpt          # Strict go formatting (replaces gofmt)
+
 linters:
   enable:
-    - errcheck        # Unchecked error-returning functions
-    - govet           # Go vet checks
-    - staticcheck     # Advanced static analysis
-    - unused          # Unused code
-    - gosimple        # Simplifiable code
-    - ineffassign     # Ineffective assignments
-    - typecheck       # Type checks
-    - gocritic        # Additional style and performance checks
-    - gofumpt         # Strict formatting
-    - misspell        # English spelling checks
-    - prealloc        # Slice pre-allocation opportunities
-    - revive          # Additional linting rules
-    - unconvert       # Unnecessary type conversions
-    - bodyclose       # HTTP response body close check
-    - noctx           # HTTP request context check
-
-linters-settings:
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - style
-      - performance
-  revive:
+    - errcheck         # Unchecked error-returning functions
+    - govet            # Go vet checks
+    - staticcheck      # Advanced static analysis
+    - unused           # Unused code
+    - gocritic         # Style and performance checks
+    - misspell         # English spelling checks
+    - prealloc         # Slice pre-allocation opportunities
+    - revive           # Additional linting rules
+    - unconvert        # Unnecessary type conversions
+    - bodyclose        # HTTP response body close check
+    - noctx            # HTTP request context check
+  settings:
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+    revive:
+      rules:
+        - name: exported
+          disabled: true
+        - name: package-comments
+          disabled: true
+  exclusions:
     rules:
-      - name: exported
-        arguments:
-          - "checkPrivateReceivers"
-
-issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
-        - gocritic
+      - path: _test\.go
+        linters:
+          - errcheck
+          - gocritic
+      - linters:
+          - gocritic
+        text: "hugeParam|rangeValCopy|appendAssign"
 ```
+
+> **Important:** The v2 schema moves formatter configuration under `formatters:` (not `linters:`), and uses `exclusions.rules` instead of `issues.exclude-rules`. Do not mix v1 and v2 syntax — golangci-lint v2 will reject v1 configuration keys.
 
 ---
 
@@ -506,11 +515,12 @@ type AWSAccessKeyID struct{}
 | File | Content |
 |------|---------|
 | `README.md` | Project introduction, quick start, basic usage |
-| `docs/01-COMPETITIVE-ANALYSIS.md` | Competitive analysis and market positioning |
-| `docs/02-TECHNOLOGY-DECISIONS.md` | Technology decisions and rationale |
-| `docs/03-ARCHITECTURE.md` | Detailed architecture design |
-| `docs/04-DEVELOPMENT-STANDARDS.md` | This document — development standards |
+| `docs/architecture/01-COMPETITIVE-ANALYSIS.md` | Competitive analysis and market positioning |
+| `docs/architecture/02-TECHNOLOGY-DECISIONS.md` | Technology decisions and rationale |
+| `docs/architecture/03-ARCHITECTURE.md` | Detailed architecture design |
+| `docs/standards/04-DEVELOPMENT-STANDARDS.md` | This document — development standards |
 | `docs/05-ROADMAP.md` | Phased development roadmap |
+| `docs/decisions/ADR-NNNN-*.md` | Architecture Decision Records |
 | `CONTRIBUTING.md` | Contributing guide |
 | `CHANGELOG.md` | Version change log |
 | `LICENSE` | MIT License |
@@ -527,17 +537,20 @@ type AWSAccessKeyID struct{}
 - Regular security scanning with `govulncheck`
 - Direct dependencies are explicitly listed in `go.mod`
 
-### 8.2 Direct Dependency List (Planned)
+### 8.2 Direct Dependency List
+
+All entries are verified against `go.mod`. SARIF output is implemented with the standard library (`encoding/json`) — no external SARIF library is used.
 
 | Dependency | Purpose | License |
 |------------|---------|---------|
 | `github.com/spf13/cobra` | CLI framework | Apache-2.0 |
 | `github.com/spf13/viper` | Configuration management | MIT |
 | `github.com/go-git/go-git/v5` | Git operations | Apache-2.0 |
-| `github.com/google/go-containerregistry` | Container image | Apache-2.0 |
+| `github.com/google/go-containerregistry` | Container image scanning | Apache-2.0 |
 | `github.com/cloudflare/ahocorasick` | Pattern matching | BSD-3 |
-| `github.com/owenrumney/go-sarif` | SARIF output | MIT |
-| `github.com/aws/aws-sdk-go-v2` | AWS verification | Apache-2.0 |
+| `github.com/aws/aws-sdk-go-v2` | AWS S3 source + AWS STS verification | Apache-2.0 |
+| `cloud.google.com/go/storage` | Google Cloud Storage source scanning | Apache-2.0 |
+| `github.com/slack-go/slack` | Slack workspace source scanning | BSD-2 |
 | `github.com/stretchr/testify` | Test assertions | MIT |
 | `golang.org/x/time` | Rate limiting | BSD-3 |
 

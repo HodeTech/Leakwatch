@@ -12,9 +12,12 @@ import (
 )
 
 const (
-	sarifSchema  = "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json"
-	sarifVersion = "2.1.0"
-	toolName     = "Leakwatch"
+	sarifSchema    = "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json"
+	sarifVersion   = "2.1.0"
+	toolName       = "Leakwatch"
+	toolInfoURI    = "https://github.com/cemililik/Leakwatch"
+	toolVersion    = "dev"
+	rawPropertyKey = "raw"
 )
 
 // sarifDocument represents the top-level SARIF v2.1.0 document.
@@ -37,8 +40,10 @@ type sarifTool struct {
 
 // sarifDriver represents the tool driver with rules.
 type sarifDriver struct {
-	Name  string      `json:"name"`
-	Rules []sarifRule `json:"rules"`
+	Name           string      `json:"name"`
+	Version        string      `json:"version,omitempty"`
+	InformationURI string      `json:"informationUri,omitempty"`
+	Rules          []sarifRule `json:"rules"`
 }
 
 // sarifRule represents a SARIF reporting descriptor (rule).
@@ -74,6 +79,7 @@ type sarifResult struct {
 	Message             sarifMessage      `json:"message"`
 	Locations           []sarifLocation   `json:"locations,omitempty"`
 	PartialFingerprints map[string]string `json:"partialFingerprints,omitempty"`
+	Properties          map[string]string `json:"properties,omitempty"`
 }
 
 // sarifLocation represents a SARIF physical location.
@@ -99,8 +105,9 @@ type sarifRegion struct {
 
 // Formatter outputs findings in SARIF v2.1.0 format.
 type Formatter struct {
-	// ShowRaw, when true, includes the Raw field in the result message.
-	// When false, the Raw field is stripped for defense in depth.
+	// ShowRaw, when true, includes the unredacted secret value as a
+	// "raw" entry under each result's properties bag. When false, no raw value
+	// is emitted anywhere in the output.
 	ShowRaw bool
 }
 
@@ -128,22 +135,14 @@ func severityToLevel(s finding.Severity) string {
 }
 
 // Format writes findings in SARIF v2.1.0 JSON to the given writer.
-// When ShowRaw is false, the Raw field is actively stripped from the output.
+// When ShowRaw is true, each result carries the unredacted secret value under
+// properties.raw; otherwise no raw value is emitted.
 func (f *Formatter) Format(w io.Writer, findings []finding.Finding) error {
-	output := make([]finding.Finding, len(findings))
-	copy(output, findings)
-
-	if !f.ShowRaw {
-		for i := range output {
-			output[i].Raw = ""
-		}
-	}
-
 	// Build unique rules from detector IDs, preserving order of first appearance.
 	ruleIndex := make(map[string]int)
 	var rules []sarifRule
 
-	for _, fd := range output {
+	for _, fd := range findings {
 		if _, exists := ruleIndex[fd.DetectorID]; !exists {
 			ruleIndex[fd.DetectorID] = len(rules)
 			rule := sarifRule{
@@ -167,8 +166,8 @@ func (f *Formatter) Format(w io.Writer, findings []finding.Finding) error {
 	}
 
 	// Build results.
-	results := make([]sarifResult, 0, len(output))
-	for _, fd := range output {
+	results := make([]sarifResult, 0, len(findings))
+	for _, fd := range findings {
 		msg := fmt.Sprintf("Secret found: %s", fd.Redacted)
 
 		result := sarifResult{
@@ -183,6 +182,11 @@ func (f *Formatter) Format(w io.Writer, findings []finding.Finding) error {
 			PartialFingerprints: map[string]string{
 				"leakwatch/v1": locationStableFingerprint(fd),
 			},
+		}
+
+		// Only expose the unredacted secret when explicitly opted in.
+		if f.ShowRaw && fd.Raw != "" {
+			result.Properties = map[string]string{rawPropertyKey: fd.Raw}
 		}
 
 		// Add location if file path is available.
@@ -213,8 +217,10 @@ func (f *Formatter) Format(w io.Writer, findings []finding.Finding) error {
 			{
 				Tool: sarifTool{
 					Driver: sarifDriver{
-						Name:  toolName,
-						Rules: rules,
+						Name:           toolName,
+						Version:        toolVersion,
+						InformationURI: toolInfoURI,
+						Rules:          rules,
 					},
 				},
 				Results: results,

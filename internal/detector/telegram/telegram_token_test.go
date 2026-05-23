@@ -15,7 +15,9 @@ func TestDetector_Metadata_ReturnsExpectedValues(t *testing.T) {
 	assert.Equal(t, "telegram-bot-token", d.ID())
 	assert.Equal(t, "Telegram Bot Token", d.Description())
 	assert.Equal(t, finding.SeverityHigh, d.Severity())
-	assert.NotEmpty(t, d.Keywords())
+	// Telegram intentionally has no pre-filter keywords so the regex runs on
+	// every chunk and standalone tokens are not gated out by the matcher.
+	assert.Empty(t, d.Keywords())
 }
 
 func TestDetector_Scan_MatchesValidTokens(t *testing.T) {
@@ -32,19 +34,19 @@ func TestDetector_Scan_MatchesValidTokens(t *testing.T) {
 			name:     "valid token with 8 digit bot ID",
 			input:    "12345678:" + suffix35,
 			expected: 1,
-			redacted: "123456****",
+			redacted: "****" + suffix35[len(suffix35)-4:],
 		},
 		{
 			name:     "valid token with 7 digit bot ID",
 			input:    "1234567:" + suffix35,
 			expected: 1,
-			redacted: "123456****",
+			redacted: "****" + suffix35[len(suffix35)-4:],
 		},
 		{
 			name:     "valid token with 10 digit bot ID",
 			input:    "1234567890:" + suffix35,
 			expected: 1,
-			redacted: "123456****",
+			redacted: "****" + suffix35[len(suffix35)-4:],
 		},
 		{
 			name:     "token in env var context",

@@ -2,8 +2,6 @@ package filter
 
 import (
 	"strings"
-
-	"github.com/cemililik/leakwatch/pkg/finding"
 )
 
 const (
@@ -57,26 +55,6 @@ func LineHasInlineIgnore(data []byte, lineNum int, detectorID string) bool {
 		return false
 	}
 	return HasInlineIgnoreForDetector(line, detectorID)
-}
-
-// FilterFindingsByInlineIgnore returns a filtered slice of findings, removing
-// any finding whose source line contains an inline ignore marker.
-// sourceData maps file paths to their raw content; findings whose file is
-// missing from the map are kept as-is.
-func FilterFindingsByInlineIgnore(findings []finding.Finding, sourceData map[string][]byte) []finding.Finding {
-	var kept []finding.Finding
-	for _, f := range findings {
-		data, ok := sourceData[f.SourceMetadata.FilePath]
-		if !ok {
-			kept = append(kept, f)
-			continue
-		}
-		if LineHasInlineIgnore(data, f.SourceMetadata.Line, f.DetectorID) {
-			continue
-		}
-		kept = append(kept, f)
-	}
-	return kept
 }
 
 // getLine returns the content of the 1-based line number from data.

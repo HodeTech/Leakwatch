@@ -17,6 +17,10 @@ const detectorID = "rabbitmq-connection-string"
 
 // Verifier checks whether a RabbitMQ connection string has a valid URL format.
 // It NEVER logs or persists raw password values.
+//
+// Note: This is a format-check verifier; it performs no live verification, so
+// the result is always StatusUnverified. Live verification would require a
+// network connection to the broker.
 type Verifier struct{}
 
 func init() {
@@ -41,38 +45,40 @@ func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.
 
 	parsed, err := url.Parse(connStr)
 	if err != nil {
-		slog.DebugContext(ctx, "rabbitmq verifier: failed to parse URL",
+		slog.DebugContext(
+			ctx, "rabbitmq verifier: failed to parse URL",
 			slog.String("error", err.Error()),
 		)
 		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedInactive,
-			Message: "invalid URL format",
+			Status:  finding.StatusUnverified,
+			Message: "format invalid (cannot parse URL); live verification not supported",
 		}
 	}
 
 	if parsed.Scheme != "amqp" && parsed.Scheme != "amqps" {
-		slog.DebugContext(ctx, "rabbitmq verifier: unexpected scheme",
+		slog.DebugContext(
+			ctx, "rabbitmq verifier: unexpected scheme",
 			slog.String("scheme", parsed.Scheme),
 		)
 		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedInactive,
-			Message: "URL scheme is not amqp or amqps",
+			Status:  finding.StatusUnverified,
+			Message: "format invalid (scheme is not amqp or amqps); live verification not supported",
 		}
 	}
 
 	if parsed.User == nil || parsed.User.Username() == "" {
 		slog.DebugContext(ctx, "rabbitmq verifier: missing user credentials")
 		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedInactive,
-			Message: "missing user credentials in URL",
+			Status:  finding.StatusUnverified,
+			Message: "format invalid (missing user credentials in URL); live verification not supported",
 		}
 	}
 
 	if parsed.Host == "" {
 		slog.DebugContext(ctx, "rabbitmq verifier: missing host")
 		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedInactive,
-			Message: "missing host in URL",
+			Status:  finding.StatusUnverified,
+			Message: "format invalid (missing host in URL); live verification not supported",
 		}
 	}
 
@@ -81,14 +87,15 @@ func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.
 		"user": parsed.User.Username(),
 	}
 
-	slog.InfoContext(ctx, "rabbitmq verifier: connection string format validated",
+	slog.InfoContext(
+		ctx, "rabbitmq verifier: connection string format validated",
 		slog.String("host", parsed.Hostname()),
 		slog.String("user", parsed.User.Username()),
 	)
 
 	return finding.VerificationResult{
-		Status:    finding.StatusVerifiedActive,
-		Message:   "Connection string format validated (live verification requires network access)",
+		Status:    finding.StatusUnverified,
+		Message:   "format valid; live verification not supported (requires network access)",
 		ExtraData: extra,
 	}
 }

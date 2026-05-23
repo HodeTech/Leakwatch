@@ -1,8 +1,8 @@
 # Leakwatch - Technology Decisions and Rationale
 
-> **Document Version:** 1.0
-> **Date:** 2026-03-24
-> **Status:** Draft
+> **Document Version:** 1.1
+> **Date:** 2026-05-22
+> **Status:** Approved
 
 ---
 
@@ -159,9 +159,9 @@ Rust would be the best choice in terms of raw performance. However:
 
 | Library | Purpose |
 |---------|---------|
-| `github.com/owenrumney/go-sarif` | SARIF output format |
 | `encoding/json` (stdlib) | JSON output |
 | `encoding/csv` (stdlib) | CSV output |
+| `encoding/json` + hand-written structs (stdlib) | SARIF v2.1.0 output (no external library) |
 
 ### 3.6 Testing Infrastructure
 
@@ -171,12 +171,14 @@ Rust would be the best choice in terms of raw performance. However:
 | `testing/fstest` (stdlib) | In-memory filesystem tests |
 | `github.com/stretchr/testify` | Assertion and mock library |
 
-### 3.7 AWS/Cloud SDKs (For Verification)
+### 3.7 Cloud Provider SDKs
 
 | Library | Purpose |
 |---------|---------|
-| `github.com/aws/aws-sdk-go-v2` | AWS STS GetCallerIdentity (key verification) |
-| `net/http` (stdlib) | GitHub, Slack, etc. API verification |
+| `github.com/aws/aws-sdk-go-v2` | AWS S3 source scanning; AWS STS key verification |
+| `cloud.google.com/go/storage` | Google Cloud Storage (GCS) source scanning |
+| `github.com/slack-go/slack` | Slack workspace source scanning |
+| `net/http` (stdlib) | All other API verifications (GitHub, OpenAI, etc.) |
 
 ---
 
@@ -214,7 +216,7 @@ Rust would be the best choice in terms of raw performance. However:
 
 ## 5. Minimum Go Version
 
-**Go 1.22+** (preferably the latest stable release)
+**Go 1.25+** (current: 1.25.8 as declared in `go.mod`)
 
 **Rationale:**
 - `io/fs` package (Go 1.16+) — filesystem abstraction
@@ -222,6 +224,7 @@ Rust would be the best choice in terms of raw performance. However:
 - `log/slog` (Go 1.21+) — structured logging
 - Improved GC performance (Go 1.22+)
 - `range over func` (Go 1.23+) — iterator support
+- Toolchain improvements and security patches (Go 1.25+)
 
 ---
 

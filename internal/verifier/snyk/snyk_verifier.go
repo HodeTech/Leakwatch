@@ -4,12 +4,12 @@ package snyk
 
 import (
 	"context"
-	"fmt"
-	"log/slog"
 	"net/http"
+	"net/url"
 
 	"github.com/cemililik/leakwatch/internal/detector"
 	"github.com/cemililik/leakwatch/internal/verifier"
+	"github.com/cemililik/leakwatch/internal/verifier/internal/httpx"
 	"github.com/cemililik/leakwatch/pkg/finding"
 )
 
@@ -17,6 +17,10 @@ const detectorID = "snyk-api-key"
 
 // defaultAPIURL is the base URL for the Snyk API.
 const defaultAPIURL = "https://api.snyk.io"
+
+// apiVersion is the Snyk REST API version. The REST API mandates a
+// ?version=YYYY-MM-DD query parameter; omitting it makes the API respond 400.
+const apiVersion = "2024-04-29"
 
 // Verifier checks whether a Snyk API key is active by calling the
 // Snyk REST API. It NEVER logs or persists raw key values.
@@ -40,65 +44,23 @@ func (v *Verifier) Type() string {
 // Raw contains the key value.
 func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.VerificationResult {
 	token := string(raw.Raw)
-	if token == "" {
-		return finding.VerificationResult{
-			Status:  finding.StatusUnverified,
-			Message: "empty token",
-		}
-	}
+	apiURL := httpx.BaseURL(v.apiURL, defaultAPIURL)
 
-	apiURL := v.apiURL
-	if apiURL == "" {
-		apiURL = defaultAPIURL
-	}
+	// The Snyk REST API requires the version as a query parameter; without it
+	// the live API returns 400. The Version header is kept for compatibility.
+	endpoint := apiURL + "/rest/self?version=" + url.QueryEscape(apiVersion)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL+"/rest/self", nil)
-	if err != nil {
-		slog.ErrorContext(ctx, "snyk verifier: failed to create request", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("failed to create request: %v", err),
-		}
-	}
-	req.Header.Set("Authorization", "token "+token)
-	req.Header.Set("Version", "2024-04-29")
-	req.Header.Set("User-Agent", "leakwatch-verifier")
-
-	client := v.httpClient
-	if client == nil {
-		client = http.DefaultClient
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		slog.ErrorContext(ctx, "snyk verifier: request failed", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("request failed: %v", err),
-		}
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	switch resp.StatusCode {
-	case http.StatusOK:
-		slog.InfoContext(ctx, "snyk verifier: API key is active")
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedActive,
-			Message: "Snyk API key is active",
-		}
-	case http.StatusUnauthorized, http.StatusForbidden:
-		slog.DebugContext(ctx, "snyk verifier: API key is inactive")
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedInactive,
-			Message: "Snyk API key is invalid or revoked",
-		}
-	default:
-		slog.ErrorContext(ctx, "snyk verifier: unexpected status code",
-			slog.Int("status_code", resp.StatusCode),
-		)
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("unexpected status code: %d", resp.StatusCode),
-		}
-	}
+	return httpx.VerifyToken(ctx, v.httpClient, token, httpx.TokenSpec{
+		Name: "snyk",
+		Request: httpx.Request{
+			URL: endpoint,
+			Header: map[string]string{
+				"Authorization": "token " + token,
+				"Version":       apiVersion,
+			},
+		},
+		InactiveStatuses: []int{http.StatusUnauthorized, http.StatusForbidden},
+		ActiveMessage:    "Snyk API key is active",
+		InactiveMessage:  "Snyk API key is invalid or revoked",
+	})
 }

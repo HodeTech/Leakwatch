@@ -169,11 +169,17 @@ type Remediation struct {
 }
 
 // Finding represents a fully enriched secret finding.
+//
+// The Raw field holds the unredacted secret. It carries a json:"-" tag so that
+// the standard library NEVER serializes it: any external consumer that marshals
+// a Finding cannot accidentally leak the secret. Output formatters that support
+// an explicit opt-in (e.g. --show-raw) re-add the value via a dedicated wire
+// type rather than relying on this struct's tags.
 type Finding struct {
 	ID             string             `json:"id"`
 	DetectorID     string             `json:"detector_id"`
 	Severity       Severity           `json:"severity"`
-	Raw            string             `json:"raw,omitempty"`
+	Raw            string             `json:"-"`
 	Redacted       string             `json:"redacted"`
 	SourceMetadata SourceMetadata     `json:"source"`
 	Verification   VerificationResult `json:"verification"`

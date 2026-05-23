@@ -103,6 +103,81 @@ func TestFormatter_Format_ShowRawFalse_RawNotInOutput(t *testing.T) {
 		"ShowRaw=false must strip raw secret from SARIF output")
 }
 
+func TestFormatter_Format_ShowRawTrue_RawInResultProperties(t *testing.T) {
+	f := &Formatter{ShowRaw: true}
+	var buf bytes.Buffer
+
+	findings := []finding.Finding{
+		{
+			ID:         "test-1",
+			DetectorID: "generic-secret",
+			Severity:   finding.SeverityHigh,
+			Redacted:   "sk_****abcd",
+			Raw:        "sk_live_supersecretvalue",
+			SourceMetadata: finding.SourceMetadata{
+				FilePath: "app.go",
+			},
+		},
+	}
+
+	err := f.Format(&buf, findings)
+	require.NoError(t, err)
+
+	var doc sarifDocument
+	err = json.Unmarshal(buf.Bytes(), &doc)
+	require.NoError(t, err)
+
+	require.Len(t, doc.Runs[0].Results, 1)
+	props := doc.Runs[0].Results[0].Properties
+	require.NotNil(t, props, "ShowRaw=true must populate result properties")
+	assert.Equal(t, "sk_live_supersecretvalue", props["raw"],
+		"ShowRaw=true must expose the raw value under properties.raw")
+}
+
+func TestFormatter_Format_ShowRawFalse_NoRawProperty(t *testing.T) {
+	f := &Formatter{ShowRaw: false}
+	var buf bytes.Buffer
+
+	findings := []finding.Finding{
+		{
+			ID:         "test-1",
+			DetectorID: "generic-secret",
+			Severity:   finding.SeverityHigh,
+			Redacted:   "sk_****abcd",
+			Raw:        "sk_live_supersecretvalue",
+		},
+	}
+
+	err := f.Format(&buf, findings)
+	require.NoError(t, err)
+
+	var doc sarifDocument
+	err = json.Unmarshal(buf.Bytes(), &doc)
+	require.NoError(t, err)
+
+	require.Len(t, doc.Runs[0].Results, 1)
+	assert.Nil(t, doc.Runs[0].Results[0].Properties,
+		"ShowRaw=false must not emit any result properties carrying raw")
+	assert.NotContains(t, buf.String(), "sk_live_supersecretvalue")
+}
+
+func TestFormatter_Format_Driver_HasVersionAndInformationURI(t *testing.T) {
+	f := &Formatter{}
+	var buf bytes.Buffer
+
+	err := f.Format(&buf, []finding.Finding{})
+	require.NoError(t, err)
+
+	var doc sarifDocument
+	err = json.Unmarshal(buf.Bytes(), &doc)
+	require.NoError(t, err)
+
+	driver := doc.Runs[0].Tool.Driver
+	assert.Equal(t, toolName, driver.Name)
+	assert.Equal(t, toolVersion, driver.Version, "driver must report a version")
+	assert.Equal(t, toolInfoURI, driver.InformationURI, "driver must report an informationUri")
+}
+
 func TestFormatter_Format_SeverityMapping_MapsCorrectly(t *testing.T) {
 	tests := []struct {
 		name     string

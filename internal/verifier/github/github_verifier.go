@@ -5,13 +5,12 @@ package github
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 
 	"github.com/cemililik/leakwatch/internal/detector"
 	"github.com/cemililik/leakwatch/internal/verifier"
+	"github.com/cemililik/leakwatch/internal/verifier/internal/httpx"
 	"github.com/cemililik/leakwatch/pkg/finding"
 )
 
@@ -42,90 +41,30 @@ func (v *Verifier) Type() string {
 // Raw contains the token value.
 func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.VerificationResult {
 	token := string(raw.Raw)
-	if token == "" {
-		return finding.VerificationResult{
-			Status:  finding.StatusUnverified,
-			Message: "empty token",
-		}
-	}
+	apiURL := httpx.BaseURL(v.apiURL, defaultAPIURL)
 
-	apiURL := v.apiURL
-	if apiURL == "" {
-		apiURL = defaultAPIURL
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL+"/user", nil)
-	if err != nil {
-		slog.ErrorContext(ctx, "github verifier: failed to create request", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("failed to create request: %v", err),
-		}
-	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("User-Agent", "leakwatch-verifier")
-
-	client := v.httpClient
-	if client == nil {
-		client = http.DefaultClient
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		slog.ErrorContext(ctx, "github verifier: request failed", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("request failed: %v", err),
-		}
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	switch resp.StatusCode {
-	case http.StatusOK:
-		return handleActiveToken(ctx, resp.Body)
-	case http.StatusUnauthorized:
-		slog.DebugContext(ctx, "github verifier: token is inactive")
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedInactive,
-			Message: "GitHub token is invalid or revoked",
-		}
-	default:
-		slog.ErrorContext(ctx, "github verifier: unexpected status code",
-			slog.Int("status_code", resp.StatusCode),
-		)
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("unexpected status code: %d", resp.StatusCode),
-		}
-	}
+	return httpx.VerifyToken(ctx, v.httpClient, token, httpx.TokenSpec{
+		Name: "github",
+		Request: httpx.Request{
+			URL: apiURL + "/user",
+			Header: map[string]string{
+				"Authorization": "Bearer " + token,
+				"Accept":        "application/vnd.github+json",
+			},
+		},
+		ActiveMessage:   "GitHub token is active",
+		InactiveMessage: "GitHub token is invalid or revoked",
+		Decode:          decodeUser,
+	})
 }
 
-// handleActiveToken parses the GitHub API response for a valid token.
-func handleActiveToken(ctx context.Context, body io.Reader) finding.VerificationResult {
+// decodeUser parses the GitHub API response for a valid token.
+func decodeUser(body io.Reader) (map[string]string, string, error) {
 	var user struct {
 		Login string `json:"login"`
 	}
-
 	if err := json.NewDecoder(body).Decode(&user); err != nil {
-		slog.ErrorContext(ctx, "github verifier: failed to decode response", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedActive,
-			Message: "GitHub token is active (could not parse user info)",
-		}
+		return nil, "", err
 	}
-
-	extra := map[string]string{
-		"login": user.Login,
-	}
-
-	slog.InfoContext(ctx, "github verifier: token is active",
-		slog.String("login", user.Login),
-	)
-
-	return finding.VerificationResult{
-		Status:    finding.StatusVerifiedActive,
-		Message:   "GitHub token is active",
-		ExtraData: extra,
-	}
+	return map[string]string{"login": user.Login}, "", nil
 }

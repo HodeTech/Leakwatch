@@ -55,11 +55,10 @@ func (d *APIKeyDetector) Scan(_ context.Context, data []byte) []detector.RawFind
 			continue
 		}
 
-		redacted := redactValue(value)
 		findings = append(findings, detector.RawFinding{
 			DetectorID: d.ID(),
 			Raw:        value,
-			Redacted:   redacted,
+			Redacted:   detector.RedactBytes(value),
 			ExtraData: map[string]string{
 				"key_name": string(match[1]),
 			},
@@ -93,13 +92,6 @@ func isPlaceholder(value []byte) bool {
 		}
 	}
 	return false
-}
-
-func redactValue(value []byte) string {
-	if len(value) <= 8 {
-		return "****"
-	}
-	return string(value[:4]) + "****" + string(value[len(value)-4:])
 }
 
 func init() {

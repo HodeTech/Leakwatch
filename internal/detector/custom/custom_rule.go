@@ -85,11 +85,10 @@ func (d *CustomDetector) Scan(_ context.Context, data []byte) []detector.RawFind
 			continue
 		}
 
-		redacted := redactMatch(match)
 		findings = append(findings, detector.RawFinding{
 			DetectorID: d.ID(),
 			Raw:        match,
-			Redacted:   redacted,
+			Redacted:   detector.RedactBytes(match),
 		})
 	}
 	return findings
@@ -121,13 +120,6 @@ func RegisterCustomRules(rules []RuleDef) (int, []error) {
 	}
 
 	return count, errs
-}
-
-func redactMatch(match []byte) string {
-	if len(match) <= 8 {
-		return "****"
-	}
-	return string(match[:4]) + "****" + string(match[len(match)-4:])
 }
 
 func parseSeverity(s string) finding.Severity {

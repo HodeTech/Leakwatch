@@ -11,7 +11,7 @@ import (
 	"github.com/cemililik/leakwatch/pkg/finding"
 )
 
-func TestStorageVerify_ValidConnectionString_ReturnsActive(t *testing.T) {
+func TestStorageVerify_ValidConnectionString_ReturnsUnverified(t *testing.T) {
 	v := &StorageVerifier{}
 
 	raw := detector.RawFinding{
@@ -22,12 +22,12 @@ func TestStorageVerify_ValidConnectionString_ReturnsActive(t *testing.T) {
 
 	result := v.Verify(context.Background(), raw)
 
-	require.Equal(t, finding.StatusVerifiedActive, result.Status)
-	assert.Equal(t, "Format validated (live verification requires Azure SDK)", result.Message)
+	require.Equal(t, finding.StatusUnverified, result.Status)
+	assert.Contains(t, result.Message, "format valid")
 	assert.Equal(t, "mystorageaccount", result.ExtraData["account_name"])
 }
 
-func TestStorageVerify_MissingAccountName_ReturnsInactive(t *testing.T) {
+func TestStorageVerify_MissingAccountName_ReturnsUnverified(t *testing.T) {
 	v := &StorageVerifier{}
 
 	raw := detector.RawFinding{
@@ -38,11 +38,11 @@ func TestStorageVerify_MissingAccountName_ReturnsInactive(t *testing.T) {
 
 	result := v.Verify(context.Background(), raw)
 
-	assert.Equal(t, finding.StatusVerifiedInactive, result.Status)
-	assert.Equal(t, "AccountName not found in connection string", result.Message)
+	assert.Equal(t, finding.StatusUnverified, result.Status)
+	assert.Contains(t, result.Message, "format invalid")
 }
 
-func TestStorageVerify_MissingAccountKey_ReturnsInactive(t *testing.T) {
+func TestStorageVerify_MissingAccountKey_ReturnsUnverified(t *testing.T) {
 	v := &StorageVerifier{}
 
 	raw := detector.RawFinding{
@@ -53,11 +53,11 @@ func TestStorageVerify_MissingAccountKey_ReturnsInactive(t *testing.T) {
 
 	result := v.Verify(context.Background(), raw)
 
-	assert.Equal(t, finding.StatusVerifiedInactive, result.Status)
-	assert.Equal(t, "AccountKey not found in connection string", result.Message)
+	assert.Equal(t, finding.StatusUnverified, result.Status)
+	assert.Contains(t, result.Message, "format invalid")
 }
 
-func TestStorageVerify_InvalidBase64Key_ReturnsInactive(t *testing.T) {
+func TestStorageVerify_InvalidBase64Key_ReturnsUnverified(t *testing.T) {
 	v := &StorageVerifier{}
 
 	raw := detector.RawFinding{
@@ -68,8 +68,8 @@ func TestStorageVerify_InvalidBase64Key_ReturnsInactive(t *testing.T) {
 
 	result := v.Verify(context.Background(), raw)
 
-	assert.Equal(t, finding.StatusVerifiedInactive, result.Status)
-	assert.Equal(t, "AccountKey is not valid base64", result.Message)
+	assert.Equal(t, finding.StatusUnverified, result.Status)
+	assert.Contains(t, result.Message, "format invalid")
 }
 
 func TestStorageVerify_EmptyConnectionString_ReturnsUnverified(t *testing.T) {
@@ -92,7 +92,7 @@ func TestStorageVerify_Type_ReturnsCorrectID(t *testing.T) {
 	assert.Equal(t, "azure-storage-key", v.Type())
 }
 
-func TestStorageVerify_KeyWithBase64Padding_ReturnsActive(t *testing.T) {
+func TestStorageVerify_KeyWithBase64Padding_ReturnsUnverified(t *testing.T) {
 	v := &StorageVerifier{}
 
 	// A proper base64 key with padding characters.
@@ -104,6 +104,6 @@ func TestStorageVerify_KeyWithBase64Padding_ReturnsActive(t *testing.T) {
 
 	result := v.Verify(context.Background(), raw)
 
-	require.Equal(t, finding.StatusVerifiedActive, result.Status)
+	require.Equal(t, finding.StatusUnverified, result.Status)
 	assert.Equal(t, "teststorage", result.ExtraData["account_name"])
 }

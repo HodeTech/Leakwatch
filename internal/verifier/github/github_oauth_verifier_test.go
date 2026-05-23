@@ -111,7 +111,7 @@ func TestOAuthVerify_EmptyToken_ReturnsUnverified(t *testing.T) {
 	assert.Equal(t, "empty token", result.Message)
 }
 
-func TestOAuthVerify_MalformedJSON_ReturnsActiveWithFallback(t *testing.T) {
+func TestOAuthVerify_MalformedJSON_ReturnsVerifyError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -132,6 +132,8 @@ func TestOAuthVerify_MalformedJSON_ReturnsActiveWithFallback(t *testing.T) {
 
 	result := v.Verify(context.Background(), raw)
 
-	assert.Equal(t, finding.StatusVerifiedActive, result.Status)
-	assert.Contains(t, result.Message, "could not parse user info")
+	// A 200 whose body cannot be decoded must not be claimed as active: we
+	// cannot confirm the expected response shape.
+	assert.Equal(t, finding.StatusVerifyError, result.Status)
+	assert.Contains(t, result.Message, "failed to decode response body")
 }

@@ -216,7 +216,7 @@ func TestFinding_JSONMarshalUnmarshal_SeverityAsString(t *testing.T) {
 	assert.Equal(t, f.SourceMetadata.FilePath, decoded.SourceMetadata.FilePath)
 	assert.Equal(t, f.SourceMetadata.Line, decoded.SourceMetadata.Line)
 	assert.Equal(t, f.Verification.Status, decoded.Verification.Status)
-	assert.Empty(t, decoded.Raw) // Raw is empty via omitempty
+	assert.Empty(t, decoded.Raw) // Raw is never serialized via json:"-"
 }
 
 func TestFinding_JSONOmitsEmptyRaw(t *testing.T) {
@@ -234,4 +234,29 @@ func TestFinding_JSONOmitsEmptyRaw(t *testing.T) {
 
 	_, hasRaw := m["raw"]
 	assert.False(t, hasRaw, "raw field should not appear in JSON when empty")
+}
+
+// TestFinding_JSONNeverSerializesRaw verifies the type-level redaction: even
+// when Raw holds a (fake) secret, the standard json.Marshal MUST NOT emit it.
+// This is the defense that protects external consumers which marshal Findings
+// directly without going through Leakwatch's output formatters.
+func TestFinding_JSONNeverSerializesRaw(t *testing.T) {
+	f := Finding{
+		ID:       "test-1",
+		Redacted: "AKIA****MPLE",
+		Raw:      "AKIAIOSFODNN7EXAMPLE", // fake, well-known AWS docs example value
+	}
+
+	data, err := json.Marshal(f)
+	require.NoError(t, err)
+
+	assert.NotContains(t, string(data), "AKIAIOSFODNN7EXAMPLE",
+		"Raw must never appear in standard JSON output")
+
+	var m map[string]interface{}
+	err = json.Unmarshal(data, &m)
+	require.NoError(t, err)
+
+	_, hasRaw := m["raw"]
+	assert.False(t, hasRaw, "raw field must never appear in JSON regardless of value")
 }

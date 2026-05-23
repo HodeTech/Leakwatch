@@ -36,8 +36,10 @@ flowchart TD
 
 | Channel | Buffer | Producer | Consumer |
 |---------|--------|----------|----------|
-| `jobs` | `ChunkSize` (1024) | Source goroutine | Worker goroutines |
-| `results` | `ChunkSize` (1024) | Worker goroutines | Result collection goroutine |
+| `jobs` | `Concurrency × 2` (constant `channelBufferMultiplier = 2`) | Source goroutine | Worker goroutines |
+| `results` | `Concurrency × 2` (constant `channelBufferMultiplier = 2`) | Worker goroutines | Result collection goroutine |
+
+The buffer formula `Concurrency × channelBufferMultiplier` ensures enough headroom for all workers to have a pending item without blocking the producer, while keeping memory usage proportional to the configured concurrency level (rather than a fixed 1 024-slot allocation regardless of parallelism).
 
 ## Alternatives Considered
 

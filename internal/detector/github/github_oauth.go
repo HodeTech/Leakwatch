@@ -37,7 +37,7 @@ func (d *OAuthDetector) Scan(_ context.Context, data []byte) []detector.RawFindi
 		findings = append(findings, detector.RawFinding{
 			DetectorID: d.ID(),
 			Raw:        match,
-			Redacted:   string(match[:8]) + "****",
+			Redacted:   detector.RedactBytes(match),
 		})
 	}
 	return findings

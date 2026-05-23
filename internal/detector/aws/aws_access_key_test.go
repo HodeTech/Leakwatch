@@ -29,13 +29,13 @@ func TestAccessKeyID_Scan(t *testing.T) {
 			name:     "valid AKIA key",
 			input:    "AKIAIOSFODNN7EXAMPLE",
 			expected: 1,
-			redacted: "AKIA****MPLE",
+			redacted: "****MPLE",
 		},
 		{
 			name:     "valid ASIA key (temporary credentials)",
 			input:    "ASIAIOSFODNN7EXAMPLE",
 			expected: 1,
-			redacted: "ASIA****MPLE",
+			redacted: "****MPLE",
 		},
 		{
 			name:     "key in config file",

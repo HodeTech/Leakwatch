@@ -6,14 +6,18 @@ import "time"
 // Option configures a SlackSource.
 type Option func(*SlackSource)
 
-// WithChannels limits the scan to the specified channel IDs.
+// WithChannels limits the scan to the specified channel names
+// (e.g. "engineering"), matching the names shown in Slack and accepted by the
+// --channels CLI flag.
 func WithChannels(channels []string) Option {
 	return func(s *SlackSource) {
 		s.channels = channels
 	}
 }
 
-// WithExcludeChannels excludes the specified channel IDs from scanning.
+// WithExcludeChannels excludes the specified channel names from scanning,
+// matching the names shown in Slack and accepted by the --exclude-channels
+// CLI flag.
 func WithExcludeChannels(channels []string) Option {
 	return func(s *SlackSource) {
 		s.excludeChannels = channels
@@ -34,7 +38,11 @@ func WithIncludeDMs(include bool) Option {
 	}
 }
 
-// WithIncludeFiles enables or disables scanning of file content.
+// WithIncludeFiles requests scanning of file content.
+//
+// NOTE: Slack file scanning is not yet implemented. This option is currently a
+// no-op for actual scanning behavior (only message text is scanned); enabling
+// it causes a warning to be logged. See ROADMAP and the planned-feature note in slack.go.
 func WithIncludeFiles(include bool) Option {
 	return func(s *SlackSource) {
 		s.includeFiles = include

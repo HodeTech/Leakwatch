@@ -32,7 +32,7 @@ func TestDetector_Scan_MatchAndReject(t *testing.T) {
 			name:     "valid key with 40 char hex suffix",
 			input:    "sbp_" + suffix40,
 			expected: 1,
-			redacted: "sbp_****" + suffix40[len(suffix40)-4:],
+			redacted: "****" + suffix40[len(suffix40)-4:],
 		},
 		{
 			name:     "key embedded in env var",

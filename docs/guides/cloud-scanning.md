@@ -513,28 +513,39 @@ leakwatch scan s3 my-bucket --format sarif --output s3-results.sarif
 
 ```json
 {
-  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
   "version": "2.1.0",
   "runs": [{
     "tool": {
       "driver": {
         "name": "Leakwatch",
-        "version": "0.1.0"
+        "rules": [
+          {
+            "id": "aws-access-key-id",
+            "shortDescription": { "text": "Secret detected by aws-access-key-id" },
+            "defaultConfiguration": { "level": "error" }
+          }
+        ]
       }
     },
     "results": [{
       "ruleId": "aws-access-key-id",
+      "ruleIndex": 0,
       "level": "error",
       "message": {
-        "text": "AWS Access Key ID detected"
+        "text": "Secret found: AKIA****XMPL"
       },
       "locations": [{
         "physicalLocation": {
           "artifactLocation": {
             "uri": "my-bucket/config/app.env"
-          }
+          },
+          "region": { "startLine": 12 }
         }
-      }]
+      }],
+      "partialFingerprints": {
+        "leakwatch/v1": "a1b2c3d4e5f6a7b8"
+      }
     }]
   }]
 }
@@ -552,10 +563,10 @@ leakwatch scan s3 my-bucket --format json --output results.json
 jq '[.[] | select(.severity == "high" or .severity == "critical")]' results.json
 
 # Group by detector
-jq 'group_by(.detector) | map({detector: .[0].detector, count: length})' results.json
+jq 'group_by(.detector_id) | map({detector_id: .[0].detector_id, count: length})' results.json
 
 # List file paths
-jq -r '.[].source_metadata.file_path' results.json | sort -u
+jq -r '.[].source.file_path' results.json | sort -u
 ```
 
 ### 6.4 Periodic Scanning and Reporting

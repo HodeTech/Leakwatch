@@ -15,12 +15,12 @@ import (
 
 func TestVerify_ValidToken_ReturnsActive(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/api/0/", r.URL.Path)
+		assert.Equal(t, "/api/0/organizations/", r.URL.Path)
 		assert.Contains(t, r.Header.Get("Authorization"), "Bearer ")
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`[]`))
 	}))
 	defer server.Close()
 

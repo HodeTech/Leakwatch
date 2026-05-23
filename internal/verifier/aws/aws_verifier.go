@@ -4,12 +4,14 @@ package aws
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
+	smithy "github.com/aws/smithy-go"
 
 	"github.com/cemililik/leakwatch/internal/detector"
 	"github.com/cemililik/leakwatch/internal/verifier"
@@ -91,7 +93,8 @@ func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.
 		extra["user_id"] = aws.ToString(output.UserId)
 	}
 
-	slog.InfoContext(ctx, "aws verifier: credentials are active",
+	slog.InfoContext(
+		ctx, "aws verifier: credentials are active",
 		slog.String("account", extra["account"]),
 		slog.String("arn", extra["arn"]),
 	)
@@ -103,18 +106,42 @@ func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.
 	}
 }
 
-// isAuthError checks whether the error indicates invalid credentials.
+// authErrorCodes is the set of STS/IAM error codes that prove the access key
+// itself is invalid, inactive, or expired (i.e. authentication failed).
+//
+// Note: "AccessDenied" is deliberately NOT in this set. AccessDenied means the
+// credentials authenticated successfully but lack permission for the call — the
+// key is therefore active, not inactive. Treating it as inactive would be a
+// false negative.
+var authErrorCodes = map[string]struct{}{
+	"InvalidClientTokenId":        {},
+	"SignatureDoesNotMatch":       {},
+	"ExpiredToken":                {},
+	"ExpiredTokenException":       {},
+	"InvalidToken":                {},
+	"TokenRefreshRequired":        {},
+	"AuthFailure":                 {},
+	"UnrecognizedClientException": {},
+	"IncompleteSignature":         {},
+}
+
+// isAuthError reports whether the error indicates invalid/inactive credentials.
+//
+// It prefers the typed smithy.APIError code (exact match) and falls back to a
+// substring scan of the error message for callers (and tests) that surface a
+// plain error rather than a typed AWS API error. Both paths use the exact
+// authErrorCodes set so that, for example, "AccessDenied" is never classified
+// as an authentication failure.
 func isAuthError(err error) bool {
-	// AWS SDK v2 wraps errors; check the error message for common auth failure indicators.
-	errMsg := err.Error()
-	authErrorPatterns := []string{
-		"InvalidClientTokenId",
-		"SignatureDoesNotMatch",
-		"ExpiredToken",
-		"AccessDenied",
+	var apiErr smithy.APIError
+	if errors.As(err, &apiErr) {
+		_, ok := authErrorCodes[apiErr.ErrorCode()]
+		return ok
 	}
-	for _, pattern := range authErrorPatterns {
-		if containsString(errMsg, pattern) {
+
+	errMsg := err.Error()
+	for code := range authErrorCodes {
+		if containsString(errMsg, code) {
 			return true
 		}
 	}

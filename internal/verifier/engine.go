@@ -101,7 +101,8 @@ func (e *Engine) VerifyAll(ctx context.Context, pairs []VerifyPair) []finding.Fi
 	results := make([]finding.Finding, len(pairs))
 
 	if !e.enabled {
-		slog.Debug("verification disabled, skipping all verifications",
+		slog.Debug(
+			"verification disabled, skipping all verifications",
 			"count", len(pairs),
 		)
 		for i, p := range pairs {
@@ -161,7 +162,8 @@ func (e *Engine) verifySingle(ctx context.Context, pair VerifyPair) finding.Find
 
 	v, ok := e.verifiers[pair.Raw.DetectorID]
 	if !ok {
-		slog.Debug("no verifier registered for detector, skipping",
+		slog.Debug(
+			"no verifier registered for detector, skipping",
 			"detector_id", pair.Raw.DetectorID,
 		)
 		return f
@@ -169,7 +171,8 @@ func (e *Engine) verifySingle(ctx context.Context, pair VerifyPair) finding.Find
 
 	// Apply rate limiting.
 	if err := e.rateLimiter.Wait(ctx); err != nil {
-		slog.Warn("rate limiter wait cancelled",
+		slog.Warn(
+			"rate limiter wait cancelled",
 			"detector_id", pair.Raw.DetectorID,
 			"error", err,
 		)
@@ -184,7 +187,8 @@ func (e *Engine) verifySingle(ctx context.Context, pair VerifyPair) finding.Find
 	verifyCtx, cancel := context.WithTimeout(ctx, e.timeout)
 	defer cancel()
 
-	slog.Debug("verifying finding",
+	slog.Debug(
+		"verifying finding",
 		"detector_id", pair.Raw.DetectorID,
 		"redacted", pair.Raw.Redacted,
 	)
@@ -192,7 +196,8 @@ func (e *Engine) verifySingle(ctx context.Context, pair VerifyPair) finding.Find
 	result := v.Verify(verifyCtx, pair.Raw)
 	f.Verification = result
 
-	slog.Debug("verification complete",
+	slog.Debug(
+		"verification complete",
 		"detector_id", pair.Raw.DetectorID,
 		"status", result.Status.String(),
 	)

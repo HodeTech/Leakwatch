@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"runtime"
 	"strings"
@@ -12,15 +13,21 @@ import (
 	slacksource "github.com/cemililik/leakwatch/internal/source/slack"
 )
 
+// flagIncludeFiles is the slack-only flag that requests scanning of uploaded
+// file content. Defined as a constant so the registration, deprecation, and
+// read sites reference a single literal.
+const flagIncludeFiles = "include-files"
+
 var scanSlackCmd = &cobra.Command{
 	Use:   "slack",
 	Short: "Scans a Slack workspace",
-	Long: `Scans messages, channels, and uploaded files in a Slack workspace to detect
-leaked secrets such as API keys, passwords, and certificates.
+	Long: `Scans messages across channels in a Slack workspace to detect leaked secrets
+such as API keys, passwords, and certificates. Scanning of uploaded file
+content is planned but not yet implemented; only message text is scanned.
 
 Requires a Slack Bot Token with appropriate scopes (channels:history,
-groups:history, im:history, mpim:history, files:read). The token can be
-provided via the --token flag or the LEAKWATCH_SLACK_TOKEN environment variable.`,
+groups:history, im:history, mpim:history). The token can be provided via the
+--token flag or the LEAKWATCH_SLACK_TOKEN environment variable.`,
 	Example: `  # Scan all channels using environment variable for token
   export LEAKWATCH_SLACK_TOKEN=xoxb-your-token
   leakwatch scan slack
@@ -34,8 +41,8 @@ provided via the --token flag or the LEAKWATCH_SLACK_TOKEN environment variable.
   # Exclude noisy channels
   leakwatch scan slack --exclude-channels random,social
 
-  # Include direct messages and uploaded files
-  leakwatch scan slack --include-dms --include-files
+  # Include direct messages
+  leakwatch scan slack --include-dms
 
   # Reduce API rate to avoid throttling
   leakwatch scan slack --rate-limit 10`,
@@ -52,16 +59,21 @@ func init() {
 	flags.String("exclude-channels", "", "comma-separated channel names to exclude")
 	flags.String("since", "", "scan messages after this date (YYYY-MM-DD)")
 	flags.Bool("include-dms", false, "include direct messages")
-	flags.Bool("include-files", true, "scan uploaded file content")
+	// Slack file scanning is not yet implemented (only message text is scanned).
+	// The flag is kept for forward-compatibility but defaults to false, is hidden,
+	// and is marked deprecated so the CLI does not advertise a working feature.
+	flags.Bool(flagIncludeFiles, false, "(not yet implemented; planned) scan uploaded file content")
+	if err := flags.MarkDeprecated(flagIncludeFiles, "Slack file scanning is not yet implemented; this flag has no effect"); err != nil {
+		slog.Warn("failed to mark include-files deprecated", "error", err)
+	}
 	flags.Float64("rate-limit", 20, "max Slack API requests per second")
 	flags.StringP("format", "f", "json", "output format (json, sarif, csv, table)")
 	flags.StringP("output", "o", "", "output file (default: stdout)")
 	flags.IntP("concurrency", "c", runtime.NumCPU(), "number of concurrent workers")
 	flags.Int64("max-file-size", 10*1024*1024, "maximum file size in bytes")
-	flags.Bool("show-raw", false, "show raw secret content in output")
+	flags.Bool(flagShowRaw, false, "show raw secret content in output")
 
 	addVerifyFlags(flags)
-	bindScanFlags(flags)
 }
 
 func runScanSlack(cmd *cobra.Command, _ []string) error {
@@ -101,7 +113,7 @@ func runScanSlack(cmd *cobra.Command, _ []string) error {
 		opts = append(opts, slacksource.WithIncludeDMs(true))
 	}
 
-	if includeFiles, _ := cmd.Flags().GetBool("include-files"); includeFiles {
+	if includeFiles, _ := cmd.Flags().GetBool(flagIncludeFiles); includeFiles {
 		opts = append(opts, slacksource.WithIncludeFiles(true))
 	}
 

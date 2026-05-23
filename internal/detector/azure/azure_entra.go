@@ -40,14 +40,11 @@ func (d *EntraDetector) Scan(_ context.Context, data []byte) []detector.RawFindi
 		fullMatch := groups[0]
 		secretValue := groups[1]
 
-		s := string(secretValue)
-		redacted := s[:8] + "****"
-
 		findings = append(findings, detector.RawFinding{
 			DetectorID: d.ID(),
 			Raw:        secretValue,
 			RawV2:      fullMatch,
-			Redacted:   redacted,
+			Redacted:   detector.RedactBytes(secretValue),
 		})
 	}
 	return findings

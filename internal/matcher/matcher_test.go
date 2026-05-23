@@ -2,6 +2,10 @@ package matcher
 
 import (
 	"context"
+	"fmt"
+	"sort"
+	"strings"
+	"sync"
 	"testing"
 
 	"github.com/cemililik/leakwatch/internal/detector"
@@ -108,6 +112,63 @@ func TestNew_NoDetectors_ReturnsEmptyMatcher(t *testing.T) {
 	m := New(nil)
 	result := m.Match([]byte("anything"))
 	assert.Empty(t, result)
+}
+
+// TestMatch_ConcurrentCallers_ReturnsAllMatches is the regression test for the
+// Aho-Corasick data race (ENG-C-01). A single Matcher is shared across many
+// goroutines, mirroring how the engine queries one matcher from every worker.
+// The underlying ahocorasick library's plain Match() mutates shared trie
+// counters and is not thread-safe: concurrent calls can silently drop matches.
+// Match now delegates to MatchThreadSafe, so every concurrent call must still
+// return the complete detector set.
+//
+// Run with -race; with the old Match() this test would trip the race detector
+// and/or return short results. All keywords are fake fixtures, not real secrets.
+func TestMatch_ConcurrentCallers_ReturnsAllMatches(t *testing.T) {
+	keywords := []string{
+		"akia_fake", "ghp_fake", "xoxb_fake", "sk_fake", "aiza_fake",
+		"glpat_fake", "npm_fake", "dop_fake", "sq0_fake", "shppa_fake",
+	}
+	dets := make([]detector.Detector, len(keywords))
+	for i, kw := range keywords {
+		dets[i] = &stubDetector{id: kw, keywords: []string{kw}}
+	}
+	m := New(dets)
+
+	// Data containing every keyword once; a correct match returns all detectors.
+	var sb strings.Builder
+	for _, kw := range keywords {
+		fmt.Fprintf(&sb, "token_%s ", kw)
+	}
+	data := []byte(sb.String())
+
+	want := append([]string(nil), keywords...)
+	sort.Strings(want)
+
+	const goroutines = 32
+	const iterations = 200
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var failures []string
+
+	for g := 0; g < goroutines; g++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < iterations; i++ {
+				got := detectorIDs(m.Match(data))
+				sort.Strings(got)
+				if len(got) != len(want) {
+					mu.Lock()
+					failures = append(failures, fmt.Sprintf("got %d matches, want %d", len(got), len(want)))
+					mu.Unlock()
+				}
+			}
+		}()
+	}
+	wg.Wait()
+
+	assert.Empty(t, failures, "concurrent Match calls must never drop detector matches")
 }
 
 func BenchmarkMatch_40Keywords(b *testing.B) {

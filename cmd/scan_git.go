@@ -51,14 +51,13 @@ func init() {
 	flags.StringP("output", "o", "", "output file (default: stdout)")
 	flags.IntP("concurrency", "c", runtime.NumCPU(), "number of concurrent workers")
 	flags.Int64("max-file-size", 10*1024*1024, "maximum file size in bytes")
-	flags.Bool("show-raw", false, "show raw secret content in output")
+	flags.Bool(flagShowRaw, false, "show raw secret content in output")
 	flags.String("since", "", "scan commits after this date (YYYY-MM-DD)")
 	flags.String("since-commit", "", "scan changes from this commit to HEAD")
 	flags.String("branch", "", "branch to scan")
 	flags.Int("depth", 0, "clone depth (remote repos only, 0=all)")
 
 	addVerifyFlags(flags)
-	bindScanFlags(flags)
 }
 
 func runScanGit(cmd *cobra.Command, args []string) error {
@@ -69,6 +68,10 @@ func runScanGit(cmd *cobra.Command, args []string) error {
 
 	var opts []gitsource.Option
 	opts = append(opts, gitsource.WithMaxFileSize(cfg.maxFileSize))
+
+	if len(cfg.excludePaths) > 0 {
+		opts = append(opts, gitsource.WithExcludePaths(cfg.excludePaths))
+	}
 
 	if since, _ := cmd.Flags().GetString("since"); since != "" {
 		t, err := time.Parse("2006-01-02", since)
@@ -90,7 +93,7 @@ func runScanGit(cmd *cobra.Command, args []string) error {
 		opts = append(opts, gitsource.WithDepth(depth))
 	}
 
-	cfg.scanTarget = args[0]
+	cfg.scanTarget = gitsource.SafeDisplayURL(args[0])
 	src := gitsource.New(args[0], opts...)
 
 	return executeScan(cmd.Context(), cfg, src, src)

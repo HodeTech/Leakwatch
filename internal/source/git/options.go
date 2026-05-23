@@ -46,3 +46,12 @@ func WithBufferSize(size int) Option {
 		s.bufferSize = size
 	}
 }
+
+// WithExcludePaths sets glob patterns for file paths to exclude from scanning.
+// Patterns are matched against each file's path within the repository,
+// mirroring filesystem.WithExcludePaths semantics.
+func WithExcludePaths(patterns []string) Option {
+	return func(s *GitSource) {
+		s.excludePaths = patterns
+	}
+}

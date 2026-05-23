@@ -340,6 +340,74 @@ func TestScanTarLayer_MultipleFiles_ProducesMultipleChunks(t *testing.T) {
 	}
 }
 
+func TestScanTarLayer_WithExcludePaths_Skipped(t *testing.T) {
+	buf := buildTarArchive(t, []tarEntry{
+		{name: "app/keep.txt", data: []byte("keep me"), typeflag: tar.TypeReg},
+		{name: "vendor/skip.txt", data: []byte("skip me"), typeflag: tar.TypeReg},
+	})
+
+	s := New("test:latest", WithExcludePaths([]string{"vendor/**"}))
+	ch := make(chan source.Chunk, 10)
+
+	tr := tar.NewReader(buf)
+	s.scanTarLayer(context.Background(), ch, tr, 0, "sha256:abc123")
+	close(ch)
+
+	chunks := collectChunks(ch)
+	require.Len(t, chunks, 1)
+	assert.Equal(t, "app/keep.txt", chunks[0].SourceMetadata.FilePath)
+}
+
+func TestContainerSource_New_WithExcludePaths_StoresPatterns(t *testing.T) {
+	s := New("test:latest", WithExcludePaths([]string{"a/**", "b"}))
+	assert.Equal(t, []string{"a/**", "b"}, s.excludePaths)
+}
+
+func TestScanTarLayer_AbsolutePath_Skipped(t *testing.T) {
+	content := []byte("secret=value")
+	buf := buildTarArchive(t, []tarEntry{
+		{name: "/etc/passwd", data: content, typeflag: tar.TypeReg},
+	})
+
+	s := New("test:latest")
+	ch := make(chan source.Chunk, 10)
+
+	tr := tar.NewReader(buf)
+	s.scanTarLayer(context.Background(), ch, tr, 0, "sha256:abc123")
+	close(ch)
+
+	chunks := collectChunks(ch)
+	assert.Empty(t, chunks)
+}
+
+func TestSanitizeTarPath(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		wantPath string
+		wantOK   bool
+	}{
+		{name: "simple relative path", input: "app/config.env", wantPath: "app/config.env", wantOK: true},
+		{name: "dot-cleaned path", input: "app/./config.env", wantPath: "app/config.env", wantOK: true},
+		{name: "interior dotdot stays in tree", input: "app/sub/../config.env", wantPath: "app/config.env", wantOK: true},
+		{name: "leading dotdot rejected", input: "../etc/passwd", wantOK: false},
+		{name: "nested leading dotdot rejected", input: "../../etc/passwd", wantOK: false},
+		{name: "absolute unix path rejected", input: "/etc/passwd", wantOK: false},
+		{name: "escapes root via dotdot rejected", input: "a/../../etc/passwd", wantOK: false},
+		{name: "bare dotdot rejected", input: "..", wantOK: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := sanitizeTarPath(tt.input)
+			assert.Equal(t, tt.wantOK, ok)
+			if tt.wantOK {
+				assert.Equal(t, tt.wantPath, got)
+			}
+		})
+	}
+}
+
 func TestScanTarLayer_BinaryExtension_Skipped(t *testing.T) {
 	buf := buildTarArchive(t, []tarEntry{
 		{name: "app/image.png", data: []byte("not really png"), typeflag: tar.TypeReg},

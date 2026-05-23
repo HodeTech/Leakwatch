@@ -29,31 +29,29 @@ func TestToken_Scan_MatchesValidTokens(t *testing.T) {
 			name:     "valid ghp token",
 			input:    "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij",
 			expected: 1,
-			redacted: "ghp_****ghij",
+			redacted: "****ghij",
 		},
 		{
-			name:     "valid gho token",
+			// gho/ghu/ghs/ghr prefixes belong exclusively to the OAuth
+			// detector now; the token detector must ignore them.
+			name:     "ignores gho oauth token",
 			input:    "gho_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij",
-			expected: 1,
-			redacted: "gho_****ghij",
+			expected: 0,
 		},
 		{
-			name:     "valid ghu token",
+			name:     "ignores ghu oauth token",
 			input:    "ghu_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij",
-			expected: 1,
-			redacted: "ghu_****ghij",
+			expected: 0,
 		},
 		{
-			name:     "valid ghs token",
+			name:     "ignores ghs oauth token",
 			input:    "ghs_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij",
-			expected: 1,
-			redacted: "ghs_****ghij",
+			expected: 0,
 		},
 		{
-			name:     "valid ghr token",
+			name:     "ignores ghr oauth token",
 			input:    "ghr_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij",
-			expected: 1,
-			redacted: "ghr_****ghij",
+			expected: 0,
 		},
 		{
 			name:     "token in config file",
@@ -66,9 +64,10 @@ func TestToken_Scan_MatchesValidTokens(t *testing.T) {
 			expected: 1,
 		},
 		{
-			name:     "multiple tokens",
+			// Only the ghp_ token is a PAT; the ghs_ token is an OAuth token.
+			name:     "multiple tokens only ghp counted",
 			input:    "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij ghs_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij",
-			expected: 2,
+			expected: 1,
 		},
 		{
 			name:     "token in large text",

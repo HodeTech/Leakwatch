@@ -120,6 +120,40 @@ func TestFormatter_Format_ShowRawTrue_IncludesRawInOutput(t *testing.T) {
 	assert.Equal(t, "AKIAIOSFODNN7EXAMPLE", rawVal)
 }
 
+// TestFormatter_Format_DefaultShape_MatchesStandardFindingMarshal verifies the
+// default (ShowRaw=false) output is byte-identical to standard json.Marshal of
+// the findings slice, i.e. the wire type does not change the no-raw shape.
+func TestFormatter_Format_DefaultShape_MatchesStandardFindingMarshal(t *testing.T) {
+	f := &Formatter{}
+	var buf bytes.Buffer
+
+	findings := []finding.Finding{
+		{
+			ID:         "abc123",
+			DetectorID: "aws-access-key-id",
+			Severity:   finding.SeverityCritical,
+			Redacted:   "AKIA****MPLE",
+			Raw:        "AKIAIOSFODNN7EXAMPLE",
+			SourceMetadata: finding.SourceMetadata{
+				SourceType: "filesystem",
+				FilePath:   "config.yaml",
+			},
+		},
+	}
+
+	err := f.Format(&buf, findings)
+	require.NoError(t, err)
+
+	expected, err := json.MarshalIndent(findings, "", "  ")
+	require.NoError(t, err)
+
+	// json.Encoder appends a trailing newline; MarshalIndent does not.
+	assert.Equal(t, string(expected)+"\n", buf.String(),
+		"default JSON output shape must match standard json.Marshal of []finding.Finding")
+	assert.NotContains(t, buf.String(), "AKIAIOSFODNN7EXAMPLE",
+		"raw secret must never appear in default output")
+}
+
 func TestFormatter_Format_ShowRawFalse_DoesNotMutateOriginal(t *testing.T) {
 	f := &Formatter{ShowRaw: false}
 	var buf bytes.Buffer

@@ -34,7 +34,7 @@ func (d *AccessKeyID) Scan(_ context.Context, data []byte) []detector.RawFinding
 		findings = append(findings, detector.RawFinding{
 			DetectorID: d.ID(),
 			Raw:        match,
-			Redacted:   string(match[:4]) + "****" + string(match[len(match)-4:]),
+			Redacted:   detector.RedactBytes(match),
 		})
 	}
 	return findings

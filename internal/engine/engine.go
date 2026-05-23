@@ -34,9 +34,16 @@ const (
 
 // Config holds the scan engine configuration.
 type Config struct {
-	Concurrency      int
-	Detectors        []detector.Detector
-	EnableEntropy    bool
+	Concurrency   int
+	Detectors     []detector.Detector
+	EnableEntropy bool
+	// EntropyThreshold is display-only at the engine level. When EnableEntropy
+	// is set, the engine computes Shannon entropy purely to populate
+	// Finding.Entropy for reporting (see rawToFinding); it does NOT gate or drop
+	// findings whose entropy falls below this value. Threshold-based gating
+	// currently applies only to custom rules (handled inside their detector);
+	// engine-wide entropy gating is planned and tracked separately in the docs/
+	// ROADMAP. The value is defaulted to defaultEntropyThreshold in New.
 	EntropyThreshold float64
 	ShowRaw          bool
 	Clock            func() time.Time // Optional; defaults to time.Now
@@ -67,6 +74,9 @@ func New(cfg Config) *Engine {
 	if cfg.Concurrency < 1 {
 		cfg.Concurrency = 1
 	}
+	// EntropyThreshold is defaulted here for completeness, but note it is
+	// display-only at the engine level (see Config.EntropyThreshold): the engine
+	// never gates findings on it. Custom rules apply their own threshold.
 	if cfg.EntropyThreshold <= 0 {
 		cfg.EntropyThreshold = defaultEntropyThreshold
 	}
@@ -88,7 +98,8 @@ func (e *Engine) Scan(ctx context.Context, src source.Source) (*ScanResult, erro
 
 	start := time.Now()
 
-	slog.Info("scan started",
+	slog.Info(
+		"scan started",
 		"source", src.Type(),
 		"concurrency", e.config.Concurrency,
 		"detectors", len(e.config.Detectors),
@@ -108,6 +119,20 @@ func (e *Engine) Scan(ctx context.Context, src source.Source) (*ScanResult, erro
 	}
 
 	// Collect results (Finding + RawFinding pairs).
+	//
+	// Raw secret byte lifetime: each VerifyPair carries the raw secret bytes
+	// (p.Raw) in memory only so that verification can re-present them to the
+	// relevant API. These bytes are never logged, written to disk, or otherwise
+	// persisted (per the project's secret-safety rule); they live only until
+	// VerifyAll has consumed them below, after which the pairs slice goes out of
+	// scope and becomes eligible for garbage collection.
+	//
+	// Known limitation (ENG-M-02): pairs accumulates every detected pair for the
+	// whole scan before verification runs, so peak memory grows with the total
+	// number of findings (raw bytes included). For very large or highly
+	// secret-dense inputs this is unbounded. Streaming verification / a
+	// MaxFindings cap is intentionally not implemented here yet and is tracked
+	// separately; this comment documents the current behavior.
 	var pairs []verifier.VerifyPair
 	var collectWg sync.WaitGroup
 	collectWg.Add(1)
@@ -154,7 +179,8 @@ loop:
 		Interrupted:   ctx.Err() != nil,
 	}
 
-	slog.Info("scan completed",
+	slog.Info(
+		"scan completed",
 		"findings", len(findings),
 		"chunks", scannedChunks,
 		"duration", result.Duration,

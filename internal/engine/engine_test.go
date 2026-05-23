@@ -1,7 +1,9 @@
 package engine
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -361,6 +363,106 @@ func TestScan_InlineIgnore_DetectorSpecific(t *testing.T) {
 	result2, err := eng2.Scan(context.Background(), src)
 	require.NoError(t, err)
 	assert.Empty(t, result2.Findings, "marker matching the detector ID must suppress the finding")
+}
+
+// keywordDetector is a detector whose ID and single keyword are identical. Its
+// Scan emits exactly one RawFinding per occurrence of that keyword in the chunk
+// data. Combined with the Aho-Corasick pre-filter (which decides whether the
+// detector runs at all for a chunk), this lets a concurrency test assert the
+// full expected finding set: a dropped or misrouted keyword match anywhere in
+// the pipeline shows up as a missing finding.
+//
+// All values are fake, redacted-style fixtures — no real secrets.
+type keywordDetector struct {
+	keyword string
+}
+
+func (d *keywordDetector) ID() string                 { return d.keyword }
+func (d *keywordDetector) Description() string        { return "keyword detector " + d.keyword }
+func (d *keywordDetector) Keywords() []string         { return []string{d.keyword} }
+func (d *keywordDetector) Severity() finding.Severity { return finding.SeverityHigh }
+
+func (d *keywordDetector) Scan(_ context.Context, data []byte) []detector.RawFinding {
+	kw := []byte(d.keyword)
+	var out []detector.RawFinding
+	for from := 0; ; {
+		idx := bytes.Index(data[from:], kw)
+		if idx < 0 {
+			break
+		}
+		out = append(out, detector.RawFinding{
+			DetectorID: d.keyword,
+			Raw:        kw,
+			Redacted:   d.keyword[:1] + "****",
+		})
+		from += idx + len(kw)
+	}
+	return out
+}
+
+// TestScan_ConcurrentWorkers_ReturnsAllFindings is the regression test for the
+// Aho-Corasick data race (ENG-C-01). The engine shares one *matcher.Matcher
+// across all workers and queries it concurrently. The underlying ahocorasick
+// library's plain Match() mutates shared trie counters and is not thread-safe;
+// under concurrency it can silently drop matches, which would surface here as
+// fewer findings than expected. With MatchThreadSafe() the full set is returned.
+//
+// Run with -race; with the old Match() this test would also trip the race
+// detector. Concurrency is set to 8 and the input is many chunks, each carrying
+// every detector's keyword, so parallel workers genuinely contend on the shared
+// matcher.
+func TestScan_ConcurrentWorkers_ReturnsAllFindings(t *testing.T) {
+	// Fake keyword fixtures, one detector each. Distinct, non-overlapping tokens.
+	keywords := []string{
+		"akia_fake", "ghp_fake", "xoxb_fake", "sk_fake", "aiza_fake",
+		"glpat_fake", "npm_fake", "dop_fake", "sq0_fake", "shppa_fake",
+	}
+	dets := make([]detector.Detector, len(keywords))
+	for i, kw := range keywords {
+		dets[i] = &keywordDetector{keyword: kw}
+	}
+
+	// Build a chunk whose data contains every keyword exactly once, so each
+	// chunk should yield exactly len(keywords) findings.
+	var sb bytes.Buffer
+	for _, kw := range keywords {
+		fmt.Fprintf(&sb, "token_%s = \"value\"\n", kw)
+	}
+	chunkData := sb.Bytes()
+
+	const numChunks = 200
+	chunks := make([]source.Chunk, numChunks)
+	for i := range chunks {
+		// Each chunk gets a distinct file path so findings are distinct per chunk.
+		chunks[i] = source.Chunk{
+			Data: chunkData,
+			SourceMetadata: finding.SourceMetadata{
+				SourceType: "filesystem",
+				FilePath:   fmt.Sprintf("file_%03d.txt", i),
+			},
+		}
+	}
+	src := &mockSource{chunks: chunks}
+
+	eng := New(Config{Concurrency: 8, Detectors: dets, Clock: fixedClock})
+
+	result, err := eng.Scan(context.Background(), src)
+	require.NoError(t, err)
+
+	// Every chunk must produce one finding per keyword.
+	expected := numChunks * len(keywords)
+	require.Len(t, result.Findings, expected,
+		"shared matcher must not drop matches under concurrent workers")
+
+	// Sanity: every detector ID is represented the expected number of times.
+	counts := make(map[string]int)
+	for _, f := range result.Findings {
+		counts[f.DetectorID]++
+	}
+	for _, kw := range keywords {
+		assert.Equal(t, numChunks, counts[kw],
+			"detector %q must fire on every chunk", kw)
+	}
 }
 
 func TestScan_SameInput_ReturnsDeterministicID(t *testing.T) {

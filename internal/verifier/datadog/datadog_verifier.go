@@ -5,12 +5,12 @@ package datadog
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"log/slog"
+	"io"
 	"net/http"
 
 	"github.com/cemililik/leakwatch/internal/detector"
 	"github.com/cemililik/leakwatch/internal/verifier"
+	"github.com/cemililik/leakwatch/internal/verifier/internal/httpx"
 	"github.com/cemililik/leakwatch/pkg/finding"
 )
 
@@ -38,93 +38,35 @@ func (v *Verifier) Type() string {
 }
 
 // Verify checks if the detected Datadog API key is valid/active.
-// Raw contains the key value.
+// Raw contains the key value. Datadog returns 200 with a "valid" flag and uses
+// 403 (not 401) for a rejected key.
 func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.VerificationResult {
 	token := string(raw.Raw)
-	if token == "" {
-		return finding.VerificationResult{
-			Status:  finding.StatusUnverified,
-			Message: "empty token",
-		}
-	}
+	apiURL := httpx.BaseURL(v.apiURL, defaultAPIURL)
 
-	apiURL := v.apiURL
-	if apiURL == "" {
-		apiURL = defaultAPIURL
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL+"/api/v1/validate", nil)
-	if err != nil {
-		slog.ErrorContext(ctx, "datadog verifier: failed to create request", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("failed to create request: %v", err),
-		}
-	}
-	req.Header.Set("DD-API-KEY", token)
-	req.Header.Set("User-Agent", "leakwatch-verifier")
-
-	client := v.httpClient
-	if client == nil {
-		client = http.DefaultClient
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		slog.ErrorContext(ctx, "datadog verifier: request failed", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("request failed: %v", err),
-		}
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	switch resp.StatusCode {
-	case http.StatusOK:
-		return handleOKResponse(ctx, resp)
-	case http.StatusForbidden:
-		slog.DebugContext(ctx, "datadog verifier: API key is inactive")
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedInactive,
-			Message: "Datadog API key is invalid or revoked",
-		}
-	default:
-		slog.ErrorContext(ctx, "datadog verifier: unexpected status code",
-			slog.Int("status_code", resp.StatusCode),
-		)
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("unexpected status code: %d", resp.StatusCode),
-		}
-	}
+	return httpx.VerifyToken(ctx, v.httpClient, token, httpx.TokenSpec{
+		Name: "datadog",
+		Request: httpx.Request{
+			URL:    apiURL + "/api/v1/validate",
+			Header: map[string]string{"DD-API-KEY": token},
+		},
+		InactiveStatuses: []int{http.StatusForbidden},
+		ActiveMessage:    "Datadog API key is active",
+		InactiveMessage:  "Datadog API key is invalid or revoked",
+		Decode:           decodeValidate,
+	})
 }
 
-// handleOKResponse parses the Datadog validation response to determine
-// whether the key is valid or invalid.
-func handleOKResponse(ctx context.Context, resp *http.Response) finding.VerificationResult {
-	var body struct {
+// decodeValidate downgrades a 200 response to inactive when valid=false.
+func decodeValidate(body io.Reader) (map[string]string, string, error) {
+	var resp struct {
 		Valid bool `json:"valid"`
 	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
-		slog.ErrorContext(ctx, "datadog verifier: failed to decode response", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("failed to decode response: %v", err),
-		}
+	if err := json.NewDecoder(body).Decode(&resp); err != nil {
+		return nil, "", err
 	}
-
-	if body.Valid {
-		slog.InfoContext(ctx, "datadog verifier: API key is active")
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedActive,
-			Message: "Datadog API key is active",
-		}
+	if !resp.Valid {
+		return nil, "Datadog API key is invalid", nil
 	}
-
-	slog.DebugContext(ctx, "datadog verifier: API key is inactive")
-	return finding.VerificationResult{
-		Status:  finding.StatusVerifiedInactive,
-		Message: "Datadog API key is invalid",
-	}
+	return nil, "", nil
 }

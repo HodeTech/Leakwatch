@@ -5,13 +5,12 @@ package airtable
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 
 	"github.com/cemililik/leakwatch/internal/detector"
 	"github.com/cemililik/leakwatch/internal/verifier"
+	"github.com/cemililik/leakwatch/internal/verifier/internal/httpx"
 	"github.com/cemililik/leakwatch/pkg/finding"
 )
 
@@ -42,89 +41,27 @@ func (v *Verifier) Type() string {
 // Raw contains the token value.
 func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.VerificationResult {
 	token := string(raw.Raw)
-	if token == "" {
-		return finding.VerificationResult{
-			Status:  finding.StatusUnverified,
-			Message: "empty token",
-		}
-	}
+	apiURL := httpx.BaseURL(v.apiURL, defaultAPIURL)
 
-	apiURL := v.apiURL
-	if apiURL == "" {
-		apiURL = defaultAPIURL
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL+"/v0/meta/whoami", nil)
-	if err != nil {
-		slog.ErrorContext(ctx, "airtable verifier: failed to create request", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("failed to create request: %v", err),
-		}
-	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("User-Agent", "leakwatch-verifier")
-
-	client := v.httpClient
-	if client == nil {
-		client = http.DefaultClient
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		slog.ErrorContext(ctx, "airtable verifier: request failed", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("request failed: %v", err),
-		}
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	switch resp.StatusCode {
-	case http.StatusOK:
-		return handleActiveToken(ctx, resp.Body)
-	case http.StatusUnauthorized:
-		slog.DebugContext(ctx, "airtable verifier: token is inactive")
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedInactive,
-			Message: "Airtable token is invalid or revoked",
-		}
-	default:
-		slog.ErrorContext(ctx, "airtable verifier: unexpected status code",
-			slog.Int("status_code", resp.StatusCode),
-		)
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("unexpected status code: %d", resp.StatusCode),
-		}
-	}
+	return httpx.VerifyToken(ctx, v.httpClient, token, httpx.TokenSpec{
+		Name: "airtable",
+		Request: httpx.Request{
+			URL:    apiURL + "/v0/meta/whoami",
+			Header: map[string]string{"Authorization": "Bearer " + token},
+		},
+		ActiveMessage:   "Airtable token is active",
+		InactiveMessage: "Airtable token is invalid or revoked",
+		Decode:          decodeWhoami,
+	})
 }
 
-// handleActiveToken parses the Airtable API response for a valid token.
-func handleActiveToken(ctx context.Context, body io.Reader) finding.VerificationResult {
+// decodeWhoami reports the authenticated user id as id.
+func decodeWhoami(body io.Reader) (map[string]string, string, error) {
 	var user struct {
 		ID string `json:"id"`
 	}
-
 	if err := json.NewDecoder(body).Decode(&user); err != nil {
-		slog.ErrorContext(ctx, "airtable verifier: failed to decode response", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedActive,
-			Message: "Airtable token is active (could not parse user info)",
-		}
+		return nil, "", err
 	}
-
-	extra := map[string]string{
-		"id": user.ID,
-	}
-
-	slog.InfoContext(ctx, "airtable verifier: token is active",
-		slog.String("id", user.ID),
-	)
-
-	return finding.VerificationResult{
-		Status:    finding.StatusVerifiedActive,
-		Message:   "Airtable token is active",
-		ExtraData: extra,
-	}
+	return map[string]string{"id": user.ID}, "", nil
 }

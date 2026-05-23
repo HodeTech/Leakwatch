@@ -68,7 +68,7 @@ func TestCustomDetector_Scan_MatchFound_ReturnsFinding(t *testing.T) {
 	findings := det.Scan(context.Background(), []byte("found TOKEN_ABCDEF1234567890 here"))
 	require.Len(t, findings, 1)
 	assert.Equal(t, "test-pattern", findings[0].DetectorID)
-	assert.Equal(t, "TOKE****7890", findings[0].Redacted)
+	assert.Equal(t, "****7890", findings[0].Redacted)
 }
 
 func TestCustomDetector_Scan_NoMatch_ReturnsNil(t *testing.T) {

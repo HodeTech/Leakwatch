@@ -34,3 +34,12 @@ func WithRegion(region string) Option {
 		s.region = region
 	}
 }
+
+// WithExcludePaths sets glob patterns for object keys to exclude from scanning.
+// Patterns are matched against each object's key (the object's path within the
+// bucket), mirroring filesystem.WithExcludePaths semantics.
+func WithExcludePaths(patterns []string) Option {
+	return func(s *S3Source) {
+		s.excludePaths = patterns
+	}
+}

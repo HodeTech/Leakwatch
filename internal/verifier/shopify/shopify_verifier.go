@@ -6,13 +6,12 @@ package shopify
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 
 	"github.com/cemililik/leakwatch/internal/detector"
 	"github.com/cemililik/leakwatch/internal/verifier"
+	"github.com/cemililik/leakwatch/internal/verifier/internal/httpx"
 	"github.com/cemililik/leakwatch/pkg/finding"
 )
 
@@ -56,7 +55,6 @@ func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.
 	if baseURL == "" {
 		domain := raw.ExtraData["store_domain"]
 		if domain == "" {
-			slog.DebugContext(ctx, "shopify verifier: store domain not available, cannot verify")
 			return finding.VerificationResult{
 				Status:  finding.StatusUnverified,
 				Message: "store domain required for verification",
@@ -65,80 +63,31 @@ func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.
 		baseURL = "https://" + domain
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+shopAPIPath, nil)
-	if err != nil {
-		slog.ErrorContext(ctx, "shopify verifier: failed to create request", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("failed to create request: %v", err),
-		}
-	}
-	req.Header.Set("X-Shopify-Access-Token", token)
-	req.Header.Set("User-Agent", "leakwatch-verifier")
-
-	client := v.httpClient
-	if client == nil {
-		client = http.DefaultClient
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		slog.ErrorContext(ctx, "shopify verifier: request failed", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("request failed: %v", err),
-		}
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	switch resp.StatusCode {
-	case http.StatusOK:
-		return handleActiveToken(ctx, resp.Body)
-	case http.StatusUnauthorized:
-		slog.DebugContext(ctx, "shopify verifier: access token is inactive")
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedInactive,
-			Message: "Shopify access token is invalid or revoked",
-		}
-	default:
-		slog.ErrorContext(ctx, "shopify verifier: unexpected status code",
-			slog.Int("status_code", resp.StatusCode),
-		)
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("unexpected status code: %d", resp.StatusCode),
-		}
-	}
+	return httpx.VerifyToken(ctx, v.httpClient, token, httpx.TokenSpec{
+		Name: "shopify",
+		Request: httpx.Request{
+			URL:    baseURL + shopAPIPath,
+			Header: map[string]string{"X-Shopify-Access-Token": token},
+		},
+		ActiveMessage:   "Shopify access token is active",
+		InactiveMessage: "Shopify access token is invalid or revoked",
+		Decode:          decodeShop,
+	})
 }
 
-// handleActiveToken parses the Shopify API response for a valid token.
-func handleActiveToken(ctx context.Context, body io.Reader) finding.VerificationResult {
+// decodeShop reports the shop name as shop_name when present.
+func decodeShop(body io.Reader) (map[string]string, string, error) {
 	var shopResp struct {
 		Shop struct {
 			Name string `json:"name"`
 		} `json:"shop"`
 	}
-
 	if err := json.NewDecoder(body).Decode(&shopResp); err != nil {
-		slog.ErrorContext(ctx, "shopify verifier: failed to decode response", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedActive,
-			Message: "Shopify access token is active (could not parse shop details)",
-		}
+		return nil, "", err
 	}
-
 	extra := map[string]string{}
 	if shopResp.Shop.Name != "" {
 		extra["shop_name"] = shopResp.Shop.Name
 	}
-
-	slog.InfoContext(ctx, "shopify verifier: access token is active",
-		slog.String("shop_name", shopResp.Shop.Name),
-	)
-
-	return finding.VerificationResult{
-		Status:    finding.StatusVerifiedActive,
-		Message:   "Shopify access token is active",
-		ExtraData: extra,
-	}
+	return extra, "", nil
 }

@@ -16,7 +16,7 @@
 | Feature | Leakwatch | TruffleHog | Gitleaks |
 |---------|-----------|------------|----------|
 | **License** | MIT | AGPL-3.0 | MIT* |
-| **Secret Verification** | Yes (54 verifiers) | Yes | No |
+| **Secret Verification** | Yes (54 verifiers, 51 packages) | Yes | No |
 | **Container Scanning** | Yes | Yes | No |
 | **Aho-Corasick** | Yes | Partial | No |
 | **Entropy Analysis** | Hybrid | Yes | Filter |
@@ -25,7 +25,7 @@
 
 **What makes Leakwatch different:**
 - **Verification + MIT license** — A unique combination in the open source world
-- **84% verification coverage** — 54 of 64 detectors have live API or format validation verification
+- **85.7% verification coverage** — 54 of 63 detectors have live API or format validation verification
 - **Hybrid detection engine** — Low false positives with Aho-Corasick + Regex + Entropy
 - **Easy extensibility** — YAML for simple rules, Go plugin for advanced ones
 - **Single binary, zero dependencies** — Runs on every platform
@@ -104,7 +104,7 @@ leakwatch scan fs . --remediation
 
 ## Supported Secret Types
 
-**64 built-in secret detectors across 60 packages.**
+**63 built-in secret detectors across 60 packages.**
 
 | Category | Detector | ID | Severity |
 |----------|----------|----|----------|
@@ -173,13 +173,13 @@ leakwatch scan fs . --remediation
 | **Generic** | Generic API Key | `generic-api-key` | Medium |
 | **Custom** | YAML-defined rules | user-defined | user-defined |
 
-### Verification Coverage (54/64 — 84%)
+### Verification Coverage (54/63 — 85.7%)
 
 | Verification Type | Detectors | Description |
 |-------------------|-----------|-------------|
-| **Live API Verification** | `aws-access-key-id`, `github-token`, `github-oauth-token`, `gitlab-pat`, `slack-token`, `openai-api-key`, `anthropic-api-key`, `deepseek-api-key`, `huggingface-token`, `sendgrid-api-key`, `mailgun-api-key`, `postmark-server-token`, `stripe-api-key-live`, `stripe-api-key-test`, `digitalocean-token`, `cloudflare-api-token`, `heroku-api-key`, `vercel-token`, `npm-token`, `pypi-api-token`, `rubygems-api-key`, `dockerhub-pat`, `circleci-token`, `terraform-cloud-token`, `discord-bot-token`, `telegram-bot-token`, `sentry-token`, `pagerduty-api-key`, `newrelic-api-key`, `grafana-api-key`, `datadog-api-key`, `snyk-api-key`, `twilio-api-key`, `doppler-token`, `launchdarkly-sdk-key`, `sonarcloud-token`, `shopify-access-token`, `notion-token`, `linear-api-key`, `figma-pat`, `airtable-pat`, `okta-api-token`, `auth0-management-token`, `databricks-token`, `bitbucket-app-password`, `coinbase-api-key`, `supabase-service-key`, `hashicorp-vault-token`, `infura-api-key` | API call to provider to confirm active/inactive status |
-| **Format Validation** | `azure-storage-key`, `azure-entra-secret`, `gcp-service-account`, `snowflake-credentials` | Structural check (decode, parse) without network call |
-| **Not Verifiable** | `jwt`, `private-key`, `generic-api-key`, `database-connection-string`, `redis-connection-string`, `rabbitmq-connection-string`, `ftp-credentials`, `ldap-credentials`, `slack-webhook`, `teams-webhook` | No public verification API or verification would cause side effects |
+| **Live API Verification** | `aws-access-key-id`, `github-token`, `github-oauth-token`, `gitlab-pat`, `slack-token`, `openai-api-key`, `anthropic-api-key`, `deepseek-api-key`, `huggingface-token`, `sendgrid-api-key`, `mailgun-api-key`, `postmark-server-token`, `stripe-api-key-live`, `stripe-api-key-test`, `digitalocean-token`, `cloudflare-api-token`, `heroku-api-key`, `vercel-token`, `npm-token`, `pypi-api-token`, `rubygems-api-key`, `dockerhub-pat`, `circleci-token`, `terraform-cloud-token`, `discord-bot-token`, `telegram-bot-token`, `sentry-token`, `pagerduty-api-key`, `newrelic-api-key`, `grafana-api-key`, `datadog-api-key`, `snyk-api-key`, `twilio-api-key`, `doppler-token`, `launchdarkly-sdk-key`, `sonarcloud-token`, `shopify-access-token`, `notion-token`, `linear-api-key`, `figma-pat`, `airtable-pat`, `okta-api-token`, `auth0-management-token`, `databricks-token`, `bitbucket-app-password`, `coinbase-api-key`, `supabase-service-key`, `infura-api-key`, `teams-webhook` | API call to provider to confirm active/inactive status |
+| **Format Validation** | `azure-storage-key`, `azure-entra-secret`, `gcp-service-account`, `snowflake-credentials`, `rabbitmq-connection-string` | Structural check (decode, parse) without network call |
+| **Not Verifiable** | `jwt`, `private-key`, `generic-api-key`, `database-connection-string`, `redis-connection-string`, `ftp-credentials`, `ldap-credentials`, `slack-webhook`, `hashicorp-vault-token` | No public verification API or verification would cause side effects |
 
 > **Can't find your secret type?** Leakwatch supports [YAML custom rules](docs/guides/custom-rules.md) — define your own detector in 5 lines of YAML without writing Go code.
 
@@ -203,7 +203,7 @@ leakwatch scan fs . --remediation
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/cemililik/Leakwatch
-    rev: v0.1.0
+    rev: v1.5.0
     hooks:
       - id: leakwatch
 ```
@@ -246,10 +246,13 @@ output:
 
 ```mermaid
 flowchart LR
-    subgraph Sources["Sources"]
+    subgraph Sources["Sources (6)"]
         S1["Git (go-git)"]
         S2["Filesystem (io/fs)"]
         S3["Container (crane)"]
+        S4["AWS S3"]
+        S5["GCS"]
+        S6["Slack"]
     end
 
     subgraph Engine["Detection Engine"]
@@ -258,7 +261,7 @@ flowchart LR
         E3[Entropy]
     end
 
-    subgraph Verify["Verification (54 verifiers)"]
+    subgraph Verify["Verification (54 verifiers, 51 packages)"]
         V1[Live API Verification]
         V2[Format Validation]
     end
@@ -310,6 +313,11 @@ Detailed architecture: [docs/architecture/03-ARCHITECTURE.md](docs/architecture/
 | [Custom Rules](docs/guides/custom-rules.md) | YAML rule definitions, regex, entropy, keyword |
 | [Container Scanning](docs/guides/container-scanning.md) | Docker/OCI image scanning, registry authentication |
 | [Cloud Scanning](docs/guides/cloud-scanning.md) | AWS S3, GCS, parallel repo scanning |
+| [Git Scanning](docs/guides/git-scanning.md) | Full history scanning, diff-based, remote repos |
+| [Slack Scanning](docs/guides/slack-scanning.md) | Slack workspace, channel/DM/file scanning |
+| [Secret Verification](docs/guides/secret-verification.md) | Verification modes, rate limiting, --only-verified |
+| [Docker Usage](docs/guides/docker-usage.md) | Running Leakwatch in Docker containers |
+| [VS Code Extension](docs/guides/vscode-extension.md) | IDE integration, scan-on-save, diagnostics |
 
 ### Planning
 
@@ -341,6 +349,6 @@ MIT License — see the [LICENSE](LICENSE) file for details.
 
 ## Status
 
-> **Phases 1–8 are complete.** Leakwatch supports filesystem, Git, container, S3, and GCS scanning with 54 verifiers (84% coverage), multiple output formats, and CI/CD integration.
+> **Phases 1–8 are complete.** Leakwatch supports filesystem, Git, container, S3, GCS, and Slack scanning (6 sources) with 63 detectors across 60 packages, 54 verifiers (85.7% coverage), multiple output formats, and CI/CD integration.
 
 To track the project's progress, see the [Roadmap](docs/05-ROADMAP.md) document.

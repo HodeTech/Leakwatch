@@ -9,7 +9,11 @@ import (
 	"github.com/cemililik/leakwatch/pkg/finding"
 )
 
-var tokenPattern = regexp.MustCompile(`(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{36,100}`)
+// tokenPattern matches GitHub Personal Access Tokens only. The OAuth-related
+// prefixes (gho/ghu/ghs/ghr) are intentionally excluded here and handled
+// exclusively by the github-oauth-token detector, so that any single token is
+// reported by exactly one detector (see github_oauth.go).
+var tokenPattern = regexp.MustCompile(`ghp_[A-Za-z0-9_]{36,100}`)
 
 // Token detects GitHub Personal Access Tokens.
 type Token struct{}
@@ -21,7 +25,7 @@ func (d *Token) ID() string { return "github-token" }
 func (d *Token) Description() string { return "GitHub Personal Access Token" }
 
 // Keywords returns the Aho-Corasick pre-filter keywords for GitHub token detection.
-func (d *Token) Keywords() []string { return []string{"ghp_", "gho_", "ghu_", "ghs_", "ghr_"} }
+func (d *Token) Keywords() []string { return []string{"ghp_"} }
 
 // Severity returns the default severity level for GitHub token findings.
 func (d *Token) Severity() finding.Severity { return finding.SeverityCritical }
@@ -38,7 +42,7 @@ func (d *Token) Scan(_ context.Context, data []byte) []detector.RawFinding {
 		findings = append(findings, detector.RawFinding{
 			DetectorID: d.ID(),
 			Raw:        match,
-			Redacted:   string(match[:4]) + "****" + string(match[len(match)-4:]),
+			Redacted:   detector.RedactBytes(match),
 		})
 	}
 	return findings

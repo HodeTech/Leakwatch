@@ -5,12 +5,11 @@ package twilio
 
 import (
 	"context"
-	"fmt"
-	"log/slog"
 	"net/http"
 
 	"github.com/cemililik/leakwatch/internal/detector"
 	"github.com/cemililik/leakwatch/internal/verifier"
+	"github.com/cemililik/leakwatch/internal/verifier/internal/httpx"
 	"github.com/cemililik/leakwatch/pkg/finding"
 )
 
@@ -59,57 +58,15 @@ func (v *Verifier) Verify(ctx context.Context, raw detector.RawFinding) finding.
 		}
 	}
 
-	apiURL := v.apiURL
-	if apiURL == "" {
-		apiURL = defaultAPIURL
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL+"/2010-04-01/Accounts.json", nil)
-	if err != nil {
-		slog.ErrorContext(ctx, "twilio verifier: failed to create request", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("failed to create request: %v", err),
-		}
-	}
-	req.SetBasicAuth(accountSID, token)
-	req.Header.Set("User-Agent", "leakwatch-verifier")
-
-	client := v.httpClient
-	if client == nil {
-		client = http.DefaultClient
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		slog.ErrorContext(ctx, "twilio verifier: request failed", slog.String("error", err.Error()))
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("request failed: %v", err),
-		}
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	switch resp.StatusCode {
-	case http.StatusOK:
-		slog.InfoContext(ctx, "twilio verifier: API key is active")
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedActive,
-			Message: "Twilio API key is active",
-		}
-	case http.StatusUnauthorized:
-		slog.DebugContext(ctx, "twilio verifier: API key is inactive")
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifiedInactive,
-			Message: "Twilio API key is invalid or revoked",
-		}
-	default:
-		slog.ErrorContext(ctx, "twilio verifier: unexpected status code",
-			slog.Int("status_code", resp.StatusCode),
-		)
-		return finding.VerificationResult{
-			Status:  finding.StatusVerifyError,
-			Message: fmt.Sprintf("unexpected status code: %d", resp.StatusCode),
-		}
-	}
+	apiURL := httpx.BaseURL(v.apiURL, defaultAPIURL)
+	return httpx.VerifyToken(ctx, v.httpClient, token, httpx.TokenSpec{
+		Name: "twilio",
+		Request: httpx.Request{
+			URL:           apiURL + "/2010-04-01/Accounts.json",
+			BasicAuthUser: accountSID,
+			BasicAuthPass: token,
+		},
+		ActiveMessage:   "Twilio API key is active",
+		InactiveMessage: "Twilio API key is invalid or revoked",
+	})
 }

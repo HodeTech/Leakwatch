@@ -15,7 +15,7 @@ func TestVerifier_Type_ReturnsCorrectID(t *testing.T) {
 	assert.Equal(t, "rabbitmq-connection-string", v.Type())
 }
 
-func TestVerify_ValidAMQPURL_ReturnsActive(t *testing.T) {
+func TestVerify_ValidAMQPURL_ReturnsUnverified(t *testing.T) {
 	v := &Verifier{}
 
 	raw := detector.RawFinding{
@@ -26,13 +26,15 @@ func TestVerify_ValidAMQPURL_ReturnsActive(t *testing.T) {
 
 	result := v.Verify(context.Background(), raw)
 
-	assert.Equal(t, finding.StatusVerifiedActive, result.Status)
-	assert.Equal(t, "Connection string format validated (live verification requires network access)", result.Message)
+	// Format-only verifier: a valid URL does not prove the broker is reachable
+	// or the credentials active, so the status must be Unverified.
+	assert.Equal(t, finding.StatusUnverified, result.Status)
+	assert.Contains(t, result.Message, "format valid")
 	assert.Equal(t, "rabbitmq.example.com", result.ExtraData["host"])
 	assert.Equal(t, "admin", result.ExtraData["user"])
 }
 
-func TestVerify_ValidAMQPSURL_ReturnsActive(t *testing.T) {
+func TestVerify_ValidAMQPSURL_ReturnsUnverified(t *testing.T) {
 	v := &Verifier{}
 
 	raw := detector.RawFinding{
@@ -43,12 +45,12 @@ func TestVerify_ValidAMQPSURL_ReturnsActive(t *testing.T) {
 
 	result := v.Verify(context.Background(), raw)
 
-	assert.Equal(t, finding.StatusVerifiedActive, result.Status)
+	assert.Equal(t, finding.StatusUnverified, result.Status)
 	assert.Equal(t, "broker.cloud.io", result.ExtraData["host"])
 	assert.Equal(t, "myuser", result.ExtraData["user"])
 }
 
-func TestVerify_WrongScheme_ReturnsInactive(t *testing.T) {
+func TestVerify_WrongScheme_ReturnsUnverified(t *testing.T) {
 	v := &Verifier{}
 
 	raw := detector.RawFinding{
@@ -59,11 +61,12 @@ func TestVerify_WrongScheme_ReturnsInactive(t *testing.T) {
 
 	result := v.Verify(context.Background(), raw)
 
-	assert.Equal(t, finding.StatusVerifiedInactive, result.Status)
-	assert.Equal(t, "URL scheme is not amqp or amqps", result.Message)
+	// Format invalid must NOT be VerifiedInactive: no provider was contacted.
+	assert.Equal(t, finding.StatusUnverified, result.Status)
+	assert.Contains(t, result.Message, "format invalid")
 }
 
-func TestVerify_MissingCredentials_ReturnsInactive(t *testing.T) {
+func TestVerify_MissingCredentials_ReturnsUnverified(t *testing.T) {
 	v := &Verifier{}
 
 	raw := detector.RawFinding{
@@ -74,11 +77,11 @@ func TestVerify_MissingCredentials_ReturnsInactive(t *testing.T) {
 
 	result := v.Verify(context.Background(), raw)
 
-	assert.Equal(t, finding.StatusVerifiedInactive, result.Status)
-	assert.Equal(t, "missing user credentials in URL", result.Message)
+	assert.Equal(t, finding.StatusUnverified, result.Status)
+	assert.Contains(t, result.Message, "format invalid")
 }
 
-func TestVerify_MissingHost_ReturnsInactive(t *testing.T) {
+func TestVerify_MissingHost_ReturnsUnverified(t *testing.T) {
 	v := &Verifier{}
 
 	raw := detector.RawFinding{
@@ -89,8 +92,8 @@ func TestVerify_MissingHost_ReturnsInactive(t *testing.T) {
 
 	result := v.Verify(context.Background(), raw)
 
-	assert.Equal(t, finding.StatusVerifiedInactive, result.Status)
-	assert.Equal(t, "missing host in URL", result.Message)
+	assert.Equal(t, finding.StatusUnverified, result.Status)
+	assert.Contains(t, result.Message, "format invalid")
 }
 
 func TestVerify_EmptyInput_ReturnsUnverified(t *testing.T) {
@@ -108,7 +111,7 @@ func TestVerify_EmptyInput_ReturnsUnverified(t *testing.T) {
 	assert.Equal(t, "empty connection string", result.Message)
 }
 
-func TestVerify_InvalidURL_ReturnsInactive(t *testing.T) {
+func TestVerify_InvalidURL_ReturnsUnverified(t *testing.T) {
 	v := &Verifier{}
 
 	raw := detector.RawFinding{
@@ -119,5 +122,6 @@ func TestVerify_InvalidURL_ReturnsInactive(t *testing.T) {
 
 	result := v.Verify(context.Background(), raw)
 
-	assert.Equal(t, finding.StatusVerifiedInactive, result.Status)
+	assert.Equal(t, finding.StatusUnverified, result.Status)
+	assert.Contains(t, result.Message, "format invalid")
 }

@@ -40,10 +40,9 @@ func init() {
 	flags.StringP("output", "o", "", "output file (default: stdout)")
 	flags.IntP("concurrency", "c", runtime.NumCPU(), "number of concurrent workers")
 	flags.Int64("max-file-size", 10*1024*1024, "maximum file size in bytes")
-	flags.Bool("show-raw", false, "show raw secret content in output")
+	flags.Bool(flagShowRaw, false, "show raw secret content in output")
 
 	addVerifyFlags(flags)
-	bindScanFlags(flags)
 }
 
 func runScanImage(cmd *cobra.Command, args []string) error {
@@ -53,9 +52,12 @@ func runScanImage(cmd *cobra.Command, args []string) error {
 	}
 
 	cfg.scanTarget = args[0]
-	src := container.New(args[0],
-		container.WithMaxFileSize(cfg.maxFileSize),
-	)
+
+	opts := []container.Option{container.WithMaxFileSize(cfg.maxFileSize)}
+	if len(cfg.excludePaths) > 0 {
+		opts = append(opts, container.WithExcludePaths(cfg.excludePaths))
+	}
+	src := container.New(args[0], opts...)
 
 	return executeScan(cmd.Context(), cfg, src, nil)
 }

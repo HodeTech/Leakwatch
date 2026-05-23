@@ -176,25 +176,13 @@ leakwatch scan slack --include-dms
 
 ## 7. File Scanning
 
-File scanning is enabled by default. Leakwatch downloads and scans the content of files uploaded to Slack channels (configuration files, scripts, logs, etc.):
+> **Not yet implemented — planned for a future release.**
 
-```bash
-# File scanning is on by default
-leakwatch scan slack
+File scanning is **not currently implemented**. The current `scan slack` command scans only message text (channel messages, DMs if `--include-dms` is used). Uploaded file content is not fetched or scanned.
 
-# Explicitly enable file scanning
-leakwatch scan slack --include-files
+The `--include-files` flag is accepted by the CLI for forward-compatibility but has **no effect** — it is a no-op in the current release. The `files:read` OAuth scope listed in §2.2 is required only when file scanning is eventually enabled.
 
-# Disable file scanning (messages only)
-leakwatch scan slack --include-files=false
-```
-
-The `--max-file-size` flag controls the maximum file size to download and scan (default: 10 MB):
-
-```bash
-# Only scan files up to 1 MB
-leakwatch scan slack --max-file-size 1048576
-```
+File scanning (downloading and scanning the content of files uploaded to Slack channels — configuration files, scripts, logs, etc.) is a planned capability. See the [Roadmap "Documented-but-Unimplemented Gaps" §1](../05-ROADMAP.md#master-review--documented-but-unimplemented-gaps) for tracking status.
 
 ---
 
@@ -288,10 +276,13 @@ jobs:
   slack-scan:
     runs-on: ubuntu-latest
     steps:
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
       - name: Install Leakwatch
-        run: |
-          curl -sSL https://github.com/cemililik/Leakwatch/releases/latest/download/leakwatch_linux_amd64.tar.gz | tar xz
-          sudo mv leakwatch /usr/local/bin/
+        run: go install github.com/cemililik/leakwatch@latest
 
       - name: Scan Slack workspace
         env:

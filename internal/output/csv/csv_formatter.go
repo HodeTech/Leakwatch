@@ -5,41 +5,36 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/cemililik/leakwatch/pkg/finding"
 )
 
 // Formatter outputs findings in CSV format.
 type Formatter struct {
-	// ShowRaw, when true, includes the Raw field as a column.
-	// When false, the Raw field is stripped for defense in depth.
+	// ShowRaw, when true, appends a trailing "raw" column holding the
+	// unredacted secret value. When false, no raw column is emitted at all.
 	ShowRaw bool
 }
 
 // Format writes findings as CSV to the given writer.
-// Header: id,detector_id,severity,redacted,file_path,commit,verification_status,remediation
-// When ShowRaw is false, the Raw field is actively stripped from the output.
+// Header (ShowRaw=false): id,detector_id,severity,redacted,file_path,commit,verification_status,remediation
+// Header (ShowRaw=true):  the above, with a trailing "raw" column.
+// Every cell is sanitized against spreadsheet formula injection before writing.
 func (f *Formatter) Format(w io.Writer, findings []finding.Finding) error {
-	output := make([]finding.Finding, len(findings))
-	copy(output, findings)
-
-	if !f.ShowRaw {
-		for i := range output {
-			output[i].Raw = ""
-		}
-	}
-
 	writer := csv.NewWriter(w)
-	defer writer.Flush()
 
 	// Write header row.
 	header := []string{"id", "detector_id", "severity", "redacted", "file_path", "commit", "verification_status", "remediation"}
-	if err := writer.Write(header); err != nil {
+	if f.ShowRaw {
+		header = append(header, "raw")
+	}
+	if err := writer.Write(sanitizeRow(header)); err != nil {
 		return fmt.Errorf("failed to write CSV header: %w", err)
 	}
 
 	// Write one row per finding.
-	for _, fd := range output {
+	for _, fd := range findings {
 		remediation := ""
 		if fd.Remediation != nil {
 			remediation = fd.Remediation.Title
@@ -55,7 +50,10 @@ func (f *Formatter) Format(w io.Writer, findings []finding.Finding) error {
 			fd.Verification.Status.String(),
 			remediation,
 		}
-		if err := writer.Write(row); err != nil {
+		if f.ShowRaw {
+			row = append(row, fd.Raw)
+		}
+		if err := writer.Write(sanitizeRow(row)); err != nil {
 			return fmt.Errorf("failed to write CSV row: %w", err)
 		}
 	}
@@ -65,6 +63,33 @@ func (f *Formatter) Format(w io.Writer, findings []finding.Finding) error {
 		return fmt.Errorf("failed to flush CSV output: %w", err)
 	}
 	return nil
+}
+
+// formulaInjectionPrefixes are the leading characters a spreadsheet may treat as
+// the start of a formula or command when a CSV cell is opened. Attacker-influenced
+// fields (custom-rule IDs, redacted values, remediation titles) could otherwise
+// trigger execution, so any cell beginning with one of these is neutralized.
+const formulaInjectionPrefixes = "=+-@\t\r"
+
+// sanitizeCell neutralizes spreadsheet formula injection by prefixing a single
+// quote to any value beginning with a formula-trigger character. The single
+// quote tells common spreadsheet applications to treat the cell as literal text.
+func sanitizeCell(value string) string {
+	if value == "" {
+		return value
+	}
+	if strings.ContainsRune(formulaInjectionPrefixes, rune(value[0])) {
+		return "'" + value
+	}
+	return value
+}
+
+// sanitizeRow applies sanitizeCell to every cell in a row in place and returns it.
+func sanitizeRow(row []string) []string {
+	for i, cell := range row {
+		row[i] = sanitizeCell(cell)
+	}
+	return row
 }
 
 // FileExtension returns the CSV file extension.

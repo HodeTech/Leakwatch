@@ -194,6 +194,96 @@ func TestGitSource_Chunks_SinceCommit(t *testing.T) {
 	assert.NotContains(t, files, "old.txt")
 }
 
+func TestGitSource_Validate_SinceCommitNotFound_ReturnsError(t *testing.T) {
+	dir, _ := initTestRepo(t, map[string]string{"a.txt": "content"})
+
+	// A well-formed but non-existent commit hash.
+	s := New(dir, WithSinceCommit("0123456789abcdef0123456789abcdef01234567"))
+	err := s.Validate()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestGitSource_Validate_SinceCommitNotAncestor_ReturnsError(t *testing.T) {
+	dir, repo := initTestRepo(t, map[string]string{"base.txt": "base"})
+
+	// Record the base commit and the default branch (HEAD currently points here).
+	headRef, err := repo.Head()
+	require.NoError(t, err)
+	baseHash := headRef.Hash()
+	mainBranch := headRef.Name()
+
+	// Create a divergent branch off the base commit and commit there.
+	wt, err := repo.Worktree()
+	require.NoError(t, err)
+	require.NoError(t, wt.Checkout(&gogit.CheckoutOptions{
+		Hash:   baseHash,
+		Branch: "refs/heads/sidebranch",
+		Create: true,
+	}))
+	sideHash := addCommit(t, dir, repo, map[string]string{"side.txt": "side"}, "side commit")
+
+	// Switch HEAD back to the main branch and advance it independently.
+	require.NoError(t, wt.Checkout(&gogit.CheckoutOptions{Branch: mainBranch}))
+	addCommit(t, dir, repo, map[string]string{"main2.txt": "main2"}, "main second commit")
+
+	// sideHash lives only on sidebranch, so it is not an ancestor of HEAD (main).
+	s := New(dir, WithSinceCommit(sideHash))
+	err = s.Validate()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not an ancestor")
+}
+
+func TestGitSource_Validate_SinceCommitIsAncestor_ReturnsNil(t *testing.T) {
+	dir, repo := initTestRepo(t, map[string]string{"a.txt": "content"})
+
+	headRef, err := repo.Head()
+	require.NoError(t, err)
+	baseHash := headRef.Hash().String()
+
+	addCommit(t, dir, repo, map[string]string{"b.txt": "more"}, "second commit")
+
+	s := New(dir, WithSinceCommit(baseHash))
+	assert.NoError(t, s.Validate())
+}
+
+func TestGitSource_Validate_SinceCommitEqualsHead_ReturnsNil(t *testing.T) {
+	dir, repo := initTestRepo(t, map[string]string{"a.txt": "content"})
+
+	headRef, err := repo.Head()
+	require.NoError(t, err)
+	headHash := headRef.Hash().String()
+
+	s := New(dir, WithSinceCommit(headHash))
+	assert.NoError(t, s.Validate())
+}
+
+func TestGitSource_Chunks_WithExcludePaths_SkipsMatching(t *testing.T) {
+	dir, _ := initTestRepo(t, map[string]string{
+		"src/app.go":     "package app",
+		"vendor/lib.go":  "package lib",
+		"node_modules/x": "junk",
+	})
+
+	s := New(dir, WithExcludePaths([]string{"vendor/**", "node_modules/**"}))
+	require.NoError(t, s.Validate())
+
+	ctx := context.Background()
+	var files []string
+	for chunk := range s.Chunks(ctx) {
+		files = append(files, chunk.SourceMetadata.FilePath)
+	}
+
+	assert.Contains(t, files, "src/app.go")
+	assert.NotContains(t, files, "vendor/lib.go")
+	assert.NotContains(t, files, "node_modules/x")
+}
+
+func TestGitSource_New_WithExcludePaths_StoresPatterns(t *testing.T) {
+	s := New("/tmp/repo", WithExcludePaths([]string{"a/**", "b"}))
+	assert.Equal(t, []string{"a/**", "b"}, s.excludePaths)
+}
+
 func TestGitSource_Chunks_WithSince(t *testing.T) {
 	dir := t.TempDir()
 
@@ -336,7 +426,10 @@ func TestGitSource_Close_NoTmpDir(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestSanitizeURL_StripsCredentials(t *testing.T) {
+func TestSafeDisplayURL_StripsCredentials(t *testing.T) {
+	// fakeToken is a non-secret placeholder used only to prove redaction.
+	const fakeToken = "ghp_FAKEtoken1234567890"
+
 	tests := []struct {
 		name     string
 		input    string
@@ -345,7 +438,7 @@ func TestSanitizeURL_StripsCredentials(t *testing.T) {
 		{
 			name:     "https with user and password",
 			input:    "https://user:password@github.com/org/repo.git",
-			expected: "https://github.com/org/repo.git (credentials redacted)",
+			expected: "https://github.com/org/repo.git",
 		},
 		{
 			name:     "https without credentials",
@@ -353,16 +446,81 @@ func TestSanitizeURL_StripsCredentials(t *testing.T) {
 			expected: "https://github.com/org/repo.git",
 		},
 		{
-			name:     "https with token",
-			input:    "https://token@github.com/org/repo.git",
-			expected: "https://github.com/org/repo.git (credentials redacted)",
+			name:     "https with token as userinfo",
+			input:    "https://" + fakeToken + "@github.com/org/repo.git",
+			expected: "https://github.com/org/repo.git",
+		},
+		{
+			name:     "https with user and token",
+			input:    "https://user:" + fakeToken + "@github.com/org/repo.git",
+			expected: "https://github.com/org/repo.git",
+		},
+		{
+			name:     "local path is unchanged",
+			input:    "/local/path/to/repo",
+			expected: "/local/path/to/repo",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := sanitizeURL(tt.input)
+			result := SafeDisplayURL(tt.input)
 			assert.Equal(t, tt.expected, result)
+			assert.NotContains(t, result, fakeToken, "credential must not appear in display URL")
+			// The returned value must be a clean URL with no noisy suffix that
+			// would pollute a metadata field.
+			assert.NotContains(t, result, "redacted")
+			assert.NotContains(t, result, "(")
 		})
 	}
+}
+
+func TestSafeDisplayURL_ParseFailure_MasksCredential(t *testing.T) {
+	// fakeToken is a non-secret placeholder used only to prove redaction.
+	const fakeToken = "FAKEtoken1234567890"
+	// A control character makes url.Parse fail, exercising the best-effort path.
+	input := "https://user:" + fakeToken + "@ho\x7fst/repo.git"
+
+	result := SafeDisplayURL(input)
+
+	assert.NotContains(t, result, fakeToken, "credential must not appear after best-effort masking")
+	assert.Contains(t, result, "***@")
+}
+
+func TestGitSource_New_SetsCredentialFreeDisplayTarget(t *testing.T) {
+	// fakeToken is a non-secret placeholder used only to prove redaction.
+	const fakeToken = "ghp_FAKEtoken1234567890"
+	target := "https://user:" + fakeToken + "@github.com/org/repo.git"
+
+	s := New(target)
+
+	// The real target is retained for cloning, but the display form is clean.
+	assert.Equal(t, target, s.target)
+	assert.Equal(t, "https://github.com/org/repo.git", s.displayTarget)
+	assert.NotContains(t, s.displayTarget, fakeToken)
+}
+
+func TestGitSource_Chunks_RepositoryMetadataHasNoCredential(t *testing.T) {
+	// fakeToken is a non-secret placeholder used only to prove redaction.
+	const fakeToken = "ghp_FAKEtoken1234567890"
+
+	dir, _ := initTestRepo(t, map[string]string{"README.md": "hello"})
+
+	// Build a source pointed at the local repo, but override the display target
+	// as if it had been created from a credentialed remote URL. We set target to
+	// the local dir so Validate/Chunks can read it, and displayTarget to the
+	// credential-stripped remote form that should appear in metadata.
+	s := New(dir)
+	s.displayTarget = SafeDisplayURL("https://user:" + fakeToken + "@github.com/org/repo.git")
+	require.NoError(t, s.Validate())
+
+	ctx := context.Background()
+	var sawChunk bool
+	for chunk := range s.Chunks(ctx) {
+		sawChunk = true
+		assert.Equal(t, "https://github.com/org/repo.git", chunk.SourceMetadata.Repository)
+		assert.NotContains(t, chunk.SourceMetadata.Repository, fakeToken,
+			"SourceMetadata.Repository must not contain the credential")
+	}
+	assert.True(t, sawChunk, "expected at least one chunk")
 }

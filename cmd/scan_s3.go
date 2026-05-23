@@ -36,12 +36,11 @@ func init() {
 	flags.StringP("output", "o", "", "output file (default: stdout)")
 	flags.IntP("concurrency", "c", runtime.NumCPU(), "number of concurrent workers")
 	flags.Int64("max-file-size", 10*1024*1024, "maximum file size in bytes")
-	flags.Bool("show-raw", false, "show raw secret content in output")
+	flags.Bool(flagShowRaw, false, "show raw secret content in output")
 	flags.String("prefix", "", "scan only objects with this key prefix")
 	flags.String("region", "", "AWS region (default: from AWS config)")
 
 	addVerifyFlags(flags)
-	bindScanFlags(flags)
 }
 
 func runScanS3(cmd *cobra.Command, args []string) error {
@@ -52,6 +51,10 @@ func runScanS3(cmd *cobra.Command, args []string) error {
 
 	var opts []s3source.Option
 	opts = append(opts, s3source.WithMaxFileSize(cfg.maxFileSize))
+
+	if len(cfg.excludePaths) > 0 {
+		opts = append(opts, s3source.WithExcludePaths(cfg.excludePaths))
+	}
 
 	if prefix, _ := cmd.Flags().GetString("prefix"); prefix != "" {
 		opts = append(opts, s3source.WithPrefix(prefix))

@@ -55,16 +55,16 @@
 
 ### v1.3.0 Highlights
 
-- **54 verifiers implemented (51 packages)** — verification coverage increased from ~5% to ~84% (54/64)
+- **54 verifiers implemented (51 packages)** — verification coverage increased from ~5% to ~85.7% (54/63)
 - **Live API verification** for the majority of detectors across cloud, AI/ML, DevTools, CI/CD, communication, payment, monitoring, security, and SaaS categories
-- **Format validation** for 5 detectors (JWT, Azure Storage, Azure Entra, GCP Service Account, Snowflake)
+- **Format validation** for 5 detectors (Azure Storage, Azure Entra, GCP Service Account, Snowflake, RabbitMQ)
 - **Per-provider rate limiting** for all verifiers with configurable limits
 - **5 implementation sprints** completed: V-1 through V-5
 
 ### v1.0.0 Highlights
 
-- **5 scan sources:** Filesystem, Git history, Container image, AWS S3, Google Cloud Storage
-- **64 detectors (60 packages):** AWS, GitHub, Slack, Stripe, JWT, and many more across cloud, AI/ML, DevTools, CI/CD, communication, payment, database, infrastructure, identity, monitoring, security, and SaaS categories + YAML custom rules
+- **6 scan sources:** Filesystem, Git history, Container image, AWS S3, Google Cloud Storage, Slack
+- **63 detectors (60 packages):** AWS, GitHub, Slack, Stripe, JWT, and many more across cloud, AI/ML, DevTools, CI/CD, communication, payment, database, infrastructure, identity, monitoring, security, and SaaS categories + YAML custom rules
 - **4 output formats:** JSON, SARIF, CSV, Table
 - **Aho-Corasick hybrid detection engine** with Shannon entropy analysis
 - **Verifier infrastructure:** 54 verifiers (51 packages), including AWS STS and GitHub API verifiers (rate-limited, concurrent)
@@ -72,7 +72,7 @@
 - **CI/CD:** Pre-commit hook, GitHub Action, Docker image, Homebrew formula
 - **Parallel repo scanning** (`scan repos --parallel`)
 - **Filtering:** `--min-severity`, `--only-verified`, `--no-verify`
-- **Documentation:** 6 guides, 8 ADRs, 4 standards documents, architecture design
+- **Documentation:** 11 guides, 8 ADRs, 4 standards documents, architecture design
 - **2 full code reviews** completed (136 findings identified and resolved)
 
 ---
@@ -350,7 +350,7 @@ GitHub Release published with `v1.0.0` tag.
 
 ## Phase 8: Verifier Expansion — COMPLETED
 
-**Goal:** Increase verification coverage to ~84% (54/64). Verified secrets are the key differentiator.
+**Goal:** Increase verification coverage to ~85.7% (54/63). Verified secrets are the key differentiator.
 
 **Duration:** 5 sprints | **Version:** `v1.3.0` | **Status:** Completed
 
@@ -360,17 +360,17 @@ GitHub Release published with `v1.0.0` tag.
 
 | Sprint | Verifiers | Coverage | Status |
 |--------|-----------|----------|--------|
-| V-1 (Tier 1 P0) | OpenAI, Anthropic, GitLab, SendGrid, DigitalOcean, Cloudflare, Heroku, New Relic, Telegram, Discord, Notion | 14/64 (22%) | [x] Completed |
-| V-2 (Tier 1 P1) | Sentry, Vercel, NPM, PyPI, Grafana, PagerDuty, Databricks, Linear, Figma, Airtable, HuggingFace, CircleCI | 26/64 (41%) | [x] Completed |
-| V-3 (Tier 1 P2) | DockerHub, Doppler, Snyk, SonarCloud, Postmark, Terraform, LaunchDarkly, Mailgun, Coinbase, Infura | 36/64 (56%) | [x] Completed |
-| V-4 (Tier 2) | Okta, Shopify, Stripe, Twilio, Bitbucket, Auth0, Datadog, RubyGems, DeepSeek, Supabase | 47/64 (73%) | [x] Completed |
-| V-5 (Tier 2+3) | GitHub OAuth, Teams Webhook, Azure Storage, Azure Entra, GCP, Snowflake, RabbitMQ | 54/64 (84%) | [x] Completed |
+| V-1 (Tier 1 P0) | OpenAI, Anthropic, GitLab, SendGrid, DigitalOcean, Cloudflare, Heroku, New Relic, Telegram, Discord, Notion | 14/63 (22%) | [x] Completed |
+| V-2 (Tier 1 P1) | Sentry, Vercel, NPM, PyPI, Grafana, PagerDuty, Databricks, Linear, Figma, Airtable, HuggingFace, CircleCI | 26/63 (41%) | [x] Completed |
+| V-3 (Tier 1 P2) | DockerHub, Doppler, Snyk, SonarCloud, Postmark, Terraform, LaunchDarkly, Mailgun, Coinbase, Infura | 36/63 (57%) | [x] Completed |
+| V-4 (Tier 2) | Okta, Shopify, Stripe, Twilio, Bitbucket, Auth0, Datadog, RubyGems, DeepSeek, Supabase | 47/63 (75%) | [x] Completed |
+| V-5 (Tier 2+3) | GitHub OAuth, Teams Webhook, Azure Storage, Azure Entra, GCP, Snowflake, RabbitMQ | 54/63 (85.7%) | [x] Completed |
 
-**Final totals:** 54 verifiers (51 packages) covering 64 detectors (60 packages).
+**Final totals:** 54 verifiers (51 packages) covering 63 detectors (60 packages).
 
 ### Acceptance Criteria
 
-- [x] Verification coverage reaches ~84% (54/64)
+- [x] Verification coverage reaches ~85.7% (54/63)
 - [x] All Tier 1 verifiers use simple HTTP GET/POST pattern
 - [x] Rate limiting per provider (configurable)
 - [x] `--only-verified` returns results for the verified detector types
@@ -587,7 +587,7 @@ Source packages (no formal standard, but visible gaps):
 | `v1.0.0` | Phase 5 | S3/GCS, verifiers, GitHub Action, Docker | 2026-03-24 |
 | `v1.1.0` | Phase 6 | Remediation guidance for all detectors (no git tag — see note) | — |
 | `v1.2.0` | Phase 7 | Slack workspace scanning (no git tag — see note) | — |
-| `v1.3.0` | Phase 8 | Verifier expansion (~84% coverage, 54/64) | 2026-03-25 |
+| `v1.3.0` | Phase 8 | Verifier expansion (~85.7% coverage, 54/63) | 2026-03-25 |
 | `v1.3.1` | Phase 8.1 | Binary/Homebrew fix, community infrastructure | 2026-03-25 |
 | `v1.3.2` | Phase 8.2 | CLI UX improvements | 2026-03-25 |
 | `v1.4.0` | Phase 8.3 | Scan summary, `init` command, colored table, security patches | 2026-04-08 |
@@ -607,7 +607,7 @@ Source packages (no formal standard, but visible gaps):
 
 | Metric | Target | Measurement |
 |--------|--------|-------------|
-| Test coverage | >80% | `go test -cover` |
+| Test coverage | >70% overall, >95% detectors | `go test -cover` |
 | False positive rate | <5% (verified mode) | Benchmark test suite |
 | Scan speed (10K commits) | <30 seconds | CI benchmark |
 | Memory usage | <512MB (medium repo) | pprof |
@@ -622,7 +622,7 @@ Source packages (no formal standard, but visible gaps):
 | Contributors | 5+ | 15+ |
 | Detector count | 50+ | 200+ |
 | Verifier count | 54 (achieved) | 60+ |
-| Source count | 5 (fs, git, container, S3, GCS) | 8+ |
+| Source count | 6 (fs, git, container, S3, GCS, Slack) | 8+ |
 
 ---
 
@@ -635,3 +635,19 @@ Source packages (no formal standard, but visible gaps):
 | Existing tools evolve rapidly | Medium | Medium | Focus on differentiation (MIT + verification combo) |
 | Solo developer burnout | High | High | Small phase-based goals, encourage community contributions |
 | API verification rate limiting | Medium | Low | Smart rate limiting, caching, `--no-verify` option |
+
+---
+
+## Master Review — Documented-but-Unimplemented Gaps
+
+> This section consolidates gaps found in the 2026-05-22 full-project review. Each item is **planned / not yet implemented** — the documentation or public interface promises the feature but the code does not deliver it.
+
+| # | Gap | One-line description | Area affected |
+|---|-----|----------------------|---------------|
+| 1 | **Slack file scanning** | `--include-files` flag is accepted and documented but is a no-op; the `SlackSource` never fetches file content from the Slack Files API. | `internal/source/slack/slack.go`, `docs/guides/slack-scanning.md`, CHANGELOG v1.2.0 |
+| 2 | **Per-provider rate limiting, verification caching, exponential backoff/retry** | The verifier engine has a single global token-bucket rate limiter; there is no per-provider limit, no response caching, and no retry with backoff. Phase 8 deliverables and the ROADMAP claim per-provider rate limiting is implemented. | `internal/verifier/engine.go`, Phase 8 deliverables table, v1.3.0 highlights |
+| 3 | **`--remediation-format brief\|full` flag** | Only a boolean `--remediation` flag exists; the two-value `brief\|full` variant mentioned in Phase 6 deliverables and `docs/guides/secret-verification.md` is not implemented. | `cmd/scan_common.go`, Phase 6 deliverables table |
+| 4 | **Engine-level entropy-threshold gating** | The `detection.entropy.threshold` config value is read and displayed in scan summaries, but the detection engine does not gate findings on it; only custom YAML rules apply their own per-rule entropy threshold. | `internal/engine/`, `internal/config/`, `docs/guides/configuration.md` |
+| 5 | **okta / shopify / bitbucket live verification** | The verifiers for these three providers exist and compile, but their `Verify()` implementations read `ExtraData` keys (`domain`, `store_domain`, `username` respectively) that no detector currently emits. The findings will always produce a `StatusUnverified` result until the corresponding detectors are updated to populate those `ExtraData` fields. | `internal/verifier/okta/`, `internal/verifier/shopify/`, `internal/verifier/bitbucket/`, and their matching detectors |
+| 6 | **Supabase real service-role JWT detection** | The `supabase` detector matches the `sbp_` prefix which identifies Supabase Management PATs, not service-role JWTs. Service-role JWTs (`eyJ...` with `role: service_role`) are not detected; the name `supabase-service-key` implies broader coverage than is implemented. | `internal/detector/supabase/supabase_key.go`, README detector table |
+| 7 | **Unbounded in-memory result buffering** | The scan engine collects all raw findings into a single in-memory slice before passing them to the verification phase — there is no streaming path and no cap on the buffer size. This is acceptable for typical inputs but is a known limitation for very large or adversarial inputs (e.g., a repository engineered to maximise regex matches) where memory consumption could become excessive. Streaming verification or an explicit buffer cap is planned. | `internal/engine/engine.go` |

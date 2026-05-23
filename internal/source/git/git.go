@@ -27,6 +27,7 @@ const maxSeenEntries = 1_000_000
 // GitSource is a Git repository-based scan source.
 type GitSource struct {
 	target         string // Local path or remote URL
+	displayTarget  string // Credential-stripped form of target, safe for output/logs
 	repo           *git.Repository
 	bufferSize     int
 	since          *time.Time
@@ -34,6 +35,7 @@ type GitSource struct {
 	branch         string
 	depth          int
 	maxFileSize    int64
+	excludePaths   []string
 	tmpDir         string // Temporary directory for cloned repos
 	resolvedBranch string // Cached branch resolution
 }
@@ -41,9 +43,10 @@ type GitSource struct {
 // New creates a new GitSource.
 func New(target string, opts ...Option) *GitSource {
 	s := &GitSource{
-		target:      target,
-		bufferSize:  64,
-		maxFileSize: 10 * 1024 * 1024,
+		target:        target,
+		displayTarget: SafeDisplayURL(target),
+		bufferSize:    64,
+		maxFileSize:   10 * 1024 * 1024,
 	}
 	for _, opt := range opts {
 		opt(s)
@@ -57,11 +60,60 @@ func (s *GitSource) Type() string {
 }
 
 // Validate checks that the Git repository is accessible and opens/clones it.
+// When --since-commit is set, it also verifies that the given commit is an
+// ancestor of HEAD; otherwise the diff-based walk would silently fall back to
+// scanning the entire history.
 func (s *GitSource) Validate() error {
 	if s.isRemote() {
-		return s.cloneRemote()
+		if err := s.cloneRemote(); err != nil {
+			return err
+		}
+	} else if err := s.openLocal(); err != nil {
+		return err
 	}
-	return s.openLocal()
+
+	if s.sinceCommit != "" {
+		if err := s.validateSinceCommit(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// validateSinceCommit verifies that the configured since-commit exists and is
+// an ancestor of HEAD. Returning an explicit error prevents the diff-based scan
+// from silently degrading into a full-history scan.
+func (s *GitSource) validateSinceCommit() error {
+	commitHash := plumbing.NewHash(s.sinceCommit)
+	sinceCommitObj, err := s.repo.CommitObject(commitHash)
+	if err != nil {
+		return fmt.Errorf("since-commit %q not found: %w", s.sinceCommit, err)
+	}
+
+	headRef, err := s.repo.Head()
+	if err != nil {
+		return fmt.Errorf("failed to resolve HEAD for since-commit check: %w", err)
+	}
+
+	headCommit, err := s.repo.CommitObject(headRef.Hash())
+	if err != nil {
+		return fmt.Errorf("failed to resolve HEAD commit for since-commit check: %w", err)
+	}
+
+	if sinceCommitObj.Hash == headCommit.Hash {
+		return nil
+	}
+
+	isAncestor, err := sinceCommitObj.IsAncestor(headCommit)
+	if err != nil {
+		return fmt.Errorf("failed to check ancestry of since-commit %q: %w", s.sinceCommit, err)
+	}
+	if !isAncestor {
+		return fmt.Errorf("since-commit %q is not an ancestor of HEAD %q", s.sinceCommit, headCommit.Hash.String())
+	}
+
+	return nil
 }
 
 // Close cleans up temporary resources. For cloned repositories, it removes
@@ -112,22 +164,28 @@ func (s *GitSource) cloneRemote() error {
 		cloneOpts.SingleBranch = true
 	}
 
-	slog.Info("cloning remote repository", "url", sanitizeURL(s.target), "tmpDir", tmpDir)
+	slog.Info("cloning remote repository", "url", s.displayTarget, "tmpDir", tmpDir)
 
 	repo, err := git.PlainClone(tmpDir, false, cloneOpts)
 	if err != nil {
 		_ = os.RemoveAll(tmpDir)
-		return fmt.Errorf("failed to clone git repository %s: %w", sanitizeURL(s.target), err)
+		return fmt.Errorf("failed to clone git repository %s: %w", s.displayTarget, err)
 	}
 	s.repo = repo
 	s.tmpDir = tmpDir
 	return nil
 }
 
-// sanitizeURL strips credentials from a URL before it is used in log messages.
-// If the URL cannot be parsed, the original string is returned with any
-// user-info portion masked.
-func sanitizeURL(raw string) string {
+// SafeDisplayURL returns a credential-stripped form of raw that is safe to put
+// in logs, output metadata, error messages, and the scan summary. Any user-info
+// portion (the "user:password@" part of a URL) is removed so no secret is ever
+// surfaced.
+//
+// The returned value is the clean URL with no noisy suffix, so it can be stored
+// verbatim in a metadata field. When the URL cannot be parsed, the credential
+// between "://" and "@" is masked on a best-effort basis; non-URL targets (for
+// example local paths) are returned unchanged.
+func SafeDisplayURL(raw string) string {
 	u, err := url.Parse(raw)
 	if err != nil {
 		// Best-effort: mask anything between :// and @
@@ -140,7 +198,6 @@ func sanitizeURL(raw string) string {
 	}
 	if u.User != nil {
 		u.User = nil
-		return u.String() + " (credentials redacted)"
 	}
 	return u.String()
 }
@@ -230,6 +287,11 @@ func (s *GitSource) chunksFullHistory(ctx context.Context, ch chan<- source.Chun
 				return nil
 			}
 
+			// Skip files matching exclude-path globs (relative path).
+			if filter.MatchesGlob(f.Name, s.excludePaths) {
+				return nil
+			}
+
 			content, err := f.Contents()
 			if err != nil {
 				slog.Warn("failed to read file contents", "file", f.Name, "error", err)
@@ -243,7 +305,7 @@ func (s *GitSource) chunksFullHistory(ctx context.Context, ch chan<- source.Chun
 				Data: []byte(content),
 				SourceMetadata: finding.SourceMetadata{
 					SourceType: "git",
-					Repository: s.target,
+					Repository: s.displayTarget,
 					Commit:     c.Hash.String(),
 					Author:     c.Author.Name,
 					Email:      c.Author.Email,
@@ -378,6 +440,11 @@ func (s *GitSource) chunksSinceCommit(ctx context.Context, ch chan<- source.Chun
 				continue
 			}
 
+			// Skip files matching exclude-path globs (relative path).
+			if filter.MatchesGlob(change.To.Name, s.excludePaths) {
+				continue
+			}
+
 			content, err := file.Contents()
 			if err != nil {
 				slog.Warn("failed to read file contents", "file", change.To.Name, "error", err)
@@ -389,7 +456,7 @@ func (s *GitSource) chunksSinceCommit(ctx context.Context, ch chan<- source.Chun
 				Data: []byte(content),
 				SourceMetadata: finding.SourceMetadata{
 					SourceType: "git",
-					Repository: s.target,
+					Repository: s.displayTarget,
 					Commit:     c.Hash.String(),
 					Author:     c.Author.Name,
 					Email:      c.Author.Email,

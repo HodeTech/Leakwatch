@@ -36,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **`.github/workflows/release.yml`** — third-party actions pinned to immutable commit SHAs (`actions/checkout` v6.0.0, `actions/setup-go` v6.0.0, `goreleaser/goreleaser-action` v6.4.0). `persist-credentials: false` on checkout.
 
 ### Documentation
-- Comprehensive doc cleanup aligning all guides, the README, CLAUDE.md, ROADMAP, and CHANGELOG with the actual v1.5.0 state: corrected detector/verifier counts (60 packages / 64 detectors, 51 packages / 54 verifiers), fixed 20+ broken ADR/anchor links (English file names), translated ~18 Mermaid diagrams from Turkish to English, standardized `Status:` fields, corrected JWT/Infura verifier categorization, added v1.5.0 "What's New" section, and added a "Known Gaps & Follow-up Work" section to the ROADMAP tracking the items intentionally left for future PRs.
+- Comprehensive doc cleanup aligning all guides, the README, CLAUDE.md, ROADMAP, and CHANGELOG with the actual v1.5.0 state: corrected detector/verifier counts (60 packages / 63 detectors, 51 packages / 54 verifiers), fixed 20+ broken ADR/anchor links (English file names), translated ~18 Mermaid diagrams from Turkish to English, standardized `Status:` fields, corrected vault/jwt verifier categorization, added v1.5.0 "What's New" section, and added a "Known Gaps & Follow-up Work" section to the ROADMAP tracking the items intentionally left for future PRs.
 
 ---
 
@@ -93,18 +93,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [v1.3.0] - 2026-03-25
 
 ### Added
-- **51 new secret detectors** bringing the total to 60 detector packages (64 detector instances)
+- **51 new secret detectors** bringing the total to 60 detector packages (63 detector registrations)
   - Sprint 1: OpenAI, Anthropic, GitLab, SendGrid, NPM, Discord, Telegram, Redis, Snowflake, Datadog
   - Sprint 2: Hugging Face, DeepSeek, GCP, Azure (Storage + Entra), Okta, Twilio, Mailgun, Vault, Grafana, PagerDuty, CircleCI, GitHub OAuth
   - Sprint 3: PyPI, RubyGems, Docker Hub, DigitalOcean, Heroku, Vercel, New Relic, Sentry, Shopify, Supabase, Cloudflare, Notion, Linear, Figma, Airtable
   - Sprint 4: Terraform, Databricks, Bitbucket, Coinbase, Infura, RabbitMQ, FTP, LDAP, Auth0, LaunchDarkly, Snyk, SonarCloud, Doppler, MS Teams, Postmark
-- **54 verifiers (51 packages)** — verification coverage increased to ~84% (54/64)
+- **54 verifiers (51 packages)** — verification coverage increased to ~85.7% (54/63)
   - V-1 (Tier 1 P0): OpenAI, Anthropic, GitLab, SendGrid, DigitalOcean, Cloudflare, Heroku, New Relic, Telegram, Discord, Notion
   - V-2 (Tier 1 P1): Sentry, Vercel, NPM, PyPI, Grafana, PagerDuty, Databricks, Linear, Figma, Airtable, HuggingFace, CircleCI
   - V-3 (Tier 1 P2): DockerHub, Doppler, Snyk, SonarCloud, Postmark, Terraform, LaunchDarkly, Mailgun, Coinbase, Infura
   - V-4 (Tier 2): Okta, Shopify, Stripe (live+test), Twilio, Bitbucket, Auth0, Datadog, RubyGems, DeepSeek, Supabase
   - V-5 (Tier 2+3): GitHub OAuth, Teams Webhook, Azure Storage, Azure Entra, GCP, Snowflake, RabbitMQ
-  - Verification types: **Live API verification** (API call to provider) and **Format validation** (structural check without network call, used for JWT, Azure Storage, Azure Entra, GCP Service Account, Snowflake)
+  - Verification types: **Live API verification** (API call to provider) and **Format validation** (structural check without network call, used for Azure Storage, Azure Entra, GCP Service Account, Snowflake, RabbitMQ)
   - Per-provider rate limiting for all verifiers (configurable)
 - **Remediation guidance** for all detector types (previously planned for the `v1.1.0` slot — shipped together with `v1.3.0`)
 - **Slack workspace scanning** — `scan slack` command with channel/date/DM/file filtering (previously planned for the `v1.2.0` slot — shipped together with `v1.3.0`)

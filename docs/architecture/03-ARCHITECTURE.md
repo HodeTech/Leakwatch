@@ -1,8 +1,8 @@
 # Leakwatch - Detailed Architecture Design
 
-> **Document Version:** 1.0
-> **Date:** 2026-03-24
-> **Status:** Draft
+> **Document Version:** 1.1
+> **Date:** 2026-05-22
+> **Status:** Approved
 
 ---
 
@@ -28,7 +28,7 @@ flowchart LR
         E4[Custom Rules]
     end
 
-    subgraph Verifiers["Verifiers (54 verifiers, 51 packages, 84% coverage)"]
+    subgraph Verifiers["Verifiers (54 verifiers, 51 packages, 85.7% coverage)"]
         V1[AWS STS]
         V2[GitHub API]
         V3[Slack API]
@@ -76,7 +76,7 @@ classDiagram
     class Verifier {
         <<interface>>
         +Type() string
-        +Verify(ctx, finding) VerificationResult
+        +Verify(ctx, raw detector.RawFinding) finding.VerificationResult
     }
 
     class Formatter {
@@ -217,13 +217,15 @@ type RawFinding struct {
 
 ```go
 // Verifier represents a component that validates a secret's authenticity.
+// Defined in internal/verifier/verifier.go.
 type Verifier interface {
-    // Type returns which detector type this verifier matches with.
+    // Type returns which detector ID this verifier handles.
+    // Must match the corresponding Detector.ID() value.
     Type() string
 
     // Verify checks whether the found secret is valid/active.
     // May make network calls, so it can be cancelled via context.
-    Verify(ctx context.Context, finding RawFinding) VerificationResult
+    Verify(ctx context.Context, raw detector.RawFinding) finding.VerificationResult
 }
 
 // VerificationResult represents the verification outcome.
@@ -324,8 +326,8 @@ sequenceDiagram
         alt Keyword matched
             Worker->>Detector: Scan(ctx, data)
             Detector-->>Worker: []RawFinding
-            Worker->>Worker: Entropy check
             Worker-->>Engine: Write to results channel
+            Note over Worker: Entropy is calculated and attached<br/>to the finding (display-only at engine level)
         end
     end
     opt Verification enabled
@@ -345,9 +347,9 @@ sequenceDiagram
 ```mermaid
 flowchart TD
     Source["SOURCE\n(chunks channel)"] --> Jobs["JOBS CHANNEL\n(buffered chan)"]
-    Jobs --> W1["Worker 1\nAC Match → Regex → Entropy"]
-    Jobs --> W2["Worker 2..N-1\nAC Match → Regex → Entropy"]
-    Jobs --> WN["Worker N\nAC Match → Regex → Entropy"]
+    Jobs --> W1["Worker 1\nAC Match → Regex → Entropy score (display)"]
+    Jobs --> W2["Worker 2..N-1\nAC Match → Regex → Entropy score (display)"]
+    Jobs --> WN["Worker N\nAC Match → Regex → Entropy score (display)"]
     W1 --> Results["RESULTS CHANNEL\n(buffered chan)"]
     W2 --> Results
     WN --> Results
@@ -358,31 +360,30 @@ flowchart TD
 ### 3.2 Engine Configuration
 
 ```go
-type EngineConfig struct {
-    // Concurrency
-    Concurrency int // Number of workers (default: runtime.NumCPU())
-    ChunkSize   int // Chunk buffer size (default: 1024)
+// Config holds the scan engine configuration (internal/engine/engine.go).
+type Config struct {
+    // Concurrency controls the number of worker goroutines.
+    // Channel buffers are sized as Concurrency × 2.
+    Concurrency int
 
     // Detection
-    Detectors      []Detector
-    EnableEntropy  bool
+    Detectors        []detector.Detector
+    EnableEntropy    bool
+    // EntropyThreshold is validated and stored, but at the engine level
+    // entropy is display-only. Threshold gating applies only to custom rules.
     EntropyThreshold float64 // Default: 4.0
+    ShowRaw          bool    // Expose raw secret content on Finding.Raw
+
+    // Optional clock override (for deterministic tests)
+    Clock func() time.Time
 
     // Verification
-    EnableVerification bool
-    Verifiers         []Verifier
-    VerifyTimeout     time.Duration // Default: 10s
-    VerifyConcurrency int           // Number of verification workers
+    VerifierConfig verifier.Config
+    Verifiers      []verifier.Verifier
+    OnlyVerified   bool // If true, suppress unverified findings
 
     // Filtering
-    IncludePatterns []string // Glob patterns
-    ExcludePatterns []string // Glob patterns
-    MaxFileSize     int64    // Default: 10MB
-
-    // Output
-    Formatter   Formatter
-    ShowRaw     bool // Show secret content
-    OnlyVerified bool // Show only verified findings
+    MinSeverity finding.Severity // Minimum severity to include
 }
 ```
 
@@ -408,8 +409,8 @@ stateDiagram-v2
         state ParallelScan {
             [*] --> ACPreFilter: Aho-Corasick pre-filtering
             ACPreFilter --> DetectorScan: Call matching detectors' Scan()
-            DetectorScan --> EntropyCheck: Entropy check
-            EntropyCheck --> WriteResult: Write to results channel
+            DetectorScan --> EntropyCalc: Entropy score (display-only)
+            EntropyCalc --> WriteResult: Write to results channel
         }
     }
 
@@ -626,10 +627,12 @@ flowchart TD
     E --> F["Call only matching detectors'\nScan() method (regex)"]
     F --> G{"Finding\nexists?"}
     G -->|"No"| H[Skip]
-    G -->|"Yes"| I{"Entropy >= threshold?"}
-    I -->|"No"| J["Mark as\nlow confidence"]
-    I -->|"Yes"| K["High confidence finding\n→ Results"]
+    G -->|"Yes"| I["Calculate Shannon entropy\n(if EnableEntropy = true)"]
+    I --> J["Attach entropy score to Finding\n(display-only — no gating)"]
+    J --> K["Finding → Results channel"]
 ```
+
+> **Note on entropy gating:** At the engine level, entropy is **display-only**. The computed value is attached to the `Finding.Entropy` field for human review; the engine never suppresses or demotes a finding based on entropy score. The exception is **custom rules**: a YAML rule with an `entropy:` field does gate matches — only candidates whose entropy meets or exceeds the rule's threshold are emitted. A global entropy gate for built-in detectors is planned but not yet implemented (see [ROADMAP — Known Gaps](../../docs/05-ROADMAP.md)).
 
 ### 6.2 Shannon Entropy Calculation
 

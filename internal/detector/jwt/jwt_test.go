@@ -32,7 +32,7 @@ func TestJWT_Scan_MatchesValidTokens(t *testing.T) {
 			name:     "valid JWT",
 			input:    fakeJWT,
 			expected: 1,
-			redacted: "eyJhbGciOi****",
+			redacted: "****WXYZ",
 		},
 		{
 			name:     "JWT in authorization header",

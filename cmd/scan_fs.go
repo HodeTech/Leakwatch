@@ -45,10 +45,9 @@ func init() {
 	flags.IntP("concurrency", "c", runtime.NumCPU(), "number of concurrent workers")
 	flags.Int64("max-file-size", 10*1024*1024, "maximum file size in bytes")
 	flags.StringSlice("exclude", nil, "path patterns to exclude")
-	flags.Bool("show-raw", false, "show raw secret content in output")
+	flags.Bool(flagShowRaw, false, "show raw secret content in output")
 
 	addVerifyFlags(flags)
-	bindScanFlags(flags)
 }
 
 func runScanFs(cmd *cobra.Command, args []string) error {
@@ -71,7 +70,8 @@ func runScanFs(cmd *cobra.Command, args []string) error {
 
 	excludePaths, _ := cmd.Flags().GetStringSlice("exclude")
 
-	src := filesystem.New(absPath,
+	src := filesystem.New(
+		absPath,
 		filesystem.WithMaxFileSize(cfg.maxFileSize),
 		filesystem.WithExcludePaths(append(cfg.excludePaths, excludePaths...)),
 	)

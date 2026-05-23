@@ -20,10 +20,12 @@ func (d *Detector) ID() string { return "telegram-bot-token" }
 // Description returns a human-readable description of the Telegram Bot Token detector.
 func (d *Detector) Description() string { return "Telegram Bot Token" }
 
-// Keywords returns the Aho-Corasick pre-filter keywords for Telegram Bot Token detection.
-func (d *Detector) Keywords() []string {
-	return []string{"telegram", "TELEGRAM", "bot_token", "BOT_TOKEN"}
-}
+// Keywords returns the Aho-Corasick pre-filter keywords.
+// A Telegram Bot Token (digits ":" 35-char secret) has no fixed keyword that
+// the regex requires, so an empty slice is returned to ensure the regex runs on
+// every chunk. Gating on "telegram"/"bot_token" would miss standalone tokens
+// such as "123456789:AAH..." that do not carry those words.
+func (d *Detector) Keywords() []string { return []string{} }
 
 // Severity returns the default severity level for Telegram Bot Token findings.
 func (d *Detector) Severity() finding.Severity { return finding.SeverityHigh }
@@ -40,7 +42,7 @@ func (d *Detector) Scan(_ context.Context, data []byte) []detector.RawFinding {
 		findings = append(findings, detector.RawFinding{
 			DetectorID: d.ID(),
 			Raw:        match,
-			Redacted:   string(match[:6]) + "****",
+			Redacted:   detector.RedactBytes(match),
 		})
 	}
 	return findings
