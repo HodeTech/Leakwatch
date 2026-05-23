@@ -36,7 +36,7 @@ func init() {
 	flags.StringP("output", "o", "", "output file (default: stdout)")
 	flags.IntP("concurrency", "c", runtime.NumCPU(), "number of concurrent workers")
 	flags.Int64("max-file-size", 10*1024*1024, "maximum file size in bytes")
-	flags.Bool("show-raw", false, "show raw secret content in output")
+	flags.Bool(flagShowRaw, false, "show raw secret content in output")
 	flags.String("prefix", "", "scan only objects with this key prefix")
 	flags.String("project", "", "GCP project ID")
 

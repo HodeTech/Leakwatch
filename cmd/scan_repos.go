@@ -47,7 +47,7 @@ func init() {
 	flags.IntP("concurrency", "c", runtime.NumCPU(), "number of concurrent workers per repo")
 	flags.Int("parallel", 3, "number of repositories to scan in parallel")
 	flags.Int64("max-file-size", 10*1024*1024, "maximum file size in bytes")
-	flags.Bool("show-raw", false, "show raw secret content in output")
+	flags.Bool(flagShowRaw, false, "show raw secret content in output")
 
 	addVerifyFlags(flags)
 }

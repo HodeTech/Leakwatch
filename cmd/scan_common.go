@@ -66,6 +66,11 @@ type scanConfig struct {
 	customRules []custom.RuleDef
 }
 
+// Flag names shared across the scan_*.go commands. Defining them as constants
+// avoids duplicating the string literals that several commands reference when
+// registering and reading the same flag.
+const flagShowRaw = "show-raw"
+
 // scanFlagBindings maps Viper config keys to the scan flag that overrides them.
 // Each scan command's pflags are bound to a fresh, per-invocation Viper instance
 // (see newScanViper) so that one command's flag defaults never leak into another
@@ -78,7 +83,7 @@ var scanFlagBindings = map[string]string{
 	"scan.max-file-size": "max-file-size",
 	"output.format":      "format",
 	"output.file":        "output",
-	"output.show-raw":    "show-raw",
+	"output.show-raw":    flagShowRaw,
 }
 
 // bindScanFlags binds the current command's common scan flags to the given,
@@ -183,8 +188,8 @@ func loadScanConfig(cmd *cobra.Command) (*scanConfig, error) {
 	// reflects flag > env > config > default. The explicit-set check lets
 	// --show-raw=false override a config `show-raw: true` (OUT-m-04).
 	showRaw := cfg.Output.ShowRaw
-	if cmd.Flags().Changed("show-raw") {
-		showRaw, _ = cmd.Flags().GetBool("show-raw")
+	if cmd.Flags().Changed(flagShowRaw) {
+		showRaw, _ = cmd.Flags().GetBool(flagShowRaw)
 	}
 
 	return &scanConfig{

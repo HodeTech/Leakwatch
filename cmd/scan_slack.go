@@ -13,6 +13,11 @@ import (
 	slacksource "github.com/cemililik/leakwatch/internal/source/slack"
 )
 
+// flagIncludeFiles is the slack-only flag that requests scanning of uploaded
+// file content. Defined as a constant so the registration, deprecation, and
+// read sites reference a single literal.
+const flagIncludeFiles = "include-files"
+
 var scanSlackCmd = &cobra.Command{
 	Use:   "slack",
 	Short: "Scans a Slack workspace",
@@ -57,8 +62,8 @@ func init() {
 	// Slack file scanning is not yet implemented (only message text is scanned).
 	// The flag is kept for forward-compatibility but defaults to false, is hidden,
 	// and is marked deprecated so the CLI does not advertise a working feature.
-	flags.Bool("include-files", false, "(not yet implemented; planned) scan uploaded file content")
-	if err := flags.MarkDeprecated("include-files", "Slack file scanning is not yet implemented; this flag has no effect"); err != nil {
+	flags.Bool(flagIncludeFiles, false, "(not yet implemented; planned) scan uploaded file content")
+	if err := flags.MarkDeprecated(flagIncludeFiles, "Slack file scanning is not yet implemented; this flag has no effect"); err != nil {
 		slog.Warn("failed to mark include-files deprecated", "error", err)
 	}
 	flags.Float64("rate-limit", 20, "max Slack API requests per second")
@@ -66,7 +71,7 @@ func init() {
 	flags.StringP("output", "o", "", "output file (default: stdout)")
 	flags.IntP("concurrency", "c", runtime.NumCPU(), "number of concurrent workers")
 	flags.Int64("max-file-size", 10*1024*1024, "maximum file size in bytes")
-	flags.Bool("show-raw", false, "show raw secret content in output")
+	flags.Bool(flagShowRaw, false, "show raw secret content in output")
 
 	addVerifyFlags(flags)
 }
@@ -108,7 +113,7 @@ func runScanSlack(cmd *cobra.Command, _ []string) error {
 		opts = append(opts, slacksource.WithIncludeDMs(true))
 	}
 
-	if includeFiles, _ := cmd.Flags().GetBool("include-files"); includeFiles {
+	if includeFiles, _ := cmd.Flags().GetBool(flagIncludeFiles); includeFiles {
 		opts = append(opts, slacksource.WithIncludeFiles(true))
 	}
 
