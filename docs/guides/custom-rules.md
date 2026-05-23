@@ -53,8 +53,8 @@ Each rule contains the following fields:
 ```yaml
 # .leakwatch.yaml
 custom-rules:
-  - id: "sirket-api-key"
-    description: "Sirket ici API anahtari"
+  - id: "company-api-key"
+    description: "Internal company API key"
     regex: 'ACME_[A-Za-z0-9]{32}'
     keywords:
       - "ACME_"
@@ -68,9 +68,9 @@ custom-rules:
 
 The unique identifier of the rule. This value is used in finding reports and log output.
 
-- **Format:** kebab-case (lowercase, separated by hyphens)
-- **Length:** Maximum 64 characters
-- **Uniqueness:** Must be unique across all rules (built-in + custom)
+- **Format:** kebab-case (lowercase, separated by hyphens) -- recommended convention, not enforced
+- **Length:** Keep it short and descriptive (recommended; not enforced -- only a non-empty value is required)
+- **Uniqueness:** Must be unique across all rules (built-in + custom); a colliding ID is skipped with a warning
 
 ```yaml
 # Correct examples
@@ -89,7 +89,7 @@ id: ""                   # Cannot be empty
 A short text explaining what the rule detects. It is displayed in report output and security tickets.
 
 ```yaml
-description: "ACME Corp dahili API anahtari (v2 formati)"
+description: "ACME Corp internal API key (v2 format)"
 ```
 
 #### `regex` (required)
@@ -192,7 +192,7 @@ If you don't have a `.leakwatch.yaml` yet, create one with `leakwatch init`. The
 # .leakwatch.yaml
 custom-rules:
   - id: "acme-api-key"
-    description: "ACME Corp dahili API anahtari"
+    description: "ACME Corp internal API key"
     regex: 'acme_(live|test)_[a-z0-9]{32}'
     keywords:
       - "acme_live_"
@@ -204,19 +204,22 @@ custom-rules:
 ### Step 3: Test
 
 ```bash
-# Create a test file
-cat > /tmp/test-secret.txt << 'EOF'
-# Yapilandirma dosyasi
+# Create a test directory with a sample file.
+# The filesystem source scans a directory, so point it at the directory --
+# passing a single file path returns "source is not a directory".
+mkdir -p /tmp/leakwatch-test
+cat > /tmp/leakwatch-test/config.txt << 'EOF'
+# Configuration file
 api_key = "acme_live_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
 test_key = "acme_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxx1234"
 placeholder = "acme_live_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 EOF
 
-# Scan with Leakwatch
-leakwatch scan fs /tmp/test-secret.txt --log-level debug
+# Scan the directory with Leakwatch
+leakwatch scan fs /tmp/leakwatch-test --log-level debug
 
 # Clean up
-rm /tmp/test-secret.txt
+rm -rf /tmp/leakwatch-test
 ```
 
 Expected results:
@@ -230,7 +233,7 @@ Commit the `.leakwatch.yaml` file to the root of your project. The CI/CD pipelin
 
 ```bash
 git add .leakwatch.yaml
-git commit -m "feat(config): ACME API anahtari icin ozel kural eklendi"
+git commit -m "feat(config): add custom rule for ACME API key"
 ```
 
 ---
@@ -469,11 +472,11 @@ If no keyword is defined, Leakwatch runs the associated regex on **all files**. 
 
 ```yaml
 custom-rules:
-  # Dahili SSO token'i
-  # Format: sso-v2-<ortam>-<uuid>-<imza>
-  # Ornek: sso-v2-prod-550e8400-e29b-41d4-a716-446655440000-a1b2c3d4
+  # Internal SSO token
+  # Format: sso-v2-<env>-<uuid>-<signature>
+  # Example: sso-v2-prod-550e8400-e29b-41d4-a716-446655440000-a1b2c3d4
   - id: "internal-sso-token"
-    description: "Dahili SSO v2 token"
+    description: "Internal SSO v2 token"
     regex: 'sso-v2-(prod|staging|dev)-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-[a-z0-9]{8}'
     keywords:
       - "sso-v2-"
@@ -488,7 +491,7 @@ custom-rules:
   # PostgreSQL connection string
   # Format: postgres://user:password@host:port/dbname
   - id: "postgres-connection-string"
-    description: "PostgreSQL baglanti dizesi icinde credential"
+    description: "Credential inside a PostgreSQL connection string"
     regex: 'postgres(?:ql)?://[^:]+:([^@]{8,})@[^\s]+'
     keywords:
       - "postgres://"
@@ -499,7 +502,7 @@ custom-rules:
   # MongoDB connection string
   # Format: mongodb://user:password@host:port/dbname
   - id: "mongodb-connection-string"
-    description: "MongoDB baglanti dizesi icinde credential"
+    description: "Credential inside a MongoDB connection string"
     regex: 'mongodb(\+srv)?://[^:]+:([^@]{8,})@[^\s]+'
     keywords:
       - "mongodb://"
@@ -510,7 +513,7 @@ custom-rules:
   # Redis connection string
   # Format: redis://:password@host:port
   - id: "redis-connection-string"
-    description: "Redis baglanti dizesi icinde credential"
+    description: "Credential inside a Redis connection string"
     regex: 'redis://:[^@]{6,}@[^\s]+'
     keywords:
       - "redis://"
@@ -525,7 +528,7 @@ custom-rules:
   # DigitalOcean API token
   # Format: starts with dop_v1_, total 64 characters
   - id: "digitalocean-api-token"
-    description: "DigitalOcean kisisel erisim token'i"
+    description: "DigitalOcean personal access token"
     regex: 'dop_v1_[a-f0-9]{64}'
     keywords:
       - "dop_v1_"
@@ -559,7 +562,7 @@ custom-rules:
 custom-rules:
   # Internal webhook URLs
   - id: "internal-webhook-url"
-    description: "Sirket ici webhook URL'si icinde token"
+    description: "Token inside an internal webhook URL"
     regex: 'https://hooks\.internal\.acme\.com/[a-zA-Z0-9]{32,}'
     keywords:
       - "hooks.internal.acme.com"
@@ -568,7 +571,7 @@ custom-rules:
 
   # Internal certificate password
   - id: "certificate-password"
-    description: "Sertifika veya keystore parolasi"
+    description: "Certificate or keystore password"
     regex: '(?i)(keystore[_-]?pass(?:word)?|cert[_-]?pass(?:word)?|pfx[_-]?pass(?:word)?)\s*[:=]\s*["\x27]([^\s"'\'']{8,})["\x27]'
     keywords:
       - "keystore"
@@ -579,7 +582,7 @@ custom-rules:
 
   # JWT secret
   - id: "jwt-secret"
-    description: "JWT imzalama sirri"
+    description: "JWT signing secret"
     regex: '(?i)jwt[_-]?secret\s*[:=]\s*["\x27]([^\s"'\'']{16,})["\x27]'
     keywords:
       - "jwt_secret"
@@ -619,7 +622,7 @@ output:
 
 custom-rules:
   - id: "acme-api-key"
-    description: "ACME Corp dahili API anahtari"
+    description: "ACME Corp internal API key"
     regex: 'acme_(live|test)_[a-z0-9]{32}'
     keywords:
       - "acme_live_"
@@ -628,7 +631,7 @@ custom-rules:
     entropy: 3.0
 
   - id: "internal-sso-token"
-    description: "Dahili SSO v2 token"
+    description: "Internal SSO v2 token"
     regex: 'sso-v2-(prod|staging|dev)-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-[a-z0-9]{8}'
     keywords:
       - "sso-v2-"
@@ -636,7 +639,7 @@ custom-rules:
     entropy: 3.0
 
   - id: "postgres-connection-string"
-    description: "PostgreSQL baglanti dizesi icinde credential"
+    description: "Credential inside a PostgreSQL connection string"
     regex: 'postgres(?:ql)?://[^:]+:([^@]{8,})@[^\s]+'
     keywords:
       - "postgres://"
@@ -658,46 +661,76 @@ If your custom rules are not working as expected, get detailed log output with `
 leakwatch scan fs /path/to/project --log-level debug
 ```
 
-In the debug output you will see the following information:
+Logs are written to stderr by Go's `slog` text handler. With `--log-level debug`
+you will see how many custom rules were registered and how many detectors are
+active for the scan, for example:
 
 ```
-DBG Ozel kural yuklendi id=acme-api-key regex=acme_(live|test)_[a-z0-9]{32}
-DBG Keyword eslesmesi bulundu file=config.yaml keyword=acme_live_
-DBG Regex eslesmesi file=config.yaml rule=acme-api-key matches=1
-DBG Entropi kontrolu match=acme_live_a1b2c3... entropy=4.12 threshold=3.0 passed=true
+time=2026-05-23T10:00:00.000+03:00 level=INFO msg="custom rules registered" count=1 skipped=0
+time=2026-05-23T10:00:00.001+03:00 level=DEBUG msg="detectors loaded" count=64
+time=2026-05-23T10:00:00.050+03:00 level=DEBUG msg="loaded .leakwatchignore" path=/tmp/leakwatch-test/.leakwatchignore
 ```
+
+> **Note:** Leakwatch does not emit a per-file keyword-match, per-regex-match, or
+> per-entropy-check debug log. Debug logging confirms that your rule was *loaded*
+> (look for `custom rules registered` with a non-zero `count` and `skipped=0`) and
+> how many detectors are active. To confirm a rule actually *fired*, look at the
+> scan output (the reported findings).
 
 ### 8.2 Common Issues and Solutions
 
 #### Issue: Rule is not loading
 
+A rule that fails to compile is skipped (the scan still runs with the remaining
+rules). At `--log-level debug` (or `info`) you will see a warning and a non-zero
+`skipped` count:
+
 ```
-ERR Ozel kural yuklenemedi id=my-rule error="invalid regex: ..."
+time=2026-05-23T10:00:00.000+03:00 level=WARN msg="custom rule registration skipped" error="custom rule \"my-rule\": invalid regex: ..."
+time=2026-05-23T10:00:00.001+03:00 level=INFO msg="custom rules registered" count=0 skipped=1
 ```
 
 **Solution:** Verify that your regex is Go RE2 compatible. Lookahead, lookbehind, and backreference are not supported.
 
 ```bash
-# Test the regex with Go
-go run -e 'regexp.MustCompile(`your-regex-here`)'
+# Check that your regex compiles under Go's RE2 engine before adding it to a rule:
+cat > /tmp/re_check.go << 'EOF'
+package main
+
+import (
+	"fmt"
+	"regexp"
+)
+
+func main() {
+	re := regexp.MustCompile(`your-regex-here`)
+	fmt.Println("compiled OK:", re.String())
+}
+EOF
+go run /tmp/re_check.go && rm /tmp/re_check.go
 ```
 
 #### Issue: Rule finds no matches
 
 Possible causes:
 
-1. **Keyword issue:** The keyword is not in the file, so the regex is never executed
+1. **Keyword issue:** A keyword is not present in the file, so the regex is never executed. Leakwatch does not log individual keyword matches, so verify the keyword literally appears in the target file, or temporarily drop the `keywords` list so the regex runs on every file:
 
 ```bash
-# Check keyword matches
-leakwatch scan fs /path --log-level debug 2>&1 | grep "Keyword"
+# Confirm the keyword text is actually present in the file(s)
+grep -r "acme_live_" /path/to/project
+
+# Or temporarily remove `keywords:` from the rule so the regex runs on all files
+# (slower, but rules out a keyword mismatch).
 ```
 
-2. **Regex issue:** The regex pattern does not match the actual format in the file
+2. **Regex issue:** The regex pattern does not match the actual format in the file. Drop the string into a directory and scan it (the filesystem source needs a directory, not a file or stdin):
 
 ```bash
-# Test the regex directly
-echo "test-string" | leakwatch scan fs /dev/stdin --log-level debug
+mkdir -p /tmp/leakwatch-test
+echo 'token = "your-test-string"' > /tmp/leakwatch-test/sample.txt
+leakwatch scan fs /tmp/leakwatch-test --log-level debug
+rm -rf /tmp/leakwatch-test
 ```
 
 3. **Entropy issue:** The threshold is too high and the value is being filtered out

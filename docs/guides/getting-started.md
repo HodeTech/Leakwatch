@@ -80,15 +80,15 @@ You can download the binary suitable for your platform from the GitHub Releases 
 # Release archives follow the naming pattern:
 #   leakwatch_<version>_<Os>_<Arch>.tar.gz
 # Examples:
-#   leakwatch_v0.1.0_Linux_x86_64.tar.gz
-#   leakwatch_v0.1.0_Darwin_arm64.tar.gz
-#   leakwatch_v0.1.0_Windows_x86_64.zip
+#   leakwatch_v1.5.0_Linux_x86_64.tar.gz
+#   leakwatch_v1.5.0_Darwin_arm64.tar.gz
+#   leakwatch_v1.5.0_Windows_x86_64.zip
 #
 # Download the archive for your platform from the Releases page:
 # https://github.com/cemililik/Leakwatch/releases/latest
 #
-# Example for Linux x86_64 (replace v0.1.0 with the actual release version):
-curl -sSfL https://github.com/cemililik/Leakwatch/releases/latest/download/leakwatch_v0.1.0_Linux_x86_64.tar.gz | tar xz
+# Example for Linux x86_64 (replace v1.5.0 with the current release version):
+curl -sSfL https://github.com/cemililik/Leakwatch/releases/latest/download/leakwatch_v1.5.0_Linux_x86_64.tar.gz | tar xz
 
 # Move binary to PATH
 sudo mv leakwatch /usr/local/bin/
@@ -115,7 +115,7 @@ leakwatch version
 Expected output:
 
 ```
-leakwatch version v0.x.x (commit: abc1234, built: 2026-03-24)
+leakwatch version v1.5.0 (commit: abc1234, built: 2026-04-09)
 ```
 
 ---
@@ -271,7 +271,7 @@ leakwatch scan repos https://github.com/org/repo1 https://github.com/org/repo2 -
 
 ### 4.7 Slack Workspace Scan (`scan slack`)
 
-Scans messages and files in a Slack workspace for leaked secrets.
+Scans message text across channels in a Slack workspace for leaked secrets. (Scanning of uploaded files is planned but not yet implemented.)
 
 ```bash
 # Scan a Slack workspace
@@ -293,7 +293,7 @@ By default, Leakwatch writes results to standard output (stdout) in JSON format.
 ```json
 [
   {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "id": "a1b2c3d4e5f67890abcdef1234567890",
     "detector_id": "aws-access-key-id",
     "severity": "critical",
     "redacted": "AKIA************XMPL",
@@ -321,13 +321,13 @@ By default, Leakwatch writes results to standard output (stdout) in JSON format.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | string | Unique identifier for the finding (UUID) |
+| `id` | string | Unique identifier for the finding (truncated SHA-256, 32 hex characters) |
 | `detector_id` | string | ID of the detector that found the secret |
 | `severity` | string | Severity level (see below) |
 | `raw` | string | Raw content of the secret (shown with `--show-raw`) |
 | `redacted` | string | Masked secret content (shown by default) |
 | `source` | object | Source information for the finding |
-| `source.source_type` | string | Source type: `filesystem`, `git`, or `container` |
+| `source.source_type` | string | Source type: `filesystem`, `git`, `container`, `s3`, `gcs`, or `slack` |
 | `source.file_path` | string | File path where the secret was found |
 | `source.line` | int | Line number where the secret was found |
 | `source.commit` | string | Git commit hash (git scan only) |
@@ -583,7 +583,7 @@ sequenceDiagram
 
 ---
 
-## 9. Next Steps
+## 10. Next Steps
 
 Check out the following resources to use Leakwatch more effectively:
 

@@ -394,16 +394,25 @@ secret-scan:
 
 Add a Git pre-commit hook to catch secrets before they are committed:
 
+Pre-commit changes are not committed yet, so scan the working tree with
+`scan fs` rather than git history: a `scan git` run cannot see uncommitted
+changes, and `--since-commit HEAD` would scan zero commits (the diff walk stops
+as soon as it reaches the since-commit, which is HEAD itself).
+
 ```bash
 #!/bin/sh
 # .git/hooks/pre-commit
 
-leakwatch scan git . --since-commit HEAD --only-verified --min-severity high
+leakwatch scan fs . --only-verified --min-severity high
 if [ $? -eq 1 ]; then
     echo "ERROR: Active secrets detected. Commit blocked."
     exit 1
 fi
 ```
+
+> **Tip:** This mirrors the bundled [pre-commit framework](https://pre-commit.com)
+> hook in `.pre-commit-hooks.yaml`, which runs `leakwatch scan fs`. For faster
+> commits, add `--no-verify` to skip the network verification step.
 
 ---
 
@@ -470,5 +479,5 @@ flowchart TD
 | Getting started with Leakwatch | [Getting Started Guide](./getting-started.md) |
 | Configuration file and options | [Configuration Guide](./configuration.md) |
 | VS Code integration | [VS Code Extension Guide](./vscode-extension.md) |
-| Output formats and fields | [Getting Started Guide -- Understanding the Output](./getting-started.md#4-understanding-the-output) |
+| Output formats and fields | [Getting Started Guide -- Understanding the Output](./getting-started.md#5-understanding-the-output) |
 | Architecture overview | [Architecture Document](../architecture/03-ARCHITECTURE.md) |

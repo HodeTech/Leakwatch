@@ -42,7 +42,7 @@ In this example, the `credentials.json` file is not visible in the final image's
 |----------|-------------|
 | **Deleted credentials** | API keys and certificates added during build and then deleted |
 | **Multi-stage build remnants** | Secrets remaining in pre-stages of multi-stage builds |
-| **Environment variables** | Secrets embedded in the image via `ENV` commands |
+| **Env values written to files** | An `ENV`/`ARG` value persisted into a file during build (note: Leakwatch scans layer file contents, not the image config blob where `ENV` itself lives -- see §5.3) |
 | **Configuration files** | Database connection details, cloud credentials |
 | **SSH keys** | Private keys used during build that remain in layers |
 
@@ -216,7 +216,7 @@ Since Leakwatch scans each layer independently, files deleted in upper layers ar
 
 ```json
 {
-  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "id": "a1b2c3d4e5f67890abcdef1234567890",
   "detector_id": "generic-api-key",
   "severity": "high",
   "redacted": "ABCD****wxyz",
@@ -257,14 +257,18 @@ Leakwatch output:
   Status:   Not verified
 ```
 
-**Scenario 2: API key in environment variable**
+**Scenario 2: API key written to a file during build**
 
 ```dockerfile
 ENV API_KEY=sk-proj-abc123def456
-RUN ./configure.sh
+RUN ./configure.sh   # persists $API_KEY into /app/config.yaml
 ```
 
-In this case, the secret can be found in the layer metadata (as an environment variable) and potentially in configuration files.
+Leakwatch reads the file contents inside each layer's TAR archive -- it does
+**not** read the image config blob where `ENV` and `ARG` values are stored. A
+secret that lives *only* in an environment variable is therefore **not detected**.
+It is caught only when a build step persists that value into a file inside a layer
+(here, `/app/config.yaml` written by `configure.sh`).
 
 ---
 

@@ -46,7 +46,7 @@ docker run --rm \
   -e AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY \
   -e AWS_REGION=us-east-1 \
-  ghcr.io/cemililik/leakwatch:latest scan s3 s3://my-bucket/prefix
+  ghcr.io/cemililik/leakwatch:latest scan s3 my-bucket --prefix prefix/
 ```
 
 ### Scan a GCS Bucket
@@ -54,7 +54,7 @@ docker run --rm \
 ```bash
 docker run --rm \
   -v "$HOME/.config/gcloud:/home/leakwatch/.config/gcloud:ro" \
-  ghcr.io/cemililik/leakwatch:latest scan gcs gs://my-bucket/prefix
+  ghcr.io/cemililik/leakwatch:latest scan gcs my-bucket --prefix prefix/
 ```
 
 ### Scan Summary
@@ -148,12 +148,13 @@ docker run --rm ghcr.io/cemililik/leakwatch:latest \
 For private repositories that require authentication, pass credentials via environment variables or mount an SSH key:
 
 ```bash
-# HTTPS with token
+# HTTPS with token embedded in the URL.
+# Leakwatch uses go-git, which reads credentials from the URL's user-info part;
+# it does NOT honor git-CLI variables such as GIT_ASKPASS / GIT_PASSWORD.
+# The display URL is credential-stripped in logs and output.
 docker run --rm \
-  -e GIT_ASKPASS=/bin/echo \
-  -e GIT_PASSWORD=ghp_xxxxxxxxxxxx \
   ghcr.io/cemililik/leakwatch:latest \
-  scan git https://github.com/org/private-repo.git
+  scan git https://x-access-token:ghp_xxxxxxxxxxxx@github.com/org/private-repo.git
 
 # SSH key mount
 docker run --rm \
@@ -161,6 +162,10 @@ docker run --rm \
   ghcr.io/cemililik/leakwatch:latest \
   scan git git@github.com:org/private-repo.git
 ```
+
+> **Tip:** Embedding the token in the command line can expose it in shell history
+> and process listings. In CI, prefer injecting it through a masked secret, e.g.
+> `scan git https://x-access-token:${GIT_TOKEN}@github.com/org/private-repo.git`.
 
 ---
 
@@ -248,13 +253,13 @@ For GCS scanning, mount the Application Default Credentials or set the service a
 # Application Default Credentials
 docker run --rm \
   -v "$HOME/.config/gcloud:/home/leakwatch/.config/gcloud:ro" \
-  ghcr.io/cemililik/leakwatch:latest scan gcs gs://my-bucket
+  ghcr.io/cemililik/leakwatch:latest scan gcs my-bucket
 
 # Service account key
 docker run --rm \
   -e GOOGLE_APPLICATION_CREDENTIALS=/creds/sa-key.json \
   -v "/path/to/sa-key.json:/creds/sa-key.json:ro" \
-  ghcr.io/cemililik/leakwatch:latest scan gcs gs://my-bucket
+  ghcr.io/cemililik/leakwatch:latest scan gcs my-bucket
 ```
 
 ### Verification Control
@@ -437,18 +442,37 @@ You can extend the Leakwatch Dockerfile for custom needs.
 
 ### Adding Custom Rules
 
+There is no standalone rules file. Custom rules are defined under the
+`custom-rules:` key of a `.leakwatch.yaml` config file (see the
+[Custom Rules Guide](./custom-rules.md)). Bake them in by copying a config that
+contains them to the home directory, which Leakwatch loads as the global config:
+
 ```dockerfile
 FROM ghcr.io/cemililik/leakwatch:latest
 
-COPY custom-rules.yaml /home/leakwatch/.leakwatch-rules.yaml
+# .leakwatch.yaml here must include the custom rules under `custom-rules:`
+COPY .leakwatch.yaml /home/leakwatch/.leakwatch.yaml
 ```
 
 ### Adding a Custom Configuration
+
+Leakwatch searches for `.leakwatch.yaml` in the working directory and then in the
+home directory (`~/.leakwatch.yaml`). Copy your config to the home directory so it
+applies to every scan regardless of the mounted working directory:
 
 ```dockerfile
 FROM ghcr.io/cemililik/leakwatch:latest
 
 COPY .leakwatch.yaml /home/leakwatch/.leakwatch.yaml
+```
+
+Alternatively, point at a config explicitly with `--config`:
+
+```bash
+docker run --rm \
+  -v "$(pwd):/scan:ro" \
+  -v "$(pwd)/.leakwatch.yaml:/cfg/.leakwatch.yaml:ro" \
+  ghcr.io/cemililik/leakwatch:latest scan fs /scan --config /cfg/.leakwatch.yaml
 ```
 
 ### Building from Source

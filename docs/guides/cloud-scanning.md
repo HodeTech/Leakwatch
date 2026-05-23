@@ -159,9 +159,10 @@ For Leakwatch to scan an S3 bucket, the IAM identity used must have the followin
 
 | Permission | Description |
 |------------|-------------|
-| `s3:ListBucket` | To list objects in the bucket |
+| `s3:ListBucket` | To list objects in the bucket (also authorizes the `HeadBucket` access check Leakwatch performs at startup) |
 | `s3:GetObject` | To read object contents |
-| `s3:HeadBucket` | For bucket access verification |
+
+> **Note:** There is no `s3:HeadBucket` IAM action. The `HeadBucket` API call is authorized by `s3:ListBucket`, so no extra permission is required for it.
 
 **Example IAM Policy:**
 
@@ -174,8 +175,7 @@ For Leakwatch to scan an S3 bucket, the IAM identity used must have the followin
       "Effect": "Allow",
       "Action": [
         "s3:ListBucket",
-        "s3:GetObject",
-        "s3:HeadBucket"
+        "s3:GetObject"
       ],
       "Resource": [
         "arn:aws:s3:::my-bucket",
@@ -197,8 +197,7 @@ For Leakwatch to scan an S3 bucket, the IAM identity used must have the followin
       "Effect": "Allow",
       "Action": [
         "s3:ListBucket",
-        "s3:GetObject",
-        "s3:HeadBucket"
+        "s3:GetObject"
       ],
       "Resource": [
         "arn:aws:s3:::*",

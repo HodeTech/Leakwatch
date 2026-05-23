@@ -106,6 +106,11 @@ verification:
   # Default: 4
   concurrency: 4
 
+  # Maximum verification API requests per second (token-bucket rate limiter).
+  # Must be positive when verification is enabled.
+  # Default: 10.0
+  rate-limit: 10.0
+
 # ── Filter Settings ────────────────────────────────────────────
 filter:
   # File/directory patterns to exclude from scanning.
@@ -207,6 +212,7 @@ flowchart LR
 | `enabled` | bool | `true` | Enable/disable verification |
 | `timeout` | duration | `10s` | Timeout per request |
 | `concurrency` | int | `4` | Number of parallel verifications |
+| `rate-limit` | float64 | `10.0` | Max verification API requests per second (must be positive when enabled) |
 
 #### `filter` -- Filtering
 
@@ -229,10 +235,10 @@ flowchart LR
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `id` | string | Yes | Unique identifier for the rule |
-| `description` | string | Yes | Human-readable description |
-| `regex` | string | Yes | Capture regex pattern |
-| `keywords` | []string | Yes | Aho-Corasick pre-filter keywords |
-| `severity` | string | Yes | `low`, `medium`, `high`, `critical` |
+| `description` | string | No | Human-readable description (recommended) |
+| `regex` | string | Yes | Capture regex pattern (max 4096 characters) |
+| `keywords` | []string | No | Aho-Corasick pre-filter keywords. Recommended for performance: with no keywords the regex runs against every scanned file |
+| `severity` | string | No | `low`, `medium`, `high`, `critical` (default: `medium`) |
 | `entropy` | float64 | No | Minimum entropy threshold for this rule (0.0–8.0). Matches below this value are skipped. Set to `0` to disable (default: `0`) |
 
 #### `scan slack` -- Slack Workspace Scanning
@@ -249,7 +255,6 @@ leakwatch scan slack \
   --channels "engineering,devops" \
   --exclude-channels "random" \
   --since "2026-01-01" \
-  --include-files \
   --rate-limit 20 \
   --min-severity medium
 ```
@@ -261,7 +266,7 @@ leakwatch scan slack \
 | `--exclude-channels` | none | Comma-separated channel names to skip |
 | `--since` | none | Scan messages posted after this date (`YYYY-MM-DD`) |
 | `--include-dms` | `false` | Scan direct messages (requires `im:history` / `mpim:history` scopes) |
-| `--include-files` | `true` | Scan uploaded file content |
+| `--include-files` | `false` | **Not yet implemented** (planned). Deprecated and hidden; has no effect — only message text is scanned |
 | `--rate-limit` | `20` | Maximum Slack API requests per second |
 
 > **Security note:** Always provide the Slack token via the `LEAKWATCH_SLACK_TOKEN` environment variable rather than the `--token` flag in automated environments, to avoid token exposure in process listings or CI logs.
@@ -352,6 +357,7 @@ verification:
   enabled: true
   timeout: 10s
   concurrency: 4
+  rate-limit: 10.0
 
 filter:
   exclude-paths:
@@ -659,6 +665,7 @@ leakwatch scan fs . --log-level debug 2>&1 | head -5
 | `verification.enabled` | `true` |
 | `verification.timeout` | `10s` |
 | `verification.concurrency` | `4` |
+| `verification.rate-limit` | `10.0` |
 | `output.format` | `json` |
 | `output.file` | `""` (stdout) |
 | `output.show-raw` | `false` |

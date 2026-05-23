@@ -336,11 +336,7 @@ flowchart TD
     L -->|"No"| N["Process all messages"]
     M --> N
 
-    N --> O{"--include-files?"}
-    O -->|"Yes"| P["Download and scan files"]
-    O -->|"No"| Q["Skip file content"]
-    P --> R["Secret Detection Engine"]
-    Q --> R
+    N --> R["Secret Detection Engine\n(message text only; file scanning not yet implemented)"]
 
     R --> S["Verification"]
     S --> T["Apply Severity Filter"]

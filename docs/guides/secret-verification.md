@@ -11,8 +11,8 @@
 Secret verification is the process of checking whether a detected secret is actually active and valid. Leakwatch ships with **54 verifiers (51 packages)** covering **85.7% of its 63 detectors (60 packages)**, making it one of the most comprehensive verification systems available under an MIT license.
 
 Verification is performed through two methods:
-- **Live API verification** (48 detectors) -- controlled, non-destructive API calls to the service that issued the credential
-- **Format validation** (5 detectors) -- structural checks (decode, parse, expiry) without network calls
+- **Live API verification** (49 detectors) -- controlled, non-destructive API calls to the service that issued the credential
+- **Format validation** (5 detectors) -- structural checks (decode, parse, validate format) without network calls
 
 **Why it matters:**
 
@@ -70,7 +70,7 @@ stateDiagram-v2
 
 Leakwatch provides 54 verifiers (51 packages) across three verification types. The following table shows all verified detectors grouped by verification method.
 
-### Live API Verification (48 detectors)
+### Live API Verification (49 detectors)
 
 These verifiers make a controlled, non-destructive API call to the provider to confirm whether the secret is active or inactive. The majority use HTTP GET; a small number (e.g., the Teams webhook verifier) use a non-destructive POST to a validation endpoint.
 
@@ -98,6 +98,7 @@ These verifiers make a controlled, non-destructive API call to the provider to c
 | **Communication** | Slack Bot Token | `slack-token` | `slack.com/api/auth.test` |
 | **Communication** | Discord Bot Token | `discord-bot-token` | `discord.com/api/v10/users/@me` |
 | **Communication** | Telegram Bot Token | `telegram-bot-token` | `api.telegram.org/bot{token}/getMe` |
+| **Communication** | MS Teams Webhook | `teams-webhook` | `{webhook-url}` (non-destructive empty `{}` POST; 400 = active, 404 = inactive) |
 | **Email** | SendGrid API Key | `sendgrid-api-key` | `api.sendgrid.com/v3/user/profile` |
 | **Email** | Mailgun API Key | `mailgun-api-key` | `api.mailgun.net/v3/domains` |
 | **Email** | Postmark Server Token | `postmark-server-token` | `api.postmarkapp.com/server` |
@@ -108,7 +109,6 @@ These verifiers make a controlled, non-destructive API call to the provider to c
 | **Infrastructure** | Databricks PAT | `databricks-token` | `{workspace}.cloud.databricks.com/api/2.0/clusters/list` |
 | **Identity** | Okta API Token | `okta-api-token` | `{domain}/api/v1/users/me` |
 | **Identity** | Auth0 Management Token | `auth0-management-token` | `{domain}/api/v2/users?per_page=1` |
-| **Identity** | HashiCorp Vault Token | `hashicorp-vault-token` | `{vault-addr}/v1/auth/token/lookup-self` |
 | **Monitoring** | Datadog API Key | `datadog-api-key` | `api.datadoghq.com/api/v1/validate` |
 | **Monitoring** | Grafana API Key | `grafana-api-key` | `grafana.com/api/user` |
 | **Monitoring** | PagerDuty API Key | `pagerduty-api-key` | `api.pagerduty.com/users/me` |
@@ -126,7 +126,7 @@ These verifiers make a controlled, non-destructive API call to the provider to c
 | **SaaS** | Airtable PAT | `airtable-pat` | `api.airtable.com/v0/meta/whoami` |
 | **Blockchain** | Infura API Key | `infura-api-key` | `mainnet.infura.io/v3/{key}` |
 
-### Format Validation (4 detectors)
+### Format Validation (5 detectors)
 
 These verifiers perform structural validation without making network calls. They check format and decode tokens without contacting the provider.
 
@@ -135,24 +135,24 @@ These verifiers perform structural validation without making network calls. They
 | Azure Storage Key | `azure-storage-key` | HMAC-SHA256 signature format validation |
 | Azure Entra Secret | `azure-entra-secret` | OAuth2 client credential format check |
 | GCP Service Account | `gcp-service-account` | JSON key file structure and private key parsing |
+| RabbitMQ Connection | `rabbitmq-connection-string` | AMQP URL format validation (scheme, credentials, host) |
 | Snowflake Credentials | `snowflake-credentials` | Connection string format and credential structure validation |
 
-### Not Verifiable (10 detectors)
+### Not Verifiable (9 detectors)
 
-These detectors identify secrets that cannot be verified through automated means.
+These detectors have no registered verifier, so their findings are always reported as `unverified`.
 
 | Detector | Detector ID | Reason |
 |----------|-------------|--------|
 | JWT | `jwt` | No central issuer to query; validity depends on the signing key holder |
 | Private Key | `private-key` | No remote verification endpoint; validity depends on deployment target |
 | Generic API Key | `generic-api-key` | Unknown provider; no way to determine which API to call |
+| HashiCorp Vault Token | `hashicorp-vault-token` | No verifier registered; would require reaching a typically internal, self-hosted Vault address |
 | Database Connection String | `database-connection-string` | Requires direct database connection; intrusive and unsafe |
 | Redis Connection | `redis-connection-string` | Requires direct network connection to typically internal Redis instance |
-| RabbitMQ Connection | `rabbitmq-connection-string` | Requires direct network connection to broker |
 | FTP/SFTP Credentials | `ftp-credentials` | Requires direct connection to potentially internal FTP servers |
 | LDAP Credentials | `ldap-credentials` | Requires direct connection to LDAP directory server |
 | Slack Webhook | `slack-webhook` | Verification would send a message (side effect) |
-| MS Teams Webhook | `teams-webhook` | Verification would send a message (side effect) |
 
 ---
 
@@ -257,7 +257,7 @@ When the token is active, the verifier returns:
 
 ## 6. CLI Flags
 
-Leakwatch provides flags to control verification behavior on all scan commands (`scan fs`, `scan git`, `scan image`).
+Leakwatch provides flags to control verification behavior on every scan command (`scan fs`, `scan git`, `scan image`, `scan s3`, `scan gcs`, `scan slack`, and `scan repos`).
 
 | Flag | Default | Description |
 |------|---------|-------------|
@@ -310,7 +310,7 @@ verification:
   enabled: true
   timeout: 10s
   concurrency: 4
-  rate_limit: 10.0
+  rate-limit: 10.0
 ```
 
 ---

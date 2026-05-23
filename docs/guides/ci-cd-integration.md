@@ -32,7 +32,7 @@ Key reasons for performing secret scanning in CI/CD pipelines:
 
 ```mermaid
 flowchart LR
-    subgraph Gelistirici["Developer Environment"]
+    subgraph Dev["Developer Environment"]
         A[Write Code] --> B[git commit]
     end
 
@@ -41,7 +41,7 @@ flowchart LR
         D --> E[Full History Scan]
     end
 
-    subgraph Sonuc["Result"]
+    subgraph Outcome["Result"]
         F[Success: Merge]
         G[Failure: Block]
     end
@@ -99,7 +99,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Tam Git gecmisi icin gerekli
+          fetch-depth: 0  # Required for full Git history
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -196,14 +196,14 @@ jobs:
         with:
           go-version: '1.25'
 
-      # PR'in base commit'ini bul
-      - name: Base commit'i belirle
+      # Find the PR base commit
+      - name: Determine base commit
         id: base
         run: |
           BASE_SHA=$(git merge-base origin/${{ github.base_ref }} HEAD)
           echo "sha=$BASE_SHA" >> "$GITHUB_OUTPUT"
 
-      - name: Leakwatch PR Taramasi
+      - name: Leakwatch PR scan
         run: |
           go install github.com/cemililik/leakwatch@latest
           leakwatch scan git . \
@@ -212,7 +212,7 @@ jobs:
             --output results.sarif \
             --min-severity medium
 
-      - name: SARIF Yukle
+      - name: Upload SARIF
         if: always()
         uses: github/codeql-action/upload-sarif@v3
         with:
@@ -230,9 +230,9 @@ name: Full History Secret Scanning
 
 on:
   schedule:
-    # Her pazartesi saat 03:00 UTC
+    # Every Monday at 03:00 UTC
     - cron: '0 3 * * 1'
-  workflow_dispatch:  # Manuel tetikleme
+  workflow_dispatch:  # Manual trigger
 
 permissions:
   security-events: write
@@ -243,7 +243,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Checkout (tam gecmis)
+      - name: Checkout (full history)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -253,7 +253,7 @@ jobs:
         with:
           go-version: '1.25'
 
-      - name: Tam gecmis taramasi
+      - name: Full history scan
         uses: cemililik/leakwatch-action@v1
         with:
           scan-type: git
@@ -261,7 +261,7 @@ jobs:
           sarif-upload: true
           min-severity: low
 
-      - name: Sonuclari artifact olarak kaydet
+      - name: Save results as artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -292,10 +292,10 @@ permissions:
   pull-requests: read
 
 env:
-  LEAKWATCH_VERSION: 'v0.1.0'
+  LEAKWATCH_VERSION: 'v1.5.0'
 
 jobs:
-  # PR'larda sadece degisen dosyalari tara
+  # On PRs, scan only the changed files
   pr-scan:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -308,13 +308,13 @@ jobs:
         with:
           go-version: '1.25'
 
-      - name: Base commit'i belirle
+      - name: Determine base commit
         id: base
         run: |
           BASE_SHA=$(git merge-base origin/${{ github.base_ref }} HEAD)
           echo "sha=$BASE_SHA" >> "$GITHUB_OUTPUT"
 
-      - name: PR taramasi
+      - name: PR scan
         run: |
           go install github.com/cemililik/leakwatch@${{ env.LEAKWATCH_VERSION }}
           leakwatch scan git . \
@@ -323,14 +323,14 @@ jobs:
             --output results.sarif \
             --min-severity medium
 
-      - name: SARIF yukle
+      - name: Upload SARIF
         if: always()
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: results.sarif
           category: leakwatch-pr
 
-  # Push'larda dosya sistemi tara
+  # On pushes, scan the filesystem
   push-scan:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -341,7 +341,7 @@ jobs:
         with:
           go-version: '1.25'
 
-      - name: Dosya sistemi taramasi
+      - name: Filesystem scan
         uses: cemililik/leakwatch-action@v1
         with:
           scan-type: fs
@@ -349,7 +349,7 @@ jobs:
           sarif-upload: true
           min-severity: high
 
-  # Zamanlanmis tam gecmis taramasi
+  # Scheduled full history scan
   scheduled-scan:
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
@@ -363,7 +363,7 @@ jobs:
         with:
           go-version: '1.25'
 
-      - name: Tam gecmis taramasi
+      - name: Full history scan
         uses: cemililik/leakwatch-action@v1
         with:
           scan-type: git
@@ -371,7 +371,7 @@ jobs:
           sarif-upload: true
           min-severity: low
 
-      - name: Sonuclari kaydet
+      - name: Save results
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -426,7 +426,7 @@ leakwatch-mr-scan:
     - apk add --no-cache git
     - go install github.com/cemililik/leakwatch@latest
   script:
-    # MR'in base commit'ini bul
+    # Find the MR base commit
     - BASE_SHA=$(git merge-base origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME HEAD)
     - leakwatch scan git . --since-commit "$BASE_SHA" --format sarif --output leakwatch-results.sarif
   artifacts:
@@ -457,8 +457,8 @@ leakwatch-full-scan:
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
       when: always
-  # Haftalik zamanlanmis pipeline icin:
-  # GitLab > CI/CD > Schedules menusunden haftalik schedule olusturun
+  # For a weekly scheduled pipeline:
+  # create a weekly schedule under GitLab > CI/CD > Schedules
 ```
 
 ### 3.3 GitLab CI with Docker Image
@@ -522,11 +522,11 @@ pipeline {
             }
             post {
                 always {
-                    // SARIF sonuclarini arsivle
+                    // Archive the SARIF results
                     archiveArtifacts artifacts: 'leakwatch-results.sarif', allowEmptyArchive: true
                 }
                 failure {
-                    echo 'Leakwatch sir tespit etti! Sonuclari inceleyin.'
+                    echo 'Leakwatch detected secrets! Review the results.'
                 }
             }
         }
@@ -534,7 +534,7 @@ pipeline {
 
     post {
         always {
-            // JSON raporu da olustur
+            // Also produce a JSON report
             sh '''
                 leakwatch scan fs . \
                     --format json \
@@ -591,7 +591,7 @@ The pre-commit hook ensures secrets are caught before being committed to the Git
 First, install the [pre-commit](https://pre-commit.com/) framework:
 
 ```bash
-# pre-commit kurulumu
+# Install pre-commit
 pip install pre-commit
 ```
 
@@ -601,7 +601,7 @@ Create a `.pre-commit-config.yaml` file in your project root:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/cemililik/Leakwatch
-    rev: v0.1.0
+    rev: v1.5.0
     hooks:
       - id: leakwatch
 ```
@@ -609,16 +609,16 @@ repos:
 Activate the hook:
 
 ```bash
-# Hook'u kur
+# Install the hook
 pre-commit install
 
-# Tum dosyalarda test et
+# Test against all files
 pre-commit run leakwatch --all-files
 ```
 
 ### 5.2 How Does It Work?
 
-The Leakwatch pre-commit hook runs the `leakwatch scan fs` command. Before each commit, it performs secret scanning on the files to be committed.
+The Leakwatch pre-commit hook runs the `leakwatch scan fs` command. The bundled hook sets `pass_filenames: false`, so it scans the entire working tree on each commit rather than only the staged files.
 
 ```mermaid
 flowchart TD
@@ -701,7 +701,7 @@ FROM ghcr.io/cemililik/leakwatch:latest AS security
 COPY --from=builder /app /scan
 RUN leakwatch scan fs /scan --min-severity high
 
-# Runtime stage (sadece tarama basarili olursa buraya ulasilir)
+# Runtime stage (reached only if the scan succeeded)
 FROM alpine:3.20
 COPY --from=builder /app/myapp /usr/local/bin/
 ENTRYPOINT ["myapp"]
@@ -732,10 +732,10 @@ It is important to control how the CI/CD pipeline behaves when secret scanning f
 You can set a minimum severity level to prevent low-priority findings from blocking the pipeline:
 
 ```bash
-# Sadece high ve critical bulgularda basarisiz ol
+# Fail only on high and critical findings
 leakwatch scan fs . --min-severity high
 
-# Sadece critical bulgularda basarisiz ol
+# Fail only on critical findings
 leakwatch scan fs . --min-severity critical
 ```
 
@@ -753,10 +753,10 @@ leakwatch scan fs . --min-severity critical
 Leakwatch ships with 54 verifiers (51 packages) covering 85.7% of all detector types, confirming whether discovered secrets are still active via API calls. With the `--only-verified` parameter, you can report only verified (active) secrets:
 
 ```bash
-# Sadece dogrulanmis sirlari raporla
+# Report only verified secrets
 leakwatch scan git . --only-verified
 
-# PR taramasinda dogrulama ile birlikte kullan
+# Use together with verification in PR scans
 leakwatch scan git . --since-commit HEAD~1 --only-verified --min-severity medium
 ```
 
@@ -771,25 +771,25 @@ Use the `.leakwatchignore` file for known false positives or intentional test va
 ```bash
 # .leakwatchignore
 
-# Test fixture'lari
+# Test fixtures
 test/fixtures/**
 testdata/**
 
-# Ornek yapilandirma dosyalari
+# Example configuration files
 *.example
 *.sample
 
-# Belirli dosyalar
+# Specific files
 docs/examples/config.yaml
 
-# Satir ici yoksayma (kod icinde)
+# Inline ignore (within code)
 # leakwatch:ignore
 ```
 
 You can use inline comments to ignore specific lines within the code:
 
 ```go
-// Test icin ornek anahtar (gercek degil)
+// Example key for testing (not real)
 var testKey = "AKIAIOSFODNN7EXAMPLE" // leakwatch:ignore
 ```
 
@@ -873,7 +873,7 @@ filter:
 
 output:
   format: json
-  show-raw: false  # Bulunan sirlari acik metin olarak gosterme
+  show-raw: false  # Never show found secrets in plain text
 ```
 
 ### 8.5 Privacy and Security
@@ -888,14 +888,14 @@ output:
 Use CI/CD notification mechanisms to inform the team when secrets are found:
 
 ```yaml
-# GitHub Actions ornegi - Slack bildirimi
-- name: Slack Bildirimi
+# GitHub Actions example - Slack notification
+- name: Slack Notification
   if: failure()
   uses: slackapi/slack-github-action@v1
   with:
     payload: |
       {
-        "text": "Leakwatch sir tespit etti: ${{ github.repository }} (${{ github.ref_name }})"
+        "text": "Leakwatch detected secrets: ${{ github.repository }} (${{ github.ref_name }})"
       }
   env:
     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
