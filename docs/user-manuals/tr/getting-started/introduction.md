@@ -1,0 +1,59 @@
+---
+title: "Tanıtım"
+description: "Leakwatch nedir, neyi tarar ve sızan sırları nasıl tespit edip doğrular."
+---
+
+# Tanıtım
+
+**Leakwatch**, sızan sırları — API anahtarları, token'lar, parolalar, bağlantı dizeleri ve özel anahtarlar — kod tabanlarınızda, Git geçmişinizde, konteyner imajlarınızda, bulut depolamanızda ve Slack çalışma alanlarınızda **tespit eden, doğrulayan ve raporlayan** yüksek performanslı, açık kaynaklı (MIT) bir güvenlik aracıdır.
+
+Go ile yazılmıştır, çalışma zamanı bağımlılığı olmayan tek bir statik ikili dosya olarak dağıtılır (`CGO_ENABLED=0`) ve her yerde çalışacak şekilde tasarlanmıştır: bir geliştirici dizüstü bilgisayarı, bir pre-commit kancası veya bir CI/CD hattı.
+
+## Neden Leakwatch
+
+Tek bir commit'te sızan bir kimlik bilgisi — sonradan silinse bile — Git geçmişinde sonsuza dek erişilebilir kalabilir ve push edildikten dakikalar sonra istismar edilebilir. Leakwatch, bu sırları erken yakalamak ve hangilerinin *gerçekten tehlikeli* olduğunu söylemek için tasarlanmıştır:
+
+- **Geniş tespit** — bulut sağlayıcılarını, yapay zekâ API'lerini, ödeme platformlarını, veritabanlarını, mesajlaşma araçlarını ve daha fazlasını kapsayan 63 yerleşik dedektör; ayrıca kendi YAML özel kurallarınız.
+- **Yalnızca tespit değil, doğrulama** — 54 dedektör türü için Leakwatch, bulunan bir sırrın *hâlâ etkin* olup olmadığını sağlayıcıya kontrollü, salt-okunur bir çağrı yaparak teyit edebilir. Etkin olduğu doğrulanmış bir anahtar bir olaydır; etkin olmayan bir anahtar ise gürültüdür.
+- **Çok sayıda kaynak** — yerel dosya sistemi, eksiksiz bir Git geçmişi, bir OCI/Docker imajı, AWS S3, Google Cloud Storage ve Slack mesajları.
+- **CI-uyumlu çıktı** — JSON, SARIF (GitHub Code Scanning için), CSV ve renklendirilmiş terminal tablosu.
+- **Tasarımı gereği sır-güvenli** — bulunan sırlar varsayılan olarak maskelenir ve asla loglanmaz, önbelleğe alınmaz veya diske yazılmaz.
+
+## Neleri tarar
+
+| Kaynak | Komut | Neyi kapsar |
+|--------|-------|-------------|
+| Dosya sistemi | `leakwatch scan fs` | Yerel bir dizin ağacındaki dosyalar |
+| Git geçmişi | `leakwatch scan git` | Tüm commit geçmişindeki her blob (yerel veya uzak) |
+| Konteyner imajı | `leakwatch scan image` | OCI/Docker imaj katmanları, daemonsuz |
+| AWS S3 | `leakwatch scan s3` | Bir S3 kovasındaki nesneler |
+| Google Cloud Storage | `leakwatch scan gcs` | Bir GCS kovasındaki nesneler |
+| Slack | `leakwatch scan slack` | Kanallardaki ve (isteğe bağlı) DM'lerdeki mesaj metni |
+| Çoklu depo | `leakwatch scan repos` | Aynı anda birden fazla Git deposu |
+
+## Tespit kısaca nasıl çalışır
+
+Leakwatch, büyük girdilerde bile hızlı kalmak için katmanlı bir hat kullanır:
+
+1. **Aho-Corasick anahtar kelime ön-filtresi** — tek bir çok-desenli otomat, bir parçayı hangi dedektörlerin eşleştirebileceğine hızla karar verir; böylece dedektörlerin çoğu regex'ini hiç çalıştırmaz.
+2. **Regex doğrulaması** — yalnızca kısa listeye alınan dedektörler kesin desenlerini çalıştırır.
+3. **Entropi** — Shannon entropisi gösterim için hesaplanır (ve özel kurallar tarafından düşük rastgelelikteki eşleşmeleri elemek için kullanılır).
+4. **Doğrulama** — uygun bulgular canlı sağlayıcı API'sine karşı kontrol edilir.
+
+:::tip
+Leakwatch'ı kullanmak için bu hattı anlamanız gerekmez — ancak taramaların neden hızlı olduğunu ve bazı bulguların neden bir doğrulama durumu gösterirken bazılarının göstermediğini açıklar. Tam tablo için [Nasıl Çalışır](#/getting-started/how-it-works) bölümüne bakın.
+:::
+
+## Leakwatch *ne değildir*
+
+Beklentileri doğru belirlemek için:
+
+- Git geçmişini yeniden yazmaz veya sırları sizin için **kaldırmaz** — onları bulup raporlar ve (`--remediation` ile) nasıl döndüreceğinizi söyler.
+- Slack taraması yalnızca **mesaj metnini** kapsar; yüklenen dosyaların *içeriğini* taramak uygulanmamıştır.
+- Doğrulama, birçok sır türü için mevcuttur ancak hepsi için değil — 9 dedektör türü (JWT'ler ve genel API anahtarları gibi) güvenli biçimde doğrulanamaz ve her zaman doğrulanmamış olarak raporlanır.
+
+## Sonraki adımlar
+
+- [Kurulum](#/getting-started/installation) — Homebrew, `go install`, Docker veya hazır bir ikili dosya ile kurun.
+- [Hızlı Başlangıç](#/getting-started/quick-start) — ilk taramanızı bir dakikadan kısa sürede çalıştırın.
+- [Nasıl Çalışır](#/getting-started/how-it-works) — taramanın arkasındaki mimari.

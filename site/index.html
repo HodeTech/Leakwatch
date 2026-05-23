@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title data-i18n="meta.home.title">Leakwatch — Detect, verify & report leaked secrets</title>
+<meta name="description" data-i18n-attr="content:meta.home.desc" content="Leakwatch is a fast, open-source security tool that detects, verifies, and reports leaked secrets across code, Git history, containers, and the cloud." />
+<meta name="theme-color" content="#0a0b0d" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Leakwatch — Detect, verify & report leaked secrets" />
+<meta property="og:description" content="Open-source secret scanning for code, Git history, containers, and the cloud. 63 detectors, 54 live verifiers." />
+<meta property="og:image" content="assets/og.svg" />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<a class="skip-link" href="#main" data-i18n="a11y.skip">Skip to content</a>
+
+<div class="classbar"><div class="wrap"><span data-i18n="classbar.left">⬤ Classified — Leakwatch field report</span><span data-i18n="classbar.right">Declassify on scan</span></div></div>
+
+<!-- ===== Nav ===== -->
+<header class="nav"><nav class="nav-inner" aria-label="Primary">
+  <a class="nav-brand" href="index.html" aria-label="Leakwatch home">
+    <svg class="logo" viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect x="3" y="3" width="26" height="26" rx="4" fill="#111316" stroke="#e6394d" stroke-width="1.4"/><rect x="8" y="11" width="16" height="3.4" fill="#000"/><rect x="8" y="17" width="10" height="3.4" fill="#000"/><circle cx="22" cy="18.7" r="2.4" fill="none" stroke="#34d39a" stroke-width="1.4"/></svg>
+    <span>Leak<b>watch</b></span>
+  </a>
+  <div class="nav-menu" id="navMenu">
+    <a class="nav-link" href="#chain" data-i18n="nav.howitworks">How it works</a>
+    <a class="nav-link" href="#points" data-i18n="nav.sources">Sources</a>
+    <a class="nav-link" href="#index" data-i18n="nav.detectors">Detectors</a>
+    <a class="nav-link" href="docs.html" data-i18n="nav.docs">Docs</a>
+    <a class="nav-link" href="contact.html" data-i18n="nav.contact">Contact</a>
+  </div>
+  <div class="nav-actions">
+    <div class="lang">
+      <button class="icon-btn lang-toggle" id="langToggle" aria-haspopup="true" aria-expanded="false" aria-label="Change language"><span id="langCurrent">EN</span></button>
+      <div class="lang-menu" id="langMenu" role="menu">
+        <button data-lang="en" role="menuitemradio">English</button>
+        <button data-lang="tr" role="menuitemradio">Türkçe</button>
+      </div>
+    </div>
+    <a class="btn btn-sm" href="https://github.com/HodeTech/Leakwatch" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.5v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.6.8.5 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5Z"/></svg>
+      <span>GitHub</span>
+    </a>
+    <button class="btn btn-red btn-sm" data-scan><span data-i18n="nav.runscan">▸ Run scan</span></button>
+    <button class="icon-btn nav-burger" id="navBurger" aria-label="Menu" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18" stroke-linecap="round"/></svg></button>
+  </div>
+</nav></header>
+
+<main id="main"><div class="wrap">
+
+  <!-- ===== Hero ===== -->
+  <section class="hero">
+    <div class="hero-copy">
+      <div class="tag mono-label"><b>●</b> <span data-i18n="hero.eyebrow">Open-source secret scanner · MIT</span></div>
+      <h1 data-i18n-html="hero.title">Some secrets shouldn't be <span class="rd"><span class="redact" data-real="visible">visible</span></span>.<br>Leakwatch finds the ones that are.</h1>
+      <p class="lede" data-i18n="hero.lede">Detect, verify, and report leaked API keys, tokens, and credentials across code, Git history, containers, and the cloud — then watch the redactions lift.</p>
+      <div class="cta">
+        <button class="btn btn-red btn-lg" data-scan><span data-i18n="hero.cta.run">▸ Run the scan</span></button>
+        <a class="btn btn-lg" href="docs.html"><span data-i18n="hero.cta.docs">Read the dossier</span></a>
+      </div>
+      <div class="kv" data-i18n="hero.kv">63 detectors · 54 live verifiers · 6 sources · exit-code aware</div>
+    </div>
+
+    <div class="frame doc" id="heroDoc">
+      <div class="doc-head"><span>▣</span><span class="file">prod.env</span><span class="meta" data-i18n="hero.doc.redacted">3 REDACTED</span></div>
+      <div class="scanwrap">
+        <div class="scanline" id="scanLine"></div>
+        <div class="doc-body">
+          <div class="code-row"><span class="ln">01</span><span class="src"><span class="tok-key">DB_HOST</span>=db.internal.acme.io</span></div>
+          <div class="code-row"><span class="ln">02</span><span class="src"><span class="tok-key">AWS_ACCESS_KEY_ID</span>=<span class="redact" data-real="AKIA3F7QExampleR8XZ">AKIA3F7QExampleR8XZ</span></span></div>
+          <div class="finding-card" data-card="0"><span class="sev c">CRITICAL</span><span class="det">aws-access-key-id</span><span class="st live">✓ verified active</span></div>
+          <div class="code-row"><span class="ln">03</span><span class="src"><span class="tok-key">JWT_SECRET</span>=<span class="redact" data-real="eyJhbGciOiJIUzI1NiJ9">eyJhbGciOiJIUzI1NiJ9</span></span></div>
+          <div class="finding-card" data-card="1"><span class="sev h">HIGH</span><span class="det">jwt</span><span class="st unv">unverified</span></div>
+          <div class="code-row"><span class="ln">04</span><span class="src"><span class="tok-key">OPENAI_API_KEY</span>=<span class="redact" data-real="sk-proj-Example9aZ">sk-proj-Example9aZ</span></span></div>
+          <div class="finding-card" data-card="2"><span class="sev c">CRITICAL</span><span class="det">openai-api-key</span><span class="st live">✓ verified active</span></div>
+        </div>
+      </div>
+      <div class="doc-foot">
+        <span class="stamp" id="docStamp">3 findings</span>
+        <span class="kv" style="margin-left:auto" data-i18n="hero.doc.hint">hover a redaction to reveal it</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Stats ===== -->
+  <section class="section no-rule" style="padding-top:6px">
+    <div class="frame stats">
+      <div class="cell"><div class="n"><b>63</b></div><div class="l" data-i18n="stats.detectors">secret detectors</div></div>
+      <div class="cell"><div class="n"><b>54</b></div><div class="l" data-i18n="stats.verifiers">live verifiers</div></div>
+      <div class="cell"><div class="n"><b>6</b></div><div class="l" data-i18n="stats.sources">scan sources</div></div>
+      <div class="cell"><div class="n"><b>4</b></div><div class="l" data-i18n="stats.formats">output formats</div></div>
+    </div>
+  </section>
+
+  <!-- ===== §01 Case file ===== -->
+  <section class="section" id="report">
+    <div class="sec-head"><span class="idx mono-label">§ 01</span><h2 data-i18n="case.title">The case file</h2></div>
+    <p class="sec-intro" data-i18n="case.intro">Every finding is logged like evidence: what it is, where it was found, how severe it is, and whether the key is still live. Verified-active keys are incidents — the rest is triage.</p>
+    <div class="frame case reveal">
+      <div class="case-row h"><span>#</span><span data-i18n="case.col.sev">Severity</span><span data-i18n="case.col.det">Detector / location</span><span data-i18n="case.col.status">Status</span><span class="h-action" data-i18n="case.col.action">Action</span></div>
+      <div class="case-row"><span class="num">01</span><span><span class="sev c">CRITICAL</span></span><span><b>aws-access-key-id</b><br><span class="loc">config/prod.yaml:12</span></span><span class="st live">✓ verified active</span><span class="accent" data-i18n="case.rotate">rotate now</span></div>
+      <div class="case-row"><span class="num">02</span><span><span class="sev c">CRITICAL</span></span><span><b>openai-api-key</b><br><span class="loc">.env:3</span></span><span class="st live">✓ verified active</span><span class="accent" data-i18n="case.rotate">rotate now</span></div>
+      <div class="case-row"><span class="num">03</span><span><span class="sev h">HIGH</span></span><span><b>jwt</b><br><span class="loc">src/auth.go:88</span></span><span class="st unv">unverified</span><span style="color:var(--muted)" data-i18n="case.review">review</span></div>
+    </div>
+  </section>
+
+  <!-- ===== §02 Watch points ===== -->
+  <section class="section" id="points">
+    <div class="sec-head"><span class="idx mono-label">§ 02</span><h2 data-i18n="points.title">Six watch points</h2></div>
+    <p class="sec-intro" data-i18n="points.intro">Secrets leak through more than source files. Leakwatch reaches into history, build artifacts, the cloud, and chat.</p>
+    <div class="grid-3">
+      <div class="card point reveal"><div class="pf"><span class="pid" data-i18n="points.fs.t">Filesystem</span><span class="cmd">scan fs</span></div><p data-i18n="points.fs.d">Walk a directory tree; skip binaries and lock files automatically.</p></div>
+      <div class="card point reveal"><div class="pf"><span class="pid" data-i18n="points.git.t">Git history</span><span class="cmd">scan git</span></div><p data-i18n="points.git.d">Every commit — recover secrets that were committed and later deleted.</p></div>
+      <div class="card point reveal"><div class="pf"><span class="pid" data-i18n="points.image.t">Container images</span><span class="cmd">scan image</span></div><p data-i18n="points.image.d">Inspect OCI/Docker image layers directly. No Docker daemon required.</p></div>
+      <div class="card point reveal"><div class="pf"><span class="pid" data-i18n="points.s3.t">AWS S3</span><span class="cmd">scan s3</span></div><p data-i18n="points.s3.d">Bucket objects via your existing AWS credential chain.</p></div>
+      <div class="card point reveal"><div class="pf"><span class="pid" data-i18n="points.gcs.t">Google Cloud</span><span class="cmd">scan gcs</span></div><p data-i18n="points.gcs.d">Cloud Storage objects with Application Default Credentials.</p></div>
+      <div class="card point reveal"><div class="pf"><span class="pid" data-i18n="points.slack.t">Slack</span><span class="cmd">scan slack</span></div><p data-i18n="points.slack.d">Message text across channels and DMs for pasted credentials.</p></div>
+    </div>
+  </section>
+
+  <!-- ===== §03 Chain of custody (pipeline) ===== -->
+  <section class="section" id="chain">
+    <div class="sec-head"><span class="idx mono-label">§ 03</span><h2 data-i18n="chain.title">Chain of custody</h2></div>
+    <p class="sec-intro" data-i18n="chain.intro">A keyword pre-filter shortlists candidate detectors before any regex runs, so scans stay fast even across full Git history.</p>
+    <div class="chain">
+      <div class="chain-step reveal"><span class="n">01</span><h4 data-i18n="chain.s1.t">Source</h4><p data-i18n="chain.s1.d">Stream chunks from files, Git, images, cloud, or Slack.</p><span class="arr"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+      <div class="chain-step reveal"><span class="n">02</span><h4 data-i18n="chain.s2.t">Pre-filter</h4><p data-i18n="chain.s2.d">Aho-Corasick keyword matching shortlists detectors.</p><span class="arr"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+      <div class="chain-step reveal"><span class="n">03</span><h4 data-i18n="chain.s3.t">Match</h4><p data-i18n="chain.s3.d">Shortlisted detectors run precise regex patterns.</p><span class="arr"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+      <div class="chain-step reveal"><span class="n">04</span><h4 data-i18n="chain.s4.t">Verify</h4><p data-i18n="chain.s4.d">Eligible findings are checked against the live provider API.</p><span class="arr"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+      <div class="chain-step reveal"><span class="n">05</span><h4 data-i18n="chain.s5.t">Report</h4><p data-i18n="chain.s5.d">Filter by severity; emit JSON, SARIF, CSV, or a table.</p></div>
+    </div>
+  </section>
+
+  <!-- ===== §04 Verification ===== -->
+  <section class="section" id="verify">
+    <div class="sec-head"><span class="idx mono-label">§ 04</span><h2 data-i18n="verify.title">Is it still live?</h2></div>
+    <p class="sec-intro" data-i18n="verify.intro">Detection is half the job. For most secret types, Leakwatch makes a controlled, read-only API call to the provider to confirm whether a key is active — separating real incidents from noise.</p>
+    <div class="frame" style="border-radius:8px;padding:8px 22px">
+      <div class="vrow"><span class="vk live" data-i18n="verify.live.k">Live verified</span><span class="vd" data-i18n="verify.live.d">A read-only API call confirms the key is active or inactive.</span><span class="vcount">~49</span></div>
+      <div class="vrow"><span class="vk fmt" data-i18n="verify.fmt.k">Format checked</span><span class="vd" data-i18n="verify.fmt.d">Validated by structure where no safe live check exists.</span><span class="vcount">5</span></div>
+      <div class="vrow"><span class="vk no" data-i18n="verify.no.k">Not verifiable</span><span class="vd" data-i18n="verify.no.d">No public verification API (e.g. JWTs, private keys) — still detected, triaged manually.</span><span class="vcount">9</span></div>
+    </div>
+  </section>
+
+  <!-- ===== §05 Output formats ===== -->
+  <section class="section" id="formats">
+    <div class="sec-head"><span class="idx mono-label">§ 05</span><h2 data-i18n="formats.title">Reports that fit your workflow</h2></div>
+    <div class="grid-2" style="grid-template-columns:repeat(4,1fr)">
+      <div class="card format-card reveal"><div class="fmt">JSON</div><p data-i18n="formats.json">Structured findings for tooling and automation.</p></div>
+      <div class="card format-card reveal"><div class="fmt">SARIF</div><p data-i18n="formats.sarif">v2.1.0 — upload straight to GitHub Code Scanning.</p></div>
+      <div class="card format-card reveal"><div class="fmt">CSV</div><p data-i18n="formats.csv">Spreadsheet-ready, sanitized against formula injection.</p></div>
+      <div class="card format-card reveal"><div class="fmt">Table</div><p data-i18n="formats.table">Colorized terminal output for local triage.</p></div>
+    </div>
+  </section>
+
+  <!-- ===== §06 Detector index ===== -->
+  <section class="section" id="index">
+    <div class="sec-head"><span class="idx mono-label">§ 06</span><h2 data-i18n="index.title">Redacted index — 63 detectors</h2></div>
+    <p class="sec-intro" data-i18n="index.intro">A sample of the catalog. 54 of these can be verified against the live provider. Add your own with YAML custom rules.</p>
+    <div class="index-grid">
+      <span class="idx-chip">aws-access-key-id</span><span class="idx-chip">gcp-service-account</span><span class="idx-chip">openai-api-key</span><span class="idx-chip">anthropic-api-key</span><span class="idx-chip">github-token</span><span class="idx-chip">stripe-api-key-live</span><span class="idx-chip r"></span><span class="idx-chip">slack-token</span><span class="idx-chip">twilio-api-key</span><span class="idx-chip r"></span><span class="idx-chip">datadog-api-key</span><span class="idx-chip">cloudflare-api-token</span><span class="idx-chip r"></span><span class="idx-chip">private-key</span><span class="idx-chip">jwt</span><span class="idx-chip r"></span><span class="idx-chip">supabase-service-key</span><span class="idx-chip">gitlab-pat</span><span class="idx-chip r"></span><a class="idx-chip more" href="docs.html#/detectors/detector-catalog" data-i18n="index.more">+ 45 more · view full catalog →</a>
+    </div>
+  </section>
+
+  <!-- ===== CTA ===== -->
+  <section class="section">
+    <div class="frame cta-box reveal">
+      <h2 data-i18n="cta.title">Declassify your repo</h2>
+      <p data-i18n="cta.subtitle">One static binary. No daemon, no runtime dependencies. Install it your way.</p>
+      <div class="install-tabs">
+        <div class="cmd-line" data-copy="brew install HodeTech/tap/leakwatch"><span class="p">$</span><code>brew install HodeTech/tap/leakwatch</code><button class="copy-btn" aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>
+        <div class="cmd-line" data-copy="go install github.com/HodeTech/leakwatch@latest"><span class="p">$</span><code>go install github.com/HodeTech/leakwatch@latest</code><button class="copy-btn" aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>
+        <div class="cmd-line" data-copy="docker run --rm -v $(pwd):/scan ghcr.io/hodetech/leakwatch:latest scan fs /scan"><span class="p">$</span><code>docker run --rm -v $(pwd):/scan ghcr.io/hodetech/leakwatch scan fs /scan</code><button class="copy-btn" aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>
+      </div>
+      <div style="margin-top:24px"><a class="btn btn-red btn-lg" href="docs.html"><span data-i18n="cta.button">Read the documentation</span></a></div>
+    </div>
+  </section>
+
+</div></main>
+
+<!-- ===== Footer ===== -->
+<footer class="footer"><div class="wrap">
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a class="nav-brand" href="index.html"><svg class="logo" viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect x="3" y="3" width="26" height="26" rx="4" fill="#16191e" stroke="#e6394d" stroke-width="1.4"/><rect x="8" y="11" width="16" height="3.4" fill="#000"/><rect x="8" y="17" width="10" height="3.4" fill="#000"/><circle cx="22" cy="18.7" r="2.4" fill="none" stroke="#34d39a" stroke-width="1.4"/></svg><span>Leak<b>watch</b></span></a>
+      <p data-i18n="footer.tagline">Open-source secret scanning that detects, verifies, and reports leaked credentials before they're abused.</p>
+    </div>
+    <div><h4 data-i18n="footer.product">Product</h4><ul>
+      <li><a href="#chain" data-i18n="nav.howitworks">How it works</a></li>
+      <li><a href="#points" data-i18n="nav.sources">Sources</a></li>
+      <li><a href="#index" data-i18n="nav.detectors">Detectors</a></li>
+      <li><a href="contact.html" data-i18n="nav.contact">Contact</a></li>
+    </ul></div>
+    <div><h4 data-i18n="footer.docs">Documentation</h4><ul>
+      <li><a href="docs.html#/getting-started/introduction" data-i18n="footer.intro">Introduction</a></li>
+      <li><a href="docs.html#/getting-started/quick-start" data-i18n="footer.quickstart">Quick Start</a></li>
+      <li><a href="docs.html#/reference/cli-reference" data-i18n="footer.cli">CLI Reference</a></li>
+      <li><a href="docs.html#/ci-cd/github-action" data-i18n="footer.action">GitHub Action</a></li>
+    </ul></div>
+    <div><h4 data-i18n="footer.project">Project</h4><ul>
+      <li><a href="https://github.com/HodeTech/Leakwatch" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="https://github.com/HodeTech/Leakwatch/releases" target="_blank" rel="noopener" data-i18n="footer.releases">Releases</a></li>
+      <li><a href="https://github.com/HodeTech/Leakwatch/issues" target="_blank" rel="noopener" data-i18n="footer.issues">Issues</a></li>
+      <li><a href="https://github.com/HodeTech/Leakwatch/blob/main/LICENSE" target="_blank" rel="noopener" data-i18n="footer.license">License (MIT)</a></li>
+    </ul></div>
+  </div>
+  <div class="footer-bottom"><span data-i18n="footer.copyright">© 2026 Leakwatch Contributors. Released under the MIT License.</span><span class="mono-label">v1.5.0 · concept: redacted</span></div>
+</div></footer>
+
+<script src="js/translations.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

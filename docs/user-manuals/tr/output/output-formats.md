@@ -1,0 +1,164 @@
+---
+title: "Çıktı Formatları"
+description: "Leakwatch'ın desteklediği dört çıktı formatı — JSON, SARIF, CSV ve tablo — örnekler ve her birini ne zaman kullanacağınıza dair rehberlik."
+---
+
+# Çıktı Formatları
+
+Leakwatch dört çıktı formatını destekler: makine tarafından okunabilir hatlar, güvenlik araç entegrasyonları, elektronik tablo dışa aktarmaları ve insan tarafından okunabilir terminal incelemesi. `--format` (veya `-f`) ile bir format seçin; stdout yerine bir dosyaya yazmak için `--output` (veya `-o`) kullanın.
+
+```bash
+leakwatch scan fs . --format json
+leakwatch scan fs . --format sarif --output results.sarif
+leakwatch scan fs . --format csv   --output findings.csv
+leakwatch scan fs . --format table
+```
+
+Varsayılan format `json`'dur.
+
+## JSON
+
+JSON varsayılan format ve en eksiksiz temsil biçimidir. Leakwatch, stdout'a (veya `--output` ile verilen dosyaya) bulgu nesnelerinden oluşan bir JSON **dizisi** yazar.
+
+Ham sır değeri, `--show-raw` açıkça ayarlanmadıkça **hiçbir zaman** serileştirilmez. `--show-raw` ile her nesneye bir `"raw"` alanı eklenir.
+
+### Örnek çağrı
+
+```bash
+leakwatch scan fs ./src --format json --output findings.json
+```
+
+### Örnek bulgu nesnesi
+
+```json
+{
+  "id": "a3f9c12d-8e4b-4c7a-9f2e-1b5d3a7c9e0f",
+  "detector_id": "github-token",
+  "severity": "critical",
+  "redacted": "ghp_****************************Xk9R",
+  "source": {
+    "source_type": "filesystem",
+    "file_path": "scripts/deploy.sh",
+    "line": 14
+  },
+  "verification": {
+    "status": "verified_active"
+  },
+  "entropy": 5.82,
+  "detected_at": "2026-05-23T10:15:30Z"
+}
+```
+
+`--remediation` de ayarlandığında her bulgunun içine iç içe bir `"remediation"` nesnesi yerleştirilir. Bkz. [Düzeltme Rehberi](#/output/remediation).
+
+## SARIF
+
+`sarif` formatı, [GitHub Code Scanning](https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/uploading-a-sarif-file-to-github)'e yüklenmek üzere tasarlanmış bir SARIF v2.1.0 belgesi üretir. Araç adı `Leakwatch`'tır ve `informationUri` `https://github.com/HodeTech/Leakwatch` adresine işaret eder.
+
+Bulgularda görünen her dedektör, SARIF sürücüsünde bir **kural** haline gelir; `--remediation` ayarlandığında düzeltme adımlarından doldurulan `help` metni ve sağlayıcı belgelerine işaret eden bir `helpUri` ile birlikte. Sonuçlar, dedektör ID'si, maskelenmiş değer ve dosya yolundan hesaplanan bir `leakwatch/v1` kısmi parmak izi taşır — bu, çevresindeki kod kaydığında bile GitHub Code Scanning'in aynı uyarıyı takip etmesini sağlar.
+
+### Örnek çağrı
+
+```bash
+leakwatch scan fs . --format sarif --output results.sarif
+```
+
+### GitHub Code Scanning'e yükleme
+
+```yaml
+# Bir GitHub Actions iş akışı adımında:
+- name: SARIF sonuçlarını yükle
+  uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: results.sarif
+```
+
+Tam CI kurulumu için [GitHub Action](#/ci-cd/github-action) bölümüne bakın.
+
+## CSV
+
+`csv` formatı, bir başlık satırı ve ardından bulgu başına bir satır yazar; standart virgülle ayrılmış değerler kullanır. Her hücre yazılmadan önce elektronik tablo formül enjeksiyonuna karşı sterilize edilir.
+
+**Sütunlar (varsayılan):**
+
+```text
+id,detector_id,severity,redacted,file_path,commit,verification_status,remediation
+```
+
+`--show-raw` ayarlandığında, sona bir `raw` sütunu eklenir.
+
+`remediation` sütunu, `--remediation` ayarlandığında düzeltme başlığını (örn. `"Revoke GitHub Token"`) içerir, aksi hâlde boş kalır.
+
+### Örnek çağrı
+
+```bash
+leakwatch scan git . --format csv --output findings.csv
+```
+
+### Örnek çıktı
+
+```csv
+id,detector_id,severity,redacted,file_path,commit,verification_status,remediation
+a3f9c12d-...,github-token,critical,ghp_****Xk9R,scripts/deploy.sh,7d3e1f2,verified_active,Revoke GitHub Token
+b7d2e45a-...,aws-access-key-id,high,AKIA****K7NP,config/aws.yml,7d3e1f2,unverified,Rotate AWS Access Key
+```
+
+## Tablo
+
+`table` formatı, insan tarafından okunabilir sekme hizalı bir tablo yazar; sonuçların hızlı görsel taramasını istediğiniz etkileşimli terminal oturumları için en uygun formattır.
+
+**Sütunlar:**
+
+```text
+SEVERITY | DETECTOR | FILE | REDACTED | STATUS | REMEDIATION
+```
+
+`--show-raw` ayarlandığında, sona bir `RAW` sütunu eklenir. Tablonun altına bir özet satırı yazdırılır (örn. `Found 3 secrets (1 critical, 2 high).`).
+
+**ANSI rengi**, `SEVERITY` sütununa otomatik olarak uygulanır, ancak yalnızca dört koşulun tamamı sağlandığında:
+
+1. `--format table` seçilmiş
+2. Çıktı stdout'a gidiyor (`--output <file>` yok)
+3. stdout bir TTY (pipe veya yönlendirme değil)
+4. `NO_COLOR` ortam değişkeni ayarlanmamış
+
+| Önem derecesi | Renk |
+|---|---|
+| `critical` | Kalın kırmızı |
+| `high` | Kırmızı |
+| `medium` | Sarı |
+| `low` | Mavi |
+
+### Örnek çağrı
+
+```bash
+leakwatch scan fs . --format table --min-severity high
+```
+
+### Örnek çıktı
+
+```text
+SEVERITY   DETECTOR          FILE                  REDACTED               STATUS            REMEDIATION
+--------   --------          ----                  --------               ------            -----------
+CRITICAL   github-token      scripts/deploy.sh     ghp_****Xk9R           verified_active   Revoke GitHub Token
+HIGH       aws-access-key-id config/aws.yml        AKIA****K7NP           unverified        Rotate AWS Access Key
+
+Found 2 secrets (1 critical, 1 high).
+```
+
+## Yaygın çıktı bayrakları
+
+| Bayrak | Kısa | Açıklama |
+|---|---|---|
+| `--format` | `-f` | Çıktı formatı: `json`, `sarif`, `csv`, `table` (varsayılan `json`) |
+| `--output` | `-o` | stdout yerine dosyaya yaz |
+| `--show-raw` | | Çıktıya maskelenmemiş sır değerini dahil et |
+| `--min-severity` | | Bu önem seviyesinin altındaki bulguları bırak |
+| `--only-verified` | | Yalnızca `verified_active` bulgularını tut |
+| `--remediation` | | Bulguları sağlayıcı düzeltme rehberiyle zenginleştir |
+
+## Ayrıca bakın
+
+- [Düzeltme Rehberi](#/output/remediation)
+- [GitHub Action](#/ci-cd/github-action)
+- [Doğrulama Nasıl Çalışır](#/verification/how-verification-works)
