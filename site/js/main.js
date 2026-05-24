@@ -75,9 +75,12 @@
     var redacts = doc ? [].slice.call(doc.querySelectorAll(".redact")) : [];
     var cards = doc ? [].slice.call(doc.querySelectorAll(".finding-card")) : [];
 
-    // hover-peek on any redaction bar (hero document + headline word)
-    document.querySelectorAll(".redact[data-real]").forEach(function (r) {
-      r.addEventListener("mouseenter", function () { r.classList.add("revealed"); });
+    // Hover-peek on any redaction bar (headline word, detector index chips,
+    // hero document). Delegated from document so it keeps working after the
+    // i18n layer re-renders nodes with innerHTML on a language switch.
+    document.addEventListener("mouseover", function (e) {
+      var r = e.target && e.target.closest ? e.target.closest(".redact[data-real]") : null;
+      if (r) r.classList.add("revealed");
     });
 
     function run() {

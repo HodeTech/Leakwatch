@@ -23,14 +23,14 @@ window.LW_T = {
     "nav.runscan": "▸ Run scan",
     "nav.getstarted": "Get started",
 
-    "hero.eyebrow": "Open-source secret scanner · MIT",
+    "hero.eyebrow": "Open-source secret scanner · MIT · by HodeTech",
     "hero.title": "Some secrets shouldn't be <span class=\"rd\"><span class=\"redact\" data-real=\"visible\">visible</span></span>.<br>Leakwatch finds the ones that are.",
     "hero.lede": "Detect, verify, and report leaked API keys, tokens, and credentials across code, Git history, containers, and the cloud — then watch the redactions lift.",
     "hero.cta.run": "▸ Run the scan",
     "hero.cta.docs": "Read the docs",
     "hero.kv": "63 detectors · 54 live verifiers · 6 sources · exit-code aware",
     "hero.doc.redacted": "3 REDACTED",
-    "hero.doc.hint": "hover a redaction to reveal it",
+    "hero.doc.hint": "Leakwatch finds the secrets that shouldn't be visible.",
 
     "stats.detectors": "secret detectors",
     "stats.verifiers": "live verifiers",
@@ -97,7 +97,7 @@ window.LW_T = {
     "cta.subtitle": "One static binary. No daemon, no runtime dependencies. Install it your way.",
     "cta.button": "Read the documentation",
 
-    "footer.tagline": "Open-source secret scanning that detects, verifies, and reports leaked credentials before they're abused.",
+    "footer.tagline": "Leakwatch is an open-source secret-scanning tool maintained by HodeTech. It detects, verifies, and reports leaked credentials before they're abused.",
     "footer.product": "Product",
     "footer.docs": "Documentation",
     "footer.project": "Project",
@@ -108,7 +108,7 @@ window.LW_T = {
     "footer.releases": "Releases",
     "footer.issues": "Issues",
     "footer.license": "License (MIT)",
-    "footer.copyright": "© 2026 Leakwatch Contributors. Released under the MIT License.",
+    "footer.copyright": "© 2026 HodeTech · Leakwatch is open source under the MIT License.",
 
     "docs.search": "Search the manual…",
     "docs.loading": "Loading documentation…",
@@ -196,14 +196,14 @@ window.LW_T = {
     "nav.runscan": "▸ Taramayı çalıştır",
     "nav.getstarted": "Başlayın",
 
-    "hero.eyebrow": "Açık kaynak sır tarayıcı · MIT",
+    "hero.eyebrow": "Açık kaynak sır tarayıcı · MIT · HodeTech",
     "hero.title": "Bazı sırlar <span class=\"rd\"><span class=\"redact\" data-real=\"görünür\">görünür</span></span> olmamalı.<br>Leakwatch görünür olanları bulur.",
     "hero.lede": "Sızan API anahtarlarını, token'ları ve kimlik bilgilerini kodda, Git geçmişinde, konteynerlerde ve bulutta tespit edin, doğrulayın ve raporlayın — sonra sansürlerin kalkışını izleyin.",
     "hero.cta.run": "▸ Taramayı çalıştır",
     "hero.cta.docs": "Dokümanları oku",
     "hero.kv": "63 dedektör · 54 canlı doğrulayıcı · 6 kaynak · çıkış-kodu duyarlı",
     "hero.doc.redacted": "3 REDAKTE",
-    "hero.doc.hint": "bir redaksiyonun üzerine gelin, açılsın",
+    "hero.doc.hint": "Leakwatch, görünür olmaması gereken sırları bulur.",
 
     "stats.detectors": "sır dedektörü",
     "stats.verifiers": "canlı doğrulayıcı",
@@ -270,7 +270,7 @@ window.LW_T = {
     "cta.subtitle": "Tek bir statik ikili dosya. Daemon yok, çalışma zamanı bağımlılığı yok. İstediğiniz yöntemle kurun.",
     "cta.button": "Dokümantasyonu okuyun",
 
-    "footer.tagline": "Sızan kimlik bilgilerini kötüye kullanılmadan önce tespit eden, doğrulayan ve raporlayan açık kaynaklı sır taraması.",
+    "footer.tagline": "Leakwatch, HodeTech tarafından geliştirilip sürdürülen açık kaynaklı bir sır tarama aracıdır. Sızan kimlik bilgilerini kötüye kullanılmadan önce tespit eder, doğrular ve raporlar.",
     "footer.product": "Ürün",
     "footer.docs": "Dokümantasyon",
     "footer.project": "Proje",
@@ -281,7 +281,7 @@ window.LW_T = {
     "footer.releases": "Sürümler",
     "footer.issues": "Sorunlar",
     "footer.license": "Lisans (MIT)",
-    "footer.copyright": "© 2026 Leakwatch Katkıda Bulunanlar. MIT Lisansı altında yayımlanmıştır.",
+    "footer.copyright": "© 2026 HodeTech · Leakwatch, MIT Lisansı altında açık kaynaktır.",
 
     "docs.search": "Kılavuzda ara…",
     "docs.loading": "Dokümantasyon yükleniyor…",
