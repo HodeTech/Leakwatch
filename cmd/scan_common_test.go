@@ -7,11 +7,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	csvout "github.com/cemililik/leakwatch/internal/output/csv"
-	jsonout "github.com/cemililik/leakwatch/internal/output/json"
-	sarifout "github.com/cemililik/leakwatch/internal/output/sarif"
-	tableout "github.com/cemililik/leakwatch/internal/output/table"
-	"github.com/cemililik/leakwatch/pkg/finding"
+	csvout "github.com/HodeTech/leakwatch/internal/output/csv"
+	jsonout "github.com/HodeTech/leakwatch/internal/output/json"
+	sarifout "github.com/HodeTech/leakwatch/internal/output/sarif"
+	tableout "github.com/HodeTech/leakwatch/internal/output/table"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 func TestParseSeverity_ValidInputs_ReturnsCorrectSeverity(t *testing.T) {

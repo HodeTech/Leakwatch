@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/cemililik/leakwatch/internal/source/filesystem"
+	"github.com/HodeTech/leakwatch/internal/source/filesystem"
 )
 
 var scanFsCmd = &cobra.Command{

@@ -11,8 +11,8 @@ Detect leaked secrets directly in your editor with real-time diagnostics.
 
 ## Requirements
 
-- [Leakwatch CLI](https://github.com/cemililik/Leakwatch) must be installed and available in your `PATH`
-- Install via: `go install github.com/cemililik/leakwatch@latest` or `brew install leakwatch`
+- [Leakwatch CLI](https://github.com/HodeTech/Leakwatch) must be installed and available in your `PATH`
+- Install via: `go install github.com/HodeTech/leakwatch@latest` or `brew install leakwatch`
 
 ## Commands
 

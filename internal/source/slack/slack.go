@@ -11,8 +11,8 @@ import (
 	"github.com/slack-go/slack"
 	"golang.org/x/time/rate"
 
-	"github.com/cemililik/leakwatch/internal/source"
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/internal/source"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 const (

@@ -5,8 +5,8 @@ import (
 	"context"
 	"regexp"
 
-	"github.com/cemililik/leakwatch/internal/detector"
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/internal/detector"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 var postmarkTokenPattern = regexp.MustCompile(`(?:POSTMARK_SERVER_TOKEN|postmark_server_token|X-Postmark-Server-Token)\s*[=:]\s*['"]?([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})['"]?`)

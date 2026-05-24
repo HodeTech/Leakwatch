@@ -5,8 +5,8 @@ import (
 	"context"
 	"regexp"
 
-	"github.com/cemililik/leakwatch/internal/detector"
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/internal/detector"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 var terraformTokenPattern = regexp.MustCompile(`[a-zA-Z0-9]{14}\.atlasv1\.[a-zA-Z0-9]{67,}`)

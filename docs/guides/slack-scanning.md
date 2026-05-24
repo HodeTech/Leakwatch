@@ -282,7 +282,7 @@ jobs:
           go-version: '1.25'
 
       - name: Install Leakwatch
-        run: go install github.com/cemililik/leakwatch@latest
+        run: go install github.com/HodeTech/leakwatch@latest
 
       - name: Scan Slack workspace
         env:

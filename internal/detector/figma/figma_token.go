@@ -5,8 +5,8 @@ import (
 	"context"
 	"regexp"
 
-	"github.com/cemililik/leakwatch/internal/detector"
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/internal/detector"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 var figmaTokenPattern = regexp.MustCompile(`figd_[A-Za-z0-9_-]{40,}`)

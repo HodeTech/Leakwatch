@@ -9,7 +9,7 @@ import (
 
 	"github.com/cloudflare/ahocorasick"
 
-	"github.com/cemililik/leakwatch/internal/detector"
+	"github.com/HodeTech/leakwatch/internal/detector"
 )
 
 // Matcher performs Aho-Corasick keyword pre-filtering to determine which

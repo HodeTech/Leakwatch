@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/cemililik/leakwatch/internal/detector"
-	"github.com/cemililik/leakwatch/internal/entropy"
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/internal/detector"
+	"github.com/HodeTech/leakwatch/internal/entropy"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 // maxRegexLength is the maximum allowed length of a custom rule regex pattern.

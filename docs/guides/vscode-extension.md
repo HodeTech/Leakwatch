@@ -33,7 +33,7 @@ leakwatch version
 
 ### 2.2 Install from VSIX
 
-Download the `.vsix` package from the [GitHub Releases](https://github.com/cemililik/Leakwatch/releases) page, then install it in VS Code:
+Download the `.vsix` package from the [GitHub Releases](https://github.com/HodeTech/Leakwatch/releases) page, then install it in VS Code:
 
 ```bash
 code --install-extension leakwatch-0.1.0.vsix
@@ -53,7 +53,7 @@ Once published, the extension will be available on the VS Code Marketplace:
 
 ```bash
 # Clone the repository
-git clone https://github.com/cemililik/Leakwatch.git
+git clone https://github.com/HodeTech/Leakwatch.git
 cd Leakwatch/vscode
 
 # Install dependencies

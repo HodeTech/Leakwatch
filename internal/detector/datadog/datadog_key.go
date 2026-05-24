@@ -5,8 +5,8 @@ import (
 	"context"
 	"regexp"
 
-	"github.com/cemililik/leakwatch/internal/detector"
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/internal/detector"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 var datadogKeyPattern = regexp.MustCompile(`(?:DD_API_KEY|DATADOG_API_KEY|datadog_api_key)\s*[=:]\s*['"]?([a-fA-F0-9]{32})['"]?`)

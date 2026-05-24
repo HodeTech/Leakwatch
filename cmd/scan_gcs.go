@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	gcssource "github.com/cemililik/leakwatch/internal/source/gcs"
+	gcssource "github.com/HodeTech/leakwatch/internal/source/gcs"
 )
 
 var scanGCSCmd = &cobra.Command{

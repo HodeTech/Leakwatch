@@ -1,6 +1,6 @@
 package remediation
 
-import "github.com/cemililik/leakwatch/pkg/finding"
+import "github.com/HodeTech/leakwatch/pkg/finding"
 
 // Reusable step and checklist strings to keep guidance consistent and
 // minimize duplication across providers.

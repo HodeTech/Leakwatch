@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 // Formatter outputs findings in JSON format.

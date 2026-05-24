@@ -6,8 +6,8 @@ package testutil
 import (
 	"context"
 
-	"github.com/cemililik/leakwatch/internal/detector"
-	"github.com/cemililik/leakwatch/internal/matcher"
+	"github.com/HodeTech/leakwatch/internal/detector"
+	"github.com/HodeTech/leakwatch/internal/matcher"
 )
 
 // ScanViaMatcher runs det through the real Aho-Corasick matcher gate before

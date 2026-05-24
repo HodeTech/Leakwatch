@@ -33,7 +33,7 @@ func init() {
 }
 
 const defaultConfig = `# Leakwatch Configuration
-# Documentation: https://github.com/cemililik/Leakwatch/blob/main/docs/guides/configuration.md
+# Documentation: https://github.com/HodeTech/Leakwatch/blob/main/docs/guides/configuration.md
 
 scan:
   concurrency: 8          # Number of concurrent workers

@@ -3,11 +3,11 @@
   "displayName": "Leakwatch",
   "description": "Detect leaked secrets in your code with Leakwatch",
   "version": "0.1.0",
-  "publisher": "cemililik",
+  "publisher": "HodeTech",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/cemililik/Leakwatch"
+    "url": "https://github.com/HodeTech/Leakwatch"
   },
   "engines": {
     "vscode": "^1.85.0"

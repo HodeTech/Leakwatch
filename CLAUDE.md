@@ -8,7 +8,7 @@ Leakwatch is a high-performance, open source (MIT) security tool that detects, v
 
 **Language:** Go (1.25+)
 **License:** MIT
-**Repo:** https://github.com/cemililik/Leakwatch
+**Repo:** https://github.com/HodeTech/Leakwatch
 
 ## Project Structure
 

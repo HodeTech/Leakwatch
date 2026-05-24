@@ -12,31 +12,31 @@ Leakwatch is available as a container image from GitHub Container Registry. No i
 
 ```bash
 # Pull the latest image
-docker pull ghcr.io/cemililik/leakwatch:latest
+docker pull ghcr.io/hodetech/leakwatch:latest
 ```
 
 ### Scan a Local Directory (Filesystem)
 
 ```bash
-docker run --rm -v "$(pwd):/scan" ghcr.io/cemililik/leakwatch:latest scan fs /scan
+docker run --rm -v "$(pwd):/scan" ghcr.io/hodetech/leakwatch:latest scan fs /scan
 ```
 
 ### Scan a Remote Git Repository
 
 ```bash
-docker run --rm ghcr.io/cemililik/leakwatch:latest scan git https://github.com/org/repo.git
+docker run --rm ghcr.io/hodetech/leakwatch:latest scan git https://github.com/org/repo.git
 ```
 
 ### Scan a Local Git Repository
 
 ```bash
-docker run --rm -v "/path/to/repo:/scan" ghcr.io/cemililik/leakwatch:latest scan git /scan
+docker run --rm -v "/path/to/repo:/scan" ghcr.io/hodetech/leakwatch:latest scan git /scan
 ```
 
 ### Scan a Container Image
 
 ```bash
-docker run --rm ghcr.io/cemililik/leakwatch:latest scan image nginx:latest
+docker run --rm ghcr.io/hodetech/leakwatch:latest scan image nginx:latest
 ```
 
 ### Scan an S3 Bucket
@@ -46,7 +46,7 @@ docker run --rm \
   -e AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY \
   -e AWS_REGION=us-east-1 \
-  ghcr.io/cemililik/leakwatch:latest scan s3 my-bucket --prefix prefix/
+  ghcr.io/hodetech/leakwatch:latest scan s3 my-bucket --prefix prefix/
 ```
 
 ### Scan a GCS Bucket
@@ -54,7 +54,7 @@ docker run --rm \
 ```bash
 docker run --rm \
   -v "$HOME/.config/gcloud:/home/leakwatch/.config/gcloud:ro" \
-  ghcr.io/cemililik/leakwatch:latest scan gcs my-bucket --prefix prefix/
+  ghcr.io/hodetech/leakwatch:latest scan gcs my-bucket --prefix prefix/
 ```
 
 ### Scan Summary
@@ -62,7 +62,7 @@ docker run --rm \
 Every scan prints a summary to stderr showing source, duration, file count, and findings count. When writing output to a file with `--output`, the summary still appears in the terminal:
 
 ```bash
-docker run --rm -v "$(pwd):/scan:ro" ghcr.io/cemililik/leakwatch:latest scan fs /scan
+docker run --rm -v "$(pwd):/scan:ro" ghcr.io/hodetech/leakwatch:latest scan fs /scan
 ```
 
 ```
@@ -108,7 +108,7 @@ For filesystem scans, mount the source directory as read-only for an additional 
 ```bash
 docker run --rm \
   -v "/path/to/project:/scan:ro" \
-  ghcr.io/cemililik/leakwatch:latest scan fs /scan
+  ghcr.io/hodetech/leakwatch:latest scan fs /scan
 ```
 
 ### Writing Output to Host
@@ -119,7 +119,7 @@ To save scan results to a file on the host, mount an output directory:
 docker run --rm \
   -v "$(pwd):/scan:ro" \
   -v "/tmp/results:/output" \
-  ghcr.io/cemililik/leakwatch:latest scan fs /scan \
+  ghcr.io/hodetech/leakwatch:latest scan fs /scan \
     --format sarif --output /output/results.sarif
 ```
 
@@ -133,15 +133,15 @@ When scanning remote Git repositories, no volume mount is needed. Leakwatch clon
 
 ```bash
 # Full history scan
-docker run --rm ghcr.io/cemililik/leakwatch:latest \
+docker run --rm ghcr.io/hodetech/leakwatch:latest \
   scan git https://github.com/org/repo.git
 
 # Shallow clone for faster scanning
-docker run --rm ghcr.io/cemililik/leakwatch:latest \
+docker run --rm ghcr.io/hodetech/leakwatch:latest \
   scan git https://github.com/org/repo.git --depth 50
 
 # Specific branch
-docker run --rm ghcr.io/cemililik/leakwatch:latest \
+docker run --rm ghcr.io/hodetech/leakwatch:latest \
   scan git https://github.com/org/repo.git --branch main
 ```
 
@@ -153,13 +153,13 @@ For private repositories that require authentication, pass credentials via envir
 # it does NOT honor git-CLI variables such as GIT_ASKPASS / GIT_PASSWORD.
 # The display URL is credential-stripped in logs and output.
 docker run --rm \
-  ghcr.io/cemililik/leakwatch:latest \
+  ghcr.io/hodetech/leakwatch:latest \
   scan git https://x-access-token:ghp_xxxxxxxxxxxx@github.com/org/private-repo.git
 
 # SSH key mount
 docker run --rm \
   -v "$HOME/.ssh:/home/leakwatch/.ssh:ro" \
-  ghcr.io/cemililik/leakwatch:latest \
+  ghcr.io/hodetech/leakwatch:latest \
   scan git git@github.com:org/private-repo.git
 ```
 
@@ -179,13 +179,13 @@ No special configuration needed. Leakwatch pulls and analyzes image layers direc
 
 ```bash
 # Docker Hub
-docker run --rm ghcr.io/cemililik/leakwatch:latest scan image nginx:latest
+docker run --rm ghcr.io/hodetech/leakwatch:latest scan image nginx:latest
 
 # GHCR
-docker run --rm ghcr.io/cemililik/leakwatch:latest scan image ghcr.io/org/app:v1.2.3
+docker run --rm ghcr.io/hodetech/leakwatch:latest scan image ghcr.io/org/app:v1.2.3
 
 # ECR
-docker run --rm ghcr.io/cemililik/leakwatch:latest scan image \
+docker run --rm ghcr.io/hodetech/leakwatch:latest scan image \
   123456789.dkr.ecr.eu-west-1.amazonaws.com/my-app:latest
 ```
 
@@ -215,7 +215,7 @@ For private registries, mount your Docker config:
 ```bash
 docker run --rm \
   -v "$HOME/.docker/config.json:/home/leakwatch/.docker/config.json:ro" \
-  ghcr.io/cemililik/leakwatch:latest scan image registry.example.com/team/service:main
+  ghcr.io/hodetech/leakwatch:latest scan image registry.example.com/team/service:main
 ```
 
 ---
@@ -233,7 +233,7 @@ docker run --rm \
   -e AWS_SESSION_TOKEN \
   -e AWS_REGION=us-east-1 \
   -v "$(pwd):/scan:ro" \
-  ghcr.io/cemililik/leakwatch:latest scan fs /scan
+  ghcr.io/hodetech/leakwatch:latest scan fs /scan
 ```
 
 Alternatively, mount the AWS credentials file:
@@ -242,7 +242,7 @@ Alternatively, mount the AWS credentials file:
 docker run --rm \
   -v "$HOME/.aws:/home/leakwatch/.aws:ro" \
   -v "$(pwd):/scan:ro" \
-  ghcr.io/cemililik/leakwatch:latest scan fs /scan
+  ghcr.io/hodetech/leakwatch:latest scan fs /scan
 ```
 
 ### GCP Credentials
@@ -253,13 +253,13 @@ For GCS scanning, mount the Application Default Credentials or set the service a
 # Application Default Credentials
 docker run --rm \
   -v "$HOME/.config/gcloud:/home/leakwatch/.config/gcloud:ro" \
-  ghcr.io/cemililik/leakwatch:latest scan gcs my-bucket
+  ghcr.io/hodetech/leakwatch:latest scan gcs my-bucket
 
 # Service account key
 docker run --rm \
   -e GOOGLE_APPLICATION_CREDENTIALS=/creds/sa-key.json \
   -v "/path/to/sa-key.json:/creds/sa-key.json:ro" \
-  ghcr.io/cemililik/leakwatch:latest scan gcs my-bucket
+  ghcr.io/hodetech/leakwatch:latest scan gcs my-bucket
 ```
 
 ### Verification Control
@@ -268,14 +268,14 @@ docker run --rm \
 # Disable verification (no outbound API calls)
 docker run --rm \
   -v "$(pwd):/scan:ro" \
-  ghcr.io/cemililik/leakwatch:latest scan fs /scan --no-verify
+  ghcr.io/hodetech/leakwatch:latest scan fs /scan --no-verify
 
 # Only show verified active secrets
 docker run --rm \
   -e AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY \
   -v "$(pwd):/scan:ro" \
-  ghcr.io/cemililik/leakwatch:latest scan fs /scan --only-verified
+  ghcr.io/hodetech/leakwatch:latest scan fs /scan --only-verified
 ```
 
 ---
@@ -287,7 +287,7 @@ docker run --rm \
 ```yaml
 services:
   leakwatch:
-    image: ghcr.io/cemililik/leakwatch:latest
+    image: ghcr.io/hodetech/leakwatch:latest
     volumes:
       - ./:/scan:ro
       - ./reports:/output
@@ -305,7 +305,7 @@ docker compose run --rm leakwatch
 ```yaml
 services:
   leakwatch:
-    image: ghcr.io/cemililik/leakwatch:latest
+    image: ghcr.io/hodetech/leakwatch:latest
     volumes:
       - ./:/scan:ro
       - ./reports:/output
@@ -321,14 +321,14 @@ services:
 ```yaml
 services:
   scan-api:
-    image: ghcr.io/cemililik/leakwatch:latest
+    image: ghcr.io/hodetech/leakwatch:latest
     volumes:
       - ../api-service:/scan:ro
       - ./reports:/output
     command: scan fs /scan --format json --output /output/api-results.json
 
   scan-web:
-    image: ghcr.io/cemililik/leakwatch:latest
+    image: ghcr.io/hodetech/leakwatch:latest
     volumes:
       - ../web-app:/scan:ro
       - ./reports:/output
@@ -363,7 +363,7 @@ jobs:
         run: |
           docker run --rm \
             -v "${{ github.workspace }}:/scan:ro" \
-            ghcr.io/cemililik/leakwatch:latest \
+            ghcr.io/hodetech/leakwatch:latest \
             scan git /scan --since-commit HEAD~1 \
               --only-verified --min-severity high \
               --format sarif --output /dev/stdout > results.sarif
@@ -380,7 +380,7 @@ jobs:
 ```yaml
 secret-scan:
   stage: test
-  image: ghcr.io/cemililik/leakwatch:latest
+  image: ghcr.io/hodetech/leakwatch:latest
   script:
     - leakwatch scan git . --since-commit HEAD~1 --min-severity high --format json --output results.json
   artifacts:
@@ -401,7 +401,7 @@ pipeline {
                 sh '''
                     docker run --rm \
                       -v "${WORKSPACE}:/scan:ro" \
-                      ghcr.io/cemililik/leakwatch:latest \
+                      ghcr.io/hodetech/leakwatch:latest \
                       scan fs /scan --min-severity high --format table
                 '''
             }
@@ -448,7 +448,7 @@ There is no standalone rules file. Custom rules are defined under the
 contains them to the home directory, which Leakwatch loads as the global config:
 
 ```dockerfile
-FROM ghcr.io/cemililik/leakwatch:latest
+FROM ghcr.io/hodetech/leakwatch:latest
 
 # .leakwatch.yaml here must include the custom rules under `custom-rules:`
 COPY .leakwatch.yaml /home/leakwatch/.leakwatch.yaml
@@ -461,7 +461,7 @@ home directory (`~/.leakwatch.yaml`). Copy your config to the home directory so 
 applies to every scan regardless of the mounted working directory:
 
 ```dockerfile
-FROM ghcr.io/cemililik/leakwatch:latest
+FROM ghcr.io/hodetech/leakwatch:latest
 
 COPY .leakwatch.yaml /home/leakwatch/.leakwatch.yaml
 ```
@@ -472,14 +472,14 @@ Alternatively, point at a config explicitly with `--config`:
 docker run --rm \
   -v "$(pwd):/scan:ro" \
   -v "$(pwd)/.leakwatch.yaml:/cfg/.leakwatch.yaml:ro" \
-  ghcr.io/cemililik/leakwatch:latest scan fs /scan --config /cfg/.leakwatch.yaml
+  ghcr.io/hodetech/leakwatch:latest scan fs /scan --config /cfg/.leakwatch.yaml
 ```
 
 ### Building from Source
 
 ```bash
 # Clone the repository
-git clone https://github.com/cemililik/Leakwatch.git
+git clone https://github.com/HodeTech/Leakwatch.git
 cd Leakwatch
 
 # Build the Docker image
@@ -536,7 +536,7 @@ When scanning remote Git repositories, Leakwatch clones them to a temporary dire
 ```bash
 docker run --rm \
   --tmpfs /tmp:size=1g \
-  ghcr.io/cemililik/leakwatch:latest \
+  ghcr.io/hodetech/leakwatch:latest \
   scan git https://github.com/org/repo.git
 ```
 
@@ -549,7 +549,7 @@ docker run --rm \
   --memory=512m \
   --cpus=2 \
   -v "$(pwd):/scan:ro" \
-  ghcr.io/cemililik/leakwatch:latest scan fs /scan --concurrency 2
+  ghcr.io/hodetech/leakwatch:latest scan fs /scan --concurrency 2
 ```
 
 ### Match Concurrency to Available CPUs
@@ -560,7 +560,7 @@ The `--concurrency` flag should match the CPUs allocated to the container:
 docker run --rm \
   --cpus=4 \
   -v "$(pwd):/scan:ro" \
-  ghcr.io/cemililik/leakwatch:latest scan fs /scan --concurrency 4
+  ghcr.io/hodetech/leakwatch:latest scan fs /scan --concurrency 4
 ```
 
 ### Skip Verification for Speed
@@ -570,7 +570,7 @@ If you only need detection without verification (e.g., in a pre-commit hook), sk
 ```bash
 docker run --rm \
   -v "$(pwd):/scan:ro" \
-  ghcr.io/cemililik/leakwatch:latest scan fs /scan --no-verify
+  ghcr.io/hodetech/leakwatch:latest scan fs /scan --no-verify
 ```
 
 ---

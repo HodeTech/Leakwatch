@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/cemililik/leakwatch/internal/source"
+	"github.com/HodeTech/leakwatch/internal/source"
 )
 
 // mockS3Client is a minimal mock for the s3Client interface.

@@ -8,14 +8,14 @@ import (
 	"io"
 	"strings"
 
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 const (
 	sarifSchema    = "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json"
 	sarifVersion   = "2.1.0"
 	toolName       = "Leakwatch"
-	toolInfoURI    = "https://github.com/cemililik/Leakwatch"
+	toolInfoURI    = "https://github.com/HodeTech/Leakwatch"
 	toolVersion    = "dev"
 	rawPropertyKey = "raw"
 )

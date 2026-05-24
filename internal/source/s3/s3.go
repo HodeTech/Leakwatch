@@ -13,9 +13,9 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	"github.com/cemililik/leakwatch/internal/filter"
-	"github.com/cemililik/leakwatch/internal/source"
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/internal/filter"
+	"github.com/HodeTech/leakwatch/internal/source"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 // defaultMaxFileSize is the maximum object size to scan (10 MB).

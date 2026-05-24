@@ -7,8 +7,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/cemililik/leakwatch/internal/detector"
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/internal/detector"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 var connStringPattern = regexp.MustCompile(`(postgres|mysql|mongodb(\+srv)?|redis)://[^\s'"]+@[^\s'"]+`)

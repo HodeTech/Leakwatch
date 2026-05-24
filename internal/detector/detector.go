@@ -4,7 +4,7 @@ package detector
 import (
 	"context"
 
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 // Detector represents a component that detects a specific secret type.

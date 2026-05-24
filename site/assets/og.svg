@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse"><stop stop-color="#0c0d10"/><stop offset="1" stop-color="#0a0b0d"/></linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#23272e" stroke-width="1" opacity="0.4"/></pattern>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  <rect x="0" y="0" width="1200" height="34" fill="#e6394d"/>
+  <text x="56" y="23" fill="#0a0b0d" font-family="'JetBrains Mono',monospace" font-size="14" font-weight="700" letter-spacing="5">CLASSIFIED — LEAKWATCH FIELD REPORT</text>
+
+  <g transform="translate(72,150)"><g transform="scale(3.1)">
+    <rect x="2.5" y="2.5" width="27" height="27" rx="5" fill="#16191e" stroke="#e6394d" stroke-width="1.6"/>
+    <rect x="7.5" y="10.5" width="17" height="3.6" rx="1" fill="#000"/>
+    <rect x="7.5" y="16.5" width="10.5" height="3.6" rx="1" fill="#000"/>
+    <circle cx="22" cy="18.8" r="2.6" fill="none" stroke="#34d39a" stroke-width="1.7"/>
+  </g></g>
+  <text x="200" y="232" fill="#f1eee5" font-family="'Space Grotesk',sans-serif" font-size="70" font-weight="700">Leak<tspan fill="#ff6377">watch</tspan></text>
+
+  <text x="72" y="350" fill="#f1eee5" font-family="'Space Grotesk',sans-serif" font-size="52" font-weight="700">Some secrets shouldn't be <tspan fill="#0a0b0d">█████████</tspan>.</text>
+  <text x="72" y="412" fill="#8b9098" font-family="'JetBrains Mono',monospace" font-size="26">Leakwatch finds the ones that are — detect · verify · report.</text>
+
+  <g font-family="'JetBrains Mono',monospace" font-size="24" font-weight="700">
+    <text x="72" y="510" fill="#34d39a">63 detectors</text>
+    <text x="320" y="510" fill="#f0b429">54 live verifiers</text>
+    <text x="600" y="510" fill="#5aa9e6">6 sources</text>
+    <text x="800" y="510" fill="#ff6377">SARIF · JSON · CSV</text>
+  </g>
+  <text x="72" y="578" fill="#5b616b" font-family="'JetBrains Mono',monospace" font-size="20">github.com/HodeTech/Leakwatch · MIT</text>
+</svg>

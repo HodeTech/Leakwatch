@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/viper"
 
-	"github.com/cemililik/leakwatch/internal/detector/custom"
+	"github.com/HodeTech/leakwatch/internal/detector/custom"
 )
 
 // Supported output formats.

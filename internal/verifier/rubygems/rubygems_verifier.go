@@ -6,10 +6,10 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/cemililik/leakwatch/internal/detector"
-	"github.com/cemililik/leakwatch/internal/verifier"
-	"github.com/cemililik/leakwatch/internal/verifier/internal/httpx"
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/internal/detector"
+	"github.com/HodeTech/leakwatch/internal/verifier"
+	"github.com/HodeTech/leakwatch/internal/verifier/internal/httpx"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 const detectorID = "rubygems-api-key"

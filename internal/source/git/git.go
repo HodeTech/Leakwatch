@@ -15,9 +15,9 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 
-	"github.com/cemililik/leakwatch/internal/filter"
-	"github.com/cemililik/leakwatch/internal/source"
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/internal/filter"
+	"github.com/HodeTech/leakwatch/internal/source"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 // maxSeenEntries is the upper bound for the blob deduplication map.

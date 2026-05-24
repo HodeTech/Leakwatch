@@ -32,11 +32,11 @@ checksum:
 
 brews:
   - repository:
-      owner: cemililik
+      owner: HodeTech
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     directory: Formula
-    homepage: https://github.com/cemililik/Leakwatch
+    homepage: https://github.com/HodeTech/Leakwatch
     description: High-performance secret scanner for codebases, Git histories, and container images
     license: MIT
     test: |
@@ -44,7 +44,7 @@ brews:
 
 dockers:
   - image_templates:
-      - ghcr.io/cemililik/leakwatch:{{ .Version }}-amd64
+      - ghcr.io/hodetech/leakwatch:{{ .Version }}-amd64
     dockerfile: Dockerfile.goreleaser
     use: buildx
     goos: linux
@@ -54,11 +54,11 @@ dockers:
       - --label=org.opencontainers.image.title={{ .ProjectName }}
       - --label=org.opencontainers.image.version={{ .Version }}
       - --label=org.opencontainers.image.revision={{ .FullCommit }}
-      - --label=org.opencontainers.image.source=https://github.com/cemililik/Leakwatch
+      - --label=org.opencontainers.image.source=https://github.com/HodeTech/Leakwatch
       - --label=org.opencontainers.image.licenses=MIT
 
   - image_templates:
-      - ghcr.io/cemililik/leakwatch:{{ .Version }}-arm64
+      - ghcr.io/hodetech/leakwatch:{{ .Version }}-arm64
     dockerfile: Dockerfile.goreleaser
     use: buildx
     goos: linux
@@ -68,24 +68,24 @@ dockers:
       - --label=org.opencontainers.image.title={{ .ProjectName }}
       - --label=org.opencontainers.image.version={{ .Version }}
       - --label=org.opencontainers.image.revision={{ .FullCommit }}
-      - --label=org.opencontainers.image.source=https://github.com/cemililik/Leakwatch
+      - --label=org.opencontainers.image.source=https://github.com/HodeTech/Leakwatch
       - --label=org.opencontainers.image.licenses=MIT
 
 docker_manifests:
-  - name_template: ghcr.io/cemililik/leakwatch:{{ .Version }}
+  - name_template: ghcr.io/hodetech/leakwatch:{{ .Version }}
     image_templates:
-      - ghcr.io/cemililik/leakwatch:{{ .Version }}-amd64
-      - ghcr.io/cemililik/leakwatch:{{ .Version }}-arm64
+      - ghcr.io/hodetech/leakwatch:{{ .Version }}-amd64
+      - ghcr.io/hodetech/leakwatch:{{ .Version }}-arm64
 
-  - name_template: ghcr.io/cemililik/leakwatch:latest
+  - name_template: ghcr.io/hodetech/leakwatch:latest
     image_templates:
-      - ghcr.io/cemililik/leakwatch:{{ .Version }}-amd64
-      - ghcr.io/cemililik/leakwatch:{{ .Version }}-arm64
+      - ghcr.io/hodetech/leakwatch:{{ .Version }}-amd64
+      - ghcr.io/hodetech/leakwatch:{{ .Version }}-arm64
 
-  - name_template: ghcr.io/cemililik/leakwatch:v{{ .Major }}.{{ .Minor }}
+  - name_template: ghcr.io/hodetech/leakwatch:v{{ .Major }}.{{ .Minor }}
     image_templates:
-      - ghcr.io/cemililik/leakwatch:{{ .Version }}-amd64
-      - ghcr.io/cemililik/leakwatch:{{ .Version }}-arm64
+      - ghcr.io/hodetech/leakwatch:{{ .Version }}-amd64
+      - ghcr.io/hodetech/leakwatch:{{ .Version }}-arm64
 
 changelog:
   sort: asc

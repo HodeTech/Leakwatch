@@ -5,7 +5,7 @@ Thank you for your interest in contributing to Leakwatch!
 ## Development Environment
 
 ```bash
-git clone https://github.com/cemililik/Leakwatch.git
+git clone https://github.com/HodeTech/Leakwatch.git
 cd Leakwatch
 go mod download
 go test -race ./...

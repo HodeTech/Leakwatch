@@ -5,8 +5,8 @@ import (
 	"context"
 	"regexp"
 
-	"github.com/cemililik/leakwatch/internal/detector"
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/internal/detector"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 var teamsWebhookPattern = regexp.MustCompile(`https://[a-zA-Z0-9-]+\.webhook\.office\.com/webhookb2/[a-f0-9-]+/IncomingWebhook/[a-f0-9]+/[a-f0-9-]+`)

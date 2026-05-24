@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/cemililik/leakwatch/internal/detector"
-	"github.com/cemililik/leakwatch/internal/verifier"
-	"github.com/cemililik/leakwatch/internal/verifier/internal/vtest"
+	"github.com/HodeTech/leakwatch/internal/detector"
+	"github.com/HodeTech/leakwatch/internal/verifier"
+	"github.com/HodeTech/leakwatch/internal/verifier/internal/vtest"
 )
 
 func TestVerify_SharedSafetySuite(t *testing.T) {

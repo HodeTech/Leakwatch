@@ -4,8 +4,8 @@ import (
 	"context"
 	"regexp"
 
-	"github.com/cemililik/leakwatch/internal/detector"
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/internal/detector"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 var azureEntraPattern = regexp.MustCompile(`(?:AZURE_CLIENT_SECRET|azure_client_secret|client_secret)\s*[=:]\s*['"]?([A-Za-z0-9~._-]{34,40})['"]?`)

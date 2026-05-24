@@ -4,7 +4,7 @@ package source
 import (
 	"context"
 
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 // Source represents a data source to be scanned.

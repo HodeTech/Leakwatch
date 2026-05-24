@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/cemililik/leakwatch/internal/source"
+	"github.com/HodeTech/leakwatch/internal/source"
 )
 
 func TestContainerSource_Type_ReturnsContainer(t *testing.T) {

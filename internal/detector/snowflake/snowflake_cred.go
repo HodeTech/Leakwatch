@@ -6,8 +6,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/cemililik/leakwatch/internal/detector"
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/internal/detector"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 var snowflakeCredPattern = regexp.MustCompile(`snowflakecomputing\.com[^\s]*(?:password|pwd|PWD|PASSWORD)\s*=\s*([^&\s'"]+)`)

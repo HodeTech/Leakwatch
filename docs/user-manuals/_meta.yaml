@@ -1,0 +1,121 @@
+# Leakwatch user-manual navigation metadata.
+#
+# This file is the single source of truth for the documentation structure.
+# The site-build tool (tools/site-build) reads it to:
+#   1. discover which Markdown pages to compile, and in what order, and
+#   2. generate the navigation tree rendered by the website sidebar.
+#
+# Markdown source lives at:  docs/user-manuals/<lang>/<section-id>/<page-id>.md
+# Every page listed below MUST exist for every language in `languages`.
+
+languages: [en, tr]
+default_language: en
+
+sections:
+  - id: getting-started
+    icon: rocket
+    title:
+      en: Getting Started
+      tr: Başlarken
+    pages:
+      - id: introduction
+        title: { en: Introduction, tr: Tanıtım }
+      - id: installation
+        title: { en: Installation, tr: Kurulum }
+      - id: quick-start
+        title: { en: Quick Start, tr: Hızlı Başlangıç }
+      - id: how-it-works
+        title: { en: How It Works, tr: Nasıl Çalışır }
+
+  - id: scanning
+    icon: scan
+    title:
+      en: Scanning Sources
+      tr: Tarama Kaynakları
+    pages:
+      - id: filesystem
+        title: { en: Filesystem, tr: Dosya Sistemi }
+      - id: git-history
+        title: { en: Git History, tr: Git Geçmişi }
+      - id: container-images
+        title: { en: Container Images, tr: Konteyner İmajları }
+      - id: cloud-storage
+        title: { en: Cloud Storage (S3 & GCS), tr: Bulut Depolama (S3 & GCS) }
+      - id: slack
+        title: { en: Slack Workspace, tr: Slack Çalışma Alanı }
+      - id: multiple-repos
+        title: { en: Multiple Repositories, tr: Çoklu Depo }
+
+  - id: verification
+    icon: shield
+    title:
+      en: Verification
+      tr: Doğrulama
+    pages:
+      - id: how-verification-works
+        title: { en: How Verification Works, tr: Doğrulama Nasıl Çalışır }
+      - id: verification-coverage
+        title: { en: Verification Coverage, tr: Doğrulama Kapsamı }
+
+  - id: detectors
+    icon: key
+    title:
+      en: Detectors
+      tr: Dedektörler
+    pages:
+      - id: detector-catalog
+        title: { en: Detector Catalog, tr: Dedektör Kataloğu }
+      - id: custom-rules
+        title: { en: Custom Rules, tr: Özel Kurallar }
+
+  - id: configuration
+    icon: sliders
+    title:
+      en: Configuration
+      tr: Yapılandırma
+    pages:
+      - id: config-file
+        title: { en: Configuration File, tr: Yapılandırma Dosyası }
+      - id: ignoring-findings
+        title: { en: Ignoring Findings, tr: Bulguları Yok Sayma }
+      - id: severity-and-filtering
+        title: { en: Severity & Filtering, tr: Önem Derecesi & Filtreleme }
+
+  - id: output
+    icon: output
+    title:
+      en: Output & Remediation
+      tr: Çıktı & Düzeltme
+    pages:
+      - id: output-formats
+        title: { en: Output Formats, tr: Çıktı Formatları }
+      - id: remediation
+        title: { en: Remediation Guidance, tr: Düzeltme Rehberi }
+
+  - id: ci-cd
+    icon: ci
+    title:
+      en: CI/CD Integration
+      tr: CI/CD Entegrasyonu
+    pages:
+      - id: github-action
+        title: { en: GitHub Action, tr: GitHub Action }
+      - id: pre-commit
+        title: { en: Pre-commit Hook, tr: Pre-commit Kancası }
+      - id: docker-usage
+        title: { en: Docker Usage, tr: Docker Kullanımı }
+      - id: other-ci
+        title: { en: Other CI Systems, tr: Diğer CI Sistemleri }
+
+  - id: reference
+    icon: book
+    title:
+      en: Reference
+      tr: Başvuru
+    pages:
+      - id: cli-reference
+        title: { en: CLI Reference, tr: CLI Başvurusu }
+      - id: exit-codes
+        title: { en: Exit Codes, tr: Çıkış Kodları }
+      - id: environment-variables
+        title: { en: Environment Variables, tr: Ortam Değişkenleri }

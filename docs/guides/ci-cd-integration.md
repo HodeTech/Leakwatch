@@ -107,7 +107,7 @@ jobs:
           go-version: '1.25'
 
       - name: Leakwatch Scan
-        uses: cemililik/leakwatch-action@v1
+        uses: HodeTech/leakwatch-action@v1
         with:
           scan-type: fs
           only-verified: true
@@ -146,7 +146,7 @@ jobs:
           go-version: '1.25'
 
       - name: Leakwatch Scan
-        uses: cemililik/leakwatch-action@v1
+        uses: HodeTech/leakwatch-action@v1
         with:
           scan-type: git
           format: sarif
@@ -205,7 +205,7 @@ jobs:
 
       - name: Leakwatch PR scan
         run: |
-          go install github.com/cemililik/leakwatch@latest
+          go install github.com/HodeTech/leakwatch@latest
           leakwatch scan git . \
             --since-commit ${{ steps.base.outputs.sha }} \
             --format sarif \
@@ -254,7 +254,7 @@ jobs:
           go-version: '1.25'
 
       - name: Full history scan
-        uses: cemililik/leakwatch-action@v1
+        uses: HodeTech/leakwatch-action@v1
         with:
           scan-type: git
           format: sarif
@@ -316,7 +316,7 @@ jobs:
 
       - name: PR scan
         run: |
-          go install github.com/cemililik/leakwatch@${{ env.LEAKWATCH_VERSION }}
+          go install github.com/HodeTech/leakwatch@${{ env.LEAKWATCH_VERSION }}
           leakwatch scan git . \
             --since-commit ${{ steps.base.outputs.sha }} \
             --format sarif \
@@ -342,7 +342,7 @@ jobs:
           go-version: '1.25'
 
       - name: Filesystem scan
-        uses: cemililik/leakwatch-action@v1
+        uses: HodeTech/leakwatch-action@v1
         with:
           scan-type: fs
           format: sarif
@@ -364,7 +364,7 @@ jobs:
           go-version: '1.25'
 
       - name: Full history scan
-        uses: cemililik/leakwatch-action@v1
+        uses: HodeTech/leakwatch-action@v1
         with:
           scan-type: git
           format: sarif
@@ -395,7 +395,7 @@ leakwatch-scan:
   stage: security
   image: golang:1.25-alpine
   before_script:
-    - go install github.com/cemililik/leakwatch@latest
+    - go install github.com/HodeTech/leakwatch@latest
   script:
     - leakwatch scan fs . --format sarif --output leakwatch-results.sarif --min-severity medium
   artifacts:
@@ -424,7 +424,7 @@ leakwatch-mr-scan:
   image: golang:1.25-alpine
   before_script:
     - apk add --no-cache git
-    - go install github.com/cemililik/leakwatch@latest
+    - go install github.com/HodeTech/leakwatch@latest
   script:
     # Find the MR base commit
     - BASE_SHA=$(git merge-base origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME HEAD)
@@ -444,7 +444,7 @@ leakwatch-full-scan:
   image: golang:1.25-alpine
   before_script:
     - apk add --no-cache git
-    - go install github.com/cemililik/leakwatch@latest
+    - go install github.com/HodeTech/leakwatch@latest
   script:
     - leakwatch scan git . --format sarif --output leakwatch-results.sarif --min-severity low
   artifacts:
@@ -469,7 +469,7 @@ Using the Docker image without requiring Go installation:
 leakwatch-docker-scan:
   stage: security
   image:
-    name: ghcr.io/cemililik/leakwatch:latest
+    name: ghcr.io/hodetech/leakwatch:latest
     entrypoint: [""]
   script:
     - leakwatch scan fs /builds/$CI_PROJECT_PATH --format sarif --output leakwatch-results.sarif
@@ -506,7 +506,7 @@ pipeline {
         stage('Install Leakwatch') {
             steps {
                 sh '''
-                    go install github.com/cemililik/leakwatch@${LEAKWATCH_VERSION}
+                    go install github.com/HodeTech/leakwatch@${LEAKWATCH_VERSION}
                 '''
             }
         }
@@ -554,7 +554,7 @@ pipeline {
 pipeline {
     agent {
         docker {
-            image 'ghcr.io/cemililik/leakwatch:latest'
+            image 'ghcr.io/hodetech/leakwatch:latest'
             args '-v ${WORKSPACE}:/scan'
         }
     }
@@ -600,7 +600,7 @@ Create a `.pre-commit-config.yaml` file in your project root:
 ```yaml
 # .pre-commit-config.yaml
 repos:
-  - repo: https://github.com/cemililik/Leakwatch
+  - repo: https://github.com/HodeTech/Leakwatch
     rev: v1.5.0
     hooks:
       - id: leakwatch
@@ -664,21 +664,21 @@ The Leakwatch Docker image can be used in any CI/CD environment without requirin
 
 ### 6.1 Docker Image
 
-The Leakwatch Docker image is published on GitHub Container Registry as `ghcr.io/cemililik/leakwatch`. The image is based on Alpine Linux and has a minimal size.
+The Leakwatch Docker image is published on GitHub Container Registry as `ghcr.io/hodetech/leakwatch`. The image is based on Alpine Linux and has a minimal size.
 
 ```bash
 # Scan a local directory
-docker run --rm -v "$(pwd):/scan" ghcr.io/cemililik/leakwatch:latest scan fs /scan
+docker run --rm -v "$(pwd):/scan" ghcr.io/hodetech/leakwatch:latest scan fs /scan
 
 # Scan a Git repository
-docker run --rm -v "$(pwd):/scan" ghcr.io/cemililik/leakwatch:latest scan git /scan
+docker run --rm -v "$(pwd):/scan" ghcr.io/hodetech/leakwatch:latest scan git /scan
 
 # SARIF output
-docker run --rm -v "$(pwd):/scan" ghcr.io/cemililik/leakwatch:latest \
+docker run --rm -v "$(pwd):/scan" ghcr.io/hodetech/leakwatch:latest \
   scan fs /scan --format sarif --output /scan/results.sarif
 
 # Show only verified active secrets
-docker run --rm -v "$(pwd):/scan" ghcr.io/cemililik/leakwatch:latest \
+docker run --rm -v "$(pwd):/scan" ghcr.io/hodetech/leakwatch:latest \
   scan fs /scan --only-verified
 ```
 
@@ -697,7 +697,7 @@ COPY . .
 RUN go build -o myapp .
 
 # Security scan stage
-FROM ghcr.io/cemililik/leakwatch:latest AS security
+FROM ghcr.io/hodetech/leakwatch:latest AS security
 COPY --from=builder /app /scan
 RUN leakwatch scan fs /scan --min-severity high
 
@@ -715,10 +715,10 @@ To scan container images for secrets, provide the full registry reference. Leakw
 
 ```bash
 # Scan a Docker Hub image
-docker run --rm ghcr.io/cemililik/leakwatch:latest scan image nginx:latest
+docker run --rm ghcr.io/hodetech/leakwatch:latest scan image nginx:latest
 
 # Scan a GHCR image
-docker run --rm ghcr.io/cemililik/leakwatch:latest scan image ghcr.io/myorg/myapp:latest
+docker run --rm ghcr.io/hodetech/leakwatch:latest scan image ghcr.io/myorg/myapp:latest
 ```
 
 ---

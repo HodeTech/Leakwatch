@@ -61,7 +61,7 @@ You can use one of the following methods to install Leakwatch on your system.
 If Go 1.25 or higher is installed:
 
 ```bash
-go install github.com/cemililik/leakwatch@latest
+go install github.com/HodeTech/leakwatch@latest
 ```
 
 The binary is installed to the `$GOPATH/bin` (or `$HOME/go/bin`) directory. Make sure this directory is defined in your `PATH` environment variable.
@@ -69,7 +69,7 @@ The binary is installed to the `$GOPATH/bin` (or `$HOME/go/bin`) directory. Make
 ### 2.2 Homebrew (macOS / Linux)
 
 ```bash
-brew install cemililik/tap/leakwatch
+brew install HodeTech/tap/leakwatch
 ```
 
 ### 2.3 Binary Download
@@ -85,10 +85,10 @@ You can download the binary suitable for your platform from the GitHub Releases 
 #   leakwatch_v1.5.0_Windows_x86_64.zip
 #
 # Download the archive for your platform from the Releases page:
-# https://github.com/cemililik/Leakwatch/releases/latest
+# https://github.com/HodeTech/Leakwatch/releases/latest
 #
 # Example for Linux x86_64 (replace v1.5.0 with the current release version):
-curl -sSfL https://github.com/cemililik/Leakwatch/releases/latest/download/leakwatch_v1.5.0_Linux_x86_64.tar.gz | tar xz
+curl -sSfL https://github.com/HodeTech/Leakwatch/releases/latest/download/leakwatch_v1.5.0_Linux_x86_64.tar.gz | tar xz
 
 # Move binary to PATH
 sudo mv leakwatch /usr/local/bin/
@@ -98,10 +98,10 @@ sudo mv leakwatch /usr/local/bin/
 
 ```bash
 # Latest version
-docker pull ghcr.io/cemililik/leakwatch:latest
+docker pull ghcr.io/hodetech/leakwatch:latest
 
 # Scan current directory
-docker run --rm -v "$(pwd):/scan" ghcr.io/cemililik/leakwatch:latest scan fs /scan
+docker run --rm -v "$(pwd):/scan" ghcr.io/hodetech/leakwatch:latest scan fs /scan
 ```
 
 ### 2.5 Installation Verification

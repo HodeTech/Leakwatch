@@ -6,7 +6,7 @@ package remediation
 import (
 	"sync"
 
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 var (

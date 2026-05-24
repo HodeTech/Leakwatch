@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/cemililik/leakwatch/internal/source/container"
+	"github.com/HodeTech/leakwatch/internal/source/container"
 )
 
 var scanImageCmd = &cobra.Command{

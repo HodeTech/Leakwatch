@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/cemililik/leakwatch/cmd"
+	"github.com/HodeTech/leakwatch/cmd"
 )
 
 // Build bilgileri (ldflags ile enjekte edilir).

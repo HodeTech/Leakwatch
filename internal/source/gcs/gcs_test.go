@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/api/iterator"
 
-	"github.com/cemililik/leakwatch/internal/source"
+	"github.com/HodeTech/leakwatch/internal/source"
 )
 
 // mockGCSClient implements the gcsClient interface for testing.

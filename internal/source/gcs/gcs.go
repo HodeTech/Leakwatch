@@ -14,9 +14,9 @@ import (
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 
-	"github.com/cemililik/leakwatch/internal/filter"
-	"github.com/cemililik/leakwatch/internal/source"
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/internal/filter"
+	"github.com/HodeTech/leakwatch/internal/source"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 // defaultMaxFileSize is the maximum object size to scan (10 MB).

@@ -415,7 +415,7 @@ jobs:
           go-version: '1.25'
 
       - name: Install Leakwatch
-        run: go install github.com/cemililik/leakwatch@latest
+        run: go install github.com/HodeTech/leakwatch@latest
 
       - name: Scan container image
         run: |
@@ -453,7 +453,7 @@ container-scan:
     DOCKER_TLS_CERTDIR: "/certs"
   script:
     - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA .
-    - go install github.com/cemililik/leakwatch@latest
+    - go install github.com/HodeTech/leakwatch@latest
     - leakwatch scan image $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA --format json --output results.json
   artifacts:
     reports:

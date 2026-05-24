@@ -5,8 +5,8 @@ import (
 	"context"
 	"regexp"
 
-	"github.com/cemililik/leakwatch/internal/detector"
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/internal/detector"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 var infuraKeyPattern = regexp.MustCompile(`(?:INFURA_API_KEY|infura_api_key|infura)\s*[=:]\s*['"]?([a-f0-9]{32})['"]?`)

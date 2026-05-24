@@ -7,7 +7,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 // Formatter outputs findings in CSV format.

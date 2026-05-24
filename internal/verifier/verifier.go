@@ -6,8 +6,8 @@ package verifier
 import (
 	"context"
 
-	"github.com/cemililik/leakwatch/internal/detector"
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/internal/detector"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 // Verifier validates whether a detected secret is active or inactive.

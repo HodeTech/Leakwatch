@@ -7,9 +7,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/cemililik/leakwatch/internal/detector"
-	detectorgcp "github.com/cemililik/leakwatch/internal/detector/gcp"
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/internal/detector"
+	detectorgcp "github.com/HodeTech/leakwatch/internal/detector/gcp"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 func TestVerifier_Type_ReturnsCorrectID(t *testing.T) {

@@ -10,7 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	slacksource "github.com/cemililik/leakwatch/internal/source/slack"
+	slacksource "github.com/HodeTech/leakwatch/internal/source/slack"
 )
 
 // flagIncludeFiles is the slack-only flag that requests scanning of uploaded

@@ -1,9 +1,9 @@
 # Leakwatch
 
-[![CI](https://github.com/cemililik/Leakwatch/actions/workflows/ci.yml/badge.svg)](https://github.com/cemililik/Leakwatch/actions/workflows/ci.yml)
+[![CI](https://github.com/HodeTech/Leakwatch/actions/workflows/ci.yml/badge.svg)](https://github.com/HodeTech/Leakwatch/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Go Report Card](https://goreportcard.com/badge/github.com/cemililik/leakwatch)](https://goreportcard.com/report/github.com/cemililik/leakwatch)
-[![Go Reference](https://pkg.go.dev/badge/github.com/cemililik/leakwatch.svg)](https://pkg.go.dev/github.com/cemililik/leakwatch)
+[![Go Report Card](https://goreportcard.com/badge/github.com/HodeTech/leakwatch)](https://goreportcard.com/report/github.com/HodeTech/leakwatch)
+[![Go Reference](https://pkg.go.dev/badge/github.com/HodeTech/leakwatch.svg)](https://pkg.go.dev/github.com/HodeTech/leakwatch)
 
 > Next-generation secret scanning platform — fast, accurate, open source.
 
@@ -40,16 +40,16 @@
 
 ```bash
 # Homebrew (macOS/Linux)
-brew install cemililik/tap/leakwatch
+brew install HodeTech/tap/leakwatch
 
 # Go install
-go install github.com/cemililik/leakwatch@latest
+go install github.com/HodeTech/leakwatch@latest
 
 # Docker
-docker run --rm -v $(pwd):/scan ghcr.io/cemililik/leakwatch:latest scan fs /scan
+docker run --rm -v $(pwd):/scan ghcr.io/hodetech/leakwatch:latest scan fs /scan
 
 # Binary download
-curl -sSfL https://github.com/cemililik/Leakwatch/releases/latest/download/leakwatch_$(uname -s)_$(uname -m).tar.gz | tar xz
+curl -sSfL https://github.com/HodeTech/Leakwatch/releases/latest/download/leakwatch_$(uname -s)_$(uname -m).tar.gz | tar xz
 ```
 
 ### Quick Setup
@@ -190,7 +190,7 @@ leakwatch scan fs . --remediation
 ### GitHub Actions
 
 ```yaml
-- uses: cemililik/leakwatch-action@v1
+- uses: HodeTech/leakwatch-action@v1
   with:
     scan-type: git
     only-verified: true  # only report verified live secrets (action default: false)
@@ -202,7 +202,7 @@ leakwatch scan fs . --remediation
 ```yaml
 # .pre-commit-config.yaml
 repos:
-  - repo: https://github.com/cemililik/Leakwatch
+  - repo: https://github.com/HodeTech/Leakwatch
     rev: v1.5.0
     hooks:
       - id: leakwatch
@@ -333,7 +333,7 @@ We welcome your contributions! Please see the [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ```bash
 # Set up the development environment
-git clone https://github.com/cemililik/Leakwatch.git
+git clone https://github.com/HodeTech/Leakwatch.git
 cd Leakwatch
 go mod download
 go test ./...

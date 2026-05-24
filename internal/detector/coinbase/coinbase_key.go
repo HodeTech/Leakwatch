@@ -5,8 +5,8 @@ import (
 	"context"
 	"regexp"
 
-	"github.com/cemililik/leakwatch/internal/detector"
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/internal/detector"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 var coinbaseKeyPattern = regexp.MustCompile(`(?:COINBASE_API_KEY|coinbase_api_key|coinbase_api_secret)\s*[=:]\s*['"]?([A-Za-z0-9+/=]{16,64})['"]?`)

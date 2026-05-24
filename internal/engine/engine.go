@@ -11,13 +11,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cemililik/leakwatch/internal/detector"
-	"github.com/cemililik/leakwatch/internal/entropy"
-	"github.com/cemililik/leakwatch/internal/filter"
-	"github.com/cemililik/leakwatch/internal/matcher"
-	"github.com/cemililik/leakwatch/internal/source"
-	"github.com/cemililik/leakwatch/internal/verifier"
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/internal/detector"
+	"github.com/HodeTech/leakwatch/internal/entropy"
+	"github.com/HodeTech/leakwatch/internal/filter"
+	"github.com/HodeTech/leakwatch/internal/matcher"
+	"github.com/HodeTech/leakwatch/internal/source"
+	"github.com/HodeTech/leakwatch/internal/verifier"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 const (

@@ -512,27 +512,27 @@ func (d *AWSAccessKeyID) Scan(ctx context.Context, data []byte) []RawFinding {
 
 import (
     // Register detectors
-    _ "github.com/cemililik/leakwatch/internal/detector/aws"
-    _ "github.com/cemililik/leakwatch/internal/detector/generic"
-    _ "github.com/cemililik/leakwatch/internal/detector/privatekey"
-    _ "github.com/cemililik/leakwatch/internal/detector/github"
-    _ "github.com/cemililik/leakwatch/internal/detector/slack"
-    _ "github.com/cemililik/leakwatch/internal/detector/stripe"
-    _ "github.com/cemililik/leakwatch/internal/detector/jwt"
-    _ "github.com/cemililik/leakwatch/internal/detector/dbconn"
-    _ "github.com/cemililik/leakwatch/internal/detector/custom"
+    _ "github.com/HodeTech/leakwatch/internal/detector/aws"
+    _ "github.com/HodeTech/leakwatch/internal/detector/generic"
+    _ "github.com/HodeTech/leakwatch/internal/detector/privatekey"
+    _ "github.com/HodeTech/leakwatch/internal/detector/github"
+    _ "github.com/HodeTech/leakwatch/internal/detector/slack"
+    _ "github.com/HodeTech/leakwatch/internal/detector/stripe"
+    _ "github.com/HodeTech/leakwatch/internal/detector/jwt"
+    _ "github.com/HodeTech/leakwatch/internal/detector/dbconn"
+    _ "github.com/HodeTech/leakwatch/internal/detector/custom"
 
     // Register sources
-    _ "github.com/cemililik/leakwatch/internal/source/git"
-    _ "github.com/cemililik/leakwatch/internal/source/filesystem"
-    _ "github.com/cemililik/leakwatch/internal/source/container"
-    _ "github.com/cemililik/leakwatch/internal/source/s3"
-    _ "github.com/cemililik/leakwatch/internal/source/gcs"
-    _ "github.com/cemililik/leakwatch/internal/source/slack"
+    _ "github.com/HodeTech/leakwatch/internal/source/git"
+    _ "github.com/HodeTech/leakwatch/internal/source/filesystem"
+    _ "github.com/HodeTech/leakwatch/internal/source/container"
+    _ "github.com/HodeTech/leakwatch/internal/source/s3"
+    _ "github.com/HodeTech/leakwatch/internal/source/gcs"
+    _ "github.com/HodeTech/leakwatch/internal/source/slack"
 
     // Register verifiers
-    _ "github.com/cemililik/leakwatch/internal/verifier/aws"
-    _ "github.com/cemililik/leakwatch/internal/verifier/github"
+    _ "github.com/HodeTech/leakwatch/internal/verifier/aws"
+    _ "github.com/HodeTech/leakwatch/internal/verifier/github"
 )
 ```
 

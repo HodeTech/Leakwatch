@@ -5,8 +5,8 @@ import (
 	"context"
 	"regexp"
 
-	"github.com/cemililik/leakwatch/internal/detector"
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/internal/detector"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 var bitbucketPasswordPattern = regexp.MustCompile(`(?:BITBUCKET_APP_PASSWORD|bitbucket_app_password|bitbucket)\s*[=:]\s*['"]?([A-Za-z0-9]{18,24})['"]?`)

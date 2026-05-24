@@ -6,8 +6,8 @@ import (
 	"net/url"
 	"regexp"
 
-	"github.com/cemililik/leakwatch/internal/detector"
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/internal/detector"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 var redisConnPattern = regexp.MustCompile(`rediss?://[^\s'"]+:[^\s'"]+@[^\s'"]+`)

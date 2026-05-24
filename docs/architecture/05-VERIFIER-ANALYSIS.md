@@ -240,9 +240,9 @@ import (
     "log/slog"
     "net/http"
 
-    "github.com/cemililik/leakwatch/internal/detector"
-    "github.com/cemililik/leakwatch/internal/verifier"
-    "github.com/cemililik/leakwatch/pkg/finding"
+    "github.com/HodeTech/leakwatch/internal/detector"
+    "github.com/HodeTech/leakwatch/internal/verifier"
+    "github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 const detectorID = "<detector-id>"
@@ -280,6 +280,6 @@ New verifiers are registered at compile time. After creating the verifier packag
 
 ```go
 import (
-    _ "github.com/cemililik/leakwatch/internal/verifier/<provider>"
+    _ "github.com/HodeTech/leakwatch/internal/verifier/<provider>"
 )
 ```

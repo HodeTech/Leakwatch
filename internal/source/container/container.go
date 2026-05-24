@@ -17,9 +17,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
-	"github.com/cemililik/leakwatch/internal/filter"
-	"github.com/cemililik/leakwatch/internal/source"
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/internal/filter"
+	"github.com/HodeTech/leakwatch/internal/source"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 const defaultMaxFileSize int64 = 10 * 1024 * 1024

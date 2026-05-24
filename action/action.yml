@@ -1,6 +1,6 @@
 name: 'Leakwatch Secret Scanner'
 description: 'Scan your codebase for leaked secrets (API keys, passwords, certificates)'
-author: 'cemililik'
+author: 'HodeTech'
 
 branding:
   icon: 'shield'
@@ -59,9 +59,9 @@ runs:
         INPUT_VERSION: ${{ inputs.version }}
       run: |
         if [ "$INPUT_VERSION" = "latest" ]; then
-          go install github.com/cemililik/leakwatch@latest
+          go install github.com/HodeTech/leakwatch@latest
         else
-          go install "github.com/cemililik/leakwatch@$INPUT_VERSION"
+          go install "github.com/HodeTech/leakwatch@$INPUT_VERSION"
         fi
 
     - name: Run scan

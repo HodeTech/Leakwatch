@@ -4,7 +4,7 @@ package output
 import (
 	"io"
 
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 // Formatter outputs findings in a specific format.

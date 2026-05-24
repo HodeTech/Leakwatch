@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

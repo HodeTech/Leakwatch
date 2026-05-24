@@ -11,9 +11,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/cemililik/leakwatch/internal/engine"
-	gitsource "github.com/cemililik/leakwatch/internal/source/git"
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/internal/engine"
+	gitsource "github.com/HodeTech/leakwatch/internal/source/git"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 var scanReposCmd = &cobra.Command{

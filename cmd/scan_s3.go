@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	s3source "github.com/cemililik/leakwatch/internal/source/s3"
+	s3source "github.com/HodeTech/leakwatch/internal/source/s3"
 )
 
 var scanS3Cmd = &cobra.Command{

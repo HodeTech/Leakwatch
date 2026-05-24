@@ -254,16 +254,16 @@ git push origin v0.2.0
 
 ```bash
 # Go install
-go install github.com/cemililik/leakwatch@latest
+go install github.com/HodeTech/leakwatch@latest
 
 # Homebrew (macOS/Linux)
-brew install cemililik/tap/leakwatch
+brew install HodeTech/tap/leakwatch
 
 # Docker
-docker run --rm -v $(pwd):/scan ghcr.io/cemililik/leakwatch:latest scan fs /scan
+docker run --rm -v $(pwd):/scan ghcr.io/hodetech/leakwatch:latest scan fs /scan
 
 # Binary download
-curl -sSfL https://github.com/cemililik/Leakwatch/releases/latest/download/leakwatch_$(uname -s)_$(uname -m).tar.gz | tar xz
+curl -sSfL https://github.com/HodeTech/Leakwatch/releases/latest/download/leakwatch_$(uname -s)_$(uname -m).tar.gz | tar xz
 ```
 
 ---

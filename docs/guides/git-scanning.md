@@ -331,7 +331,7 @@ jobs:
           fetch-depth: 0  # Full history needed for --since-commit
 
       - name: Install Leakwatch
-        run: go install github.com/cemililik/leakwatch@latest
+        run: go install github.com/HodeTech/leakwatch@latest
 
       - name: Scan for secrets (PR)
         if: github.event_name == 'pull_request'
@@ -365,7 +365,7 @@ secret-scan:
   stage: test
   image: golang:1.25-alpine
   before_script:
-    - go install github.com/cemililik/leakwatch@latest
+    - go install github.com/HodeTech/leakwatch@latest
   script:
     - |
       if [ -n "$CI_MERGE_REQUEST_DIFF_BASE_SHA" ]; then

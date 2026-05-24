@@ -5,8 +5,8 @@ import (
 	"context"
 	"regexp"
 
-	"github.com/cemililik/leakwatch/internal/detector"
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/internal/detector"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 var tokenPattern = regexp.MustCompile(`xox[bpar]-[0-9]{10,13}-[0-9]{10,13}-[a-zA-Z0-9]{24,34}`)

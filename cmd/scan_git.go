@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	gitsource "github.com/cemililik/leakwatch/internal/source/git"
+	gitsource "github.com/HodeTech/leakwatch/internal/source/git"
 )
 
 var scanGitCmd = &cobra.Command{

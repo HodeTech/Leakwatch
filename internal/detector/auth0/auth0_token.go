@@ -5,8 +5,8 @@ import (
 	"context"
 	"regexp"
 
-	"github.com/cemililik/leakwatch/internal/detector"
-	"github.com/cemililik/leakwatch/pkg/finding"
+	"github.com/HodeTech/leakwatch/internal/detector"
+	"github.com/HodeTech/leakwatch/pkg/finding"
 )
 
 var auth0TokenPattern = regexp.MustCompile(`(?:AUTH0_MANAGEMENT_TOKEN|AUTH0_API_TOKEN|auth0_token)\s*[=:]\s*['"]?([A-Za-z0-9_-]{30,})['"]?`)

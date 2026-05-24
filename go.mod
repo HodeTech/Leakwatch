@@ -1,4 +1,4 @@
-module github.com/cemililik/leakwatch
+module github.com/HodeTech/leakwatch
 
 go 1.25.10
 
