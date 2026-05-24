@@ -1,9 +1,9 @@
 # Leakwatch - Phased Development Roadmap
 
-> **Document Version:** 6.1
+> **Document Version:** 7.0
 > **Date:** 2026-04-09
 > **Status:** Approved
-> **Last Updated:** 2026-05-21
+> **Last Updated:** 2026-05-24
 
 ---
 
@@ -23,9 +23,14 @@
 | Phase 8.2 — CLI UX Improvements | Completed | `v1.3.2` | 2026-03-25 |
 | Phase 8.3 — Scan Summary + Security | Completed | `v1.4.0` | 2026-04-08 |
 | Phase 8.4 — False Positive Reduction | Completed | `v1.5.0` | 2026-04-09 |
-| Phase 9 — Confluence/Jira | Planned | `v1.6.0` | — |
-| Phase 10 — Secrets Inventory | Planned | `v1.7.0` | — |
-| Phase 11 — Honeytokens | Planned | `v1.8.0` | — |
+| Phase 9 — Detection Accuracy & FP Reduction | Planned | `v1.6.0` | — |
+| Phase 10 — Detector Library Expansion | Planned | `v1.7.0` | — |
+| Phase 11 — Verification Depth & Credential Impact | Planned | `v1.8.0` | — |
+| Phase 12 — Source Expansion (Confluence/Jira, org-scale) | Planned | `v1.9.0` | — |
+| Phase 13 — Secrets Inventory | Planned | `v1.10.0` | — |
+| Phase 14 — Honeytokens | Planned | `v1.11.0` | — |
+
+> **Prioritization note (v7.0):** the planned sequence is re-ordered so the work that most strengthens the core promise — accurate, verified, low-noise findings — comes first. Detection accuracy and false-positive reduction (Phase 9), broader coverage of high-blast-radius credential types (Phase 10), and deeper verification with credential-impact insight (Phase 11) precede new scan sources (Phase 12) and the inventory/honeytoken platform features (Phases 13–14). Rationale is detailed in [Planned Work — Prioritization](#planned-work--prioritization).
 
 ### v1.5.0 Highlights
 
@@ -79,7 +84,7 @@
 
 ## Roadmap Overview
 
-Leakwatch development is planned in 5 phases, each building on the previous one. Each phase produces a usable deliverable upon completion.
+Leakwatch development proceeds in incremental phases, each building on the previous one and each producing a usable deliverable. Phases 1–8 (through `v1.5.0`) are complete; Phases 9–14 are the planned forward path, sequenced by leverage on the product's core promise — see [Planned Work — Prioritization](#planned-work--prioritization).
 
 ```mermaid
 gantt
@@ -113,8 +118,18 @@ gantt
         S3/GCS scanning                 :done, f5a, after f4c, 3w
         GitHub Action & Docker          :done, f5b, after f5a, 2w
         v1.0.0 Release                  :milestone, after f5b, 0d
-        Slack/Confluence scanning       :f5c, after f5b, 4w
-        SaaS platform & Dashboard       :f5d, after f5c, 8w
+
+    section Completed v1.1-v1.5
+        Remediation, Slack, Verifiers   :done, f6, after f5b, 6w
+        UX, Security, FP reduction      :done, f8, after f6, 6w
+
+    section Planned v1.6.0+
+        Detection accuracy & FP         :p9, after f8, 5w
+        Detector library expansion      :p10, after p9, 6w
+        Verification depth & impact     :p11, after p10, 6w
+        Source expansion                :p12, after p11, 6w
+        Secrets inventory               :p13, after p12, 5w
+        Honeytokens                     :p14, after p13, 4w
 ```
 
 ---
@@ -277,7 +292,7 @@ GitHub Release published with `v0.4.0` tag.
 | GCS bucket scanning | [x] Completed | `scan gcs <bucket>` with ADC auth, prefix filtering |
 | Homebrew formula | [x] Completed | `Formula/leakwatch.rb` |
 | Docker image | [x] Completed | Multi-stage Dockerfile, non-root alpine |
-| GitHub Action | [x] Completed | `action/action.yml` with SARIF upload |
+| GitHub Action | [x] Completed | Root `action.yml` (composite, prebuilt-binary install), Marketplace-ready, SARIF upload, PR-diff (`--since-commit`), inline annotations |
 | AWS & GitHub verifiers | [x] Completed | AWS STS GetCallerIdentity, GitHub /user API |
 | Parallel repo scanning | [x] Completed | `scan repos` with `--parallel` flag |
 | VS Code extension | [x] Completed | Diagnostics, scan-on-save, status bar, workspace/file scan |
@@ -378,12 +393,123 @@ GitHub Release published with `v1.0.0` tag.
 
 ---
 
-## Phase 9: Confluence/Jira Scanning — PLANNED
+## Planned Work — Prioritization
 
+The product's core promise is **accurate, verified, low-noise secret findings**. Planned phases are sequenced by how directly they serve that promise, balanced against effort:
 
-**Goal:** Scan Atlassian Confluence pages and Jira issues for leaked secrets.
+1. **Sharpen what we already detect first (Phase 9).** Tightening detector precision/recall and cutting false positives is the highest-leverage, lowest-effort work: it raises the quality of *every* scan immediately and protects user trust. It also closes the remaining "documented but not yet behaving as promised" gaps (see the [traceability index](#documented-gap-traceability)).
+2. **Broaden coverage of high-impact credentials (Phase 10).** Once accuracy is solid, grow the detector library toward the credential types with the largest blast radius.
+3. **Make verification deeper and more useful (Phase 11).** Verification is the differentiator; harden the engine, verify more credential classes, and tell users what a live secret can actually reach.
+4. **Reach secrets in more places (Phase 12).** New scan sources (collaboration platforms, org-scale code hosting) extend reach after the core is strong.
+5. **Platform features last (Phases 13–14).** Persistent inventory and decoy credentials build on a trustworthy, broad, well-verified core.
+
+**Prioritization lens** — each task is weighed on: *(a)* impact on finding quality (precision/recall/verification), *(b)* blast radius of the credentials it touches, *(c)* effort, and *(d)* whether it makes an already-promised capability behave correctly. Within each phase, tables list per-task priority (Critical / High / Medium / Low).
+
+---
+
+## Phase 9: Detection Accuracy & False-Positive Reduction — PLANNED
+
+**Goal:** Make accuracy a measurable strength. Raise detector precision and recall, cut false positives across the board, and ensure every documented detection/verification behavior actually fires. This phase improves the quality of every existing scan without adding new surfaces.
 
 **Duration:** 4-5 weeks | **Version:** `v1.6.0` | **Status:** Planned
+
+### Deliverables
+
+| Task | Priority | Description |
+|------|----------|-------------|
+| Centralized false-positive filter | Critical | Shared module applied before verification: common placeholder values, a dictionary/word-list of dummy strings, and known non-secret patterns, so individual detectors no longer each re-implement ad-hoc skips |
+| Engine-level entropy gating | Critical | Apply the configured `detection.entropy.threshold` in the detection engine itself (today only custom YAML rules honor it), so low-entropy matches are dropped consistently |
+| Keyword pre-filters for high-noise detectors | High | Add Aho-Corasick pre-filter keywords / context anchors to detectors that currently scan every chunk (e.g. Telegram, Discord), which today fire on any token-shaped string |
+| Broaden OpenAI key coverage | High | Detect legacy and service-account key variants in addition to project keys, anchoring on the embedded provider marker for precision (fewer misses, fewer false positives) |
+| GitHub fine-grained PAT support | High | Extend the GitHub detector to cover fine-grained personal access tokens (`github_pat_`), now a default token type |
+| Wire okta / shopify / bitbucket verification | High | Populate the `ExtraData` fields (`domain`, `store_domain`, `username`) these verifiers require, so the three detectors actually reach verified/inactive instead of always-unverified |
+| Tighten Anthropic key regex | Medium | Anchor exact length and trailing marker; distinguish admin from standard keys |
+| Mailgun & JWT format breadth | Medium | Add the alternate Mailgun key format; broaden JWT matching to pretty-printed / base64-variant headers and optional padding |
+| Supabase service-role detection | Medium | Detect service-role JWTs (`role: service_role`) in addition to management PATs, so coverage matches the detector's name |
+| Bounded / streaming result buffering | Medium | Cap or stream the in-memory finding buffer so adversarially large inputs cannot exhaust memory before the verification phase |
+| Accuracy benchmark suite | High | Curated true/false corpus measuring precision and recall per detector, run in CI to guard against regressions |
+
+### Acceptance Criteria
+
+- [ ] Verified-mode false-positive rate is measured on the benchmark corpus and meets the `<5%` target
+- [ ] The configured entropy threshold gates findings engine-wide, not only for custom rules
+- [ ] Telegram/Discord (and other previously keyword-less detectors) no longer fire on unrelated numeric/base64 strings in the corpus
+- [ ] okta, shopify, and bitbucket findings produce verified/inactive results end-to-end
+- [ ] OpenAI legacy/service-account keys and GitHub `github_pat_` tokens are detected
+- [ ] Detector test coverage stays ≥95% for every touched detector
+
+### Exit Criteria
+
+GitHub Release published with `v1.6.0` tag.
+
+---
+
+## Phase 10: Detector Library Expansion — PLANNED
+
+**Goal:** Grow coverage of frequently-leaked, high-blast-radius credential types, prioritizing secrets whose exposure causes the most damage. Every new detector with a public verification endpoint ships with its verifier.
+
+**Duration:** 5-6 weeks | **Version:** `v1.7.0` | **Status:** Planned
+
+### Deliverables
+
+| Category | Priority | Target credential types |
+|----------|----------|-------------------------|
+| Elevated AI / model-platform keys | High | Admin-tier model-platform keys and additional widely-used model/inference providers (e.g. Gemini, Groq) |
+| Cloud identity & platform | High | Cloud application-default credentials; expanded coverage of a major cloud's service family — managed database, search, DevOps tokens, SAS tokens, function keys, container registry, app-config connection strings |
+| VCS & CI/CD | High | OAuth-type VCS tokens, application/installation private keys, and additional CI/CD provider tokens |
+| Correlated multi-field detection | High | A general mechanism to detect credentials that span multiple fields (identifier + secret) and pair them — improving both precision (require the pair) and verifiability (need both parts) |
+| Communication & delivery | Medium | Incoming-webhook URLs and additional email/SMS delivery providers |
+| Observability | Medium | Application/event keys for monitoring and error-tracking platforms |
+| Security & OSINT tooling | Medium | API keys for common security/recon services |
+
+### Acceptance Criteria
+
+- [ ] Detector count grows toward the 12-month coverage target, with ≥95% per-detector test coverage maintained
+- [ ] Each new detector that has a public verification endpoint ships with a matching verifier
+- [ ] Correlated multi-field detection pairs an identifier with its secret and feeds both to verification
+- [ ] No regression in the Phase 9 accuracy benchmark
+
+### Exit Criteria
+
+GitHub Release published with `v1.7.0` tag.
+
+---
+
+## Phase 11: Verification Depth & Credential Impact — PLANNED
+
+**Goal:** Deepen the verification differentiator. Harden the verification engine, verify more credential classes, and — for live secrets — tell users what the credential can actually reach so they can triage blast radius.
+
+**Duration:** 5-6 weeks | **Version:** `v1.8.0` | **Status:** Planned
+
+### Deliverables
+
+| Task | Priority | Description |
+|------|----------|-------------|
+| Per-provider rate limiting, caching & backoff | Critical | Replace the single global token-bucket limiter with per-provider limits, response caching to avoid re-verifying identical secrets, and exponential backoff/retry on transient failures |
+| Canary-safe verification | High | Recognize well-known decoy/canary credential formats and skip live verification for them, so a scan never triggers an alert on someone else's planted token |
+| Active private-key verification | High | Where a safe check exists, derive the public key from a detected private key and confirm liveness/association; introduce a distinct "verified key material" status that does not overstate access |
+| Credential impact analysis | High | Opt-in: for a verified secret, enumerate its effective permissions and reachable resources, starting with the highest-value providers, so users understand blast radius — not just that a secret is live |
+| Verification status refinements | Medium | Distinguish network/rate-limit failures from genuine "inactive"; surface the distinction in output and in `--only-verified`/filter semantics |
+
+### Acceptance Criteria
+
+- [ ] Per-provider limits and response caching are verified under load; transient failures retry with backoff
+- [ ] Known canary credential formats are never sent to a live endpoint
+- [ ] Private-key findings can reach a "verified key material" status without implying broader access
+- [ ] Impact analysis produces a permission/resource summary for at least the top-priority providers
+- [ ] Network/rate-limit errors are no longer reported as "inactive"
+
+### Exit Criteria
+
+GitHub Release published with `v1.8.0` tag.
+
+---
+
+## Phase 12: Source Expansion — PLANNED
+
+**Goal:** Reach secrets wherever they live — collaboration platforms and org-scale code hosting — now that the detection/verification core is strong.
+
+**Duration:** 5-6 weeks | **Version:** `v1.9.0` | **Status:** Planned
 
 ### Deliverables
 
@@ -394,9 +520,12 @@ GitHub Release published with `v1.0.0` tag.
 | JiraSource | Critical | JQL query, issue/comment scanning |
 | `scan confluence` command | Critical | Space filtering, attachment scanning |
 | `scan jira` command | Critical | Project filtering, JQL support |
-| SourceMetadata fields | High | Space, page, issue key in findings |
+| Org-scale repository enumeration | High | Scan every repository (and its history) under an organization/group via the hosting API, instead of a single local/remote repo at a time |
+| Slack file content scanning | Medium | Fetch and scan file attachments via the Files API, completing the `--include-files` flag that is currently accepted but a no-op |
+| SourceMetadata fields | High | Space, page, issue key, org/repo context in findings |
+| Additional platform sources | Low | API-collection platforms, CI systems, and search clusters as demand warrants |
 | Tests | High | `httptest.NewServer` mocks |
-| Guide | Medium | `docs/guides/atlassian-scanning.md` |
+| Guide | Medium | `docs/guides/atlassian-scanning.md`, `docs/guides/org-scanning.md` |
 
 ### Acceptance Criteria
 
@@ -404,14 +533,20 @@ GitHub Release published with `v1.0.0` tag.
 - [ ] `leakwatch scan jira --url URL --jql "project=SEC"` scans issues
 - [ ] Both Cloud and Server editions supported
 - [ ] HTML content properly extracted from Confluence storage format
+- [ ] An entire organization's repositories can be enumerated and scanned from a single command
+- [ ] Slack file attachments are fetched and scanned when `--include-files` is set
+
+### Exit Criteria
+
+GitHub Release published with `v1.9.0` tag.
 
 ---
 
-## Phase 10: Secrets Inventory — PLANNED
+## Phase 13: Secrets Inventory — PLANNED
 
 **Goal:** Persistent SQLite-based inventory tracking secrets across scans.
 
-**Duration:** 4-5 weeks | **Version:** `v1.7.0` | **Status:** Planned
+**Duration:** 4-5 weeks | **Version:** `v1.10.0` | **Status:** Planned
 
 ### Deliverables
 
@@ -436,13 +571,17 @@ GitHub Release published with `v1.0.0` tag.
 - [ ] Deduplication across multiple scan runs
 - [ ] Only redacted values stored (never raw secrets)
 
+### Exit Criteria
+
+GitHub Release published with `v1.10.0` tag.
+
 ---
 
-## Phase 11: Honeytokens — PLANNED
+## Phase 14: Honeytokens — PLANNED
 
 **Goal:** Generate and deploy decoy credentials that alert on unauthorized use.
 
-**Duration:** 3-4 weeks | **Version:** `v1.8.0` | **Status:** Planned
+**Duration:** 3-4 weeks | **Version:** `v1.11.0` | **Status:** Planned
 
 ### Deliverables
 
@@ -466,11 +605,33 @@ GitHub Release published with `v1.0.0` tag.
 - [ ] Webhook fires when honeytoken is detected in unexpected location
 - [ ] Value shown once during generation, only hash persisted
 
+### Exit Criteria
+
+GitHub Release published with `v1.11.0` tag.
+
 ---
 
-## Known Gaps & Follow-up Work
+## Documented Gap Traceability
 
-These are not new phases — they are **work that the current `v1.5.0` release still owes**: features the documentation promises but the code does not (yet) deliver, code-quality findings that survived the PR #6 cleanup pass, and refactors flagged by SonarCloud that need their own focused review. Tracked here so nothing slips through the cracks.
+Earlier reviews recorded behaviors that the documentation or public interface promised but the code did not yet deliver. Rather than tracking them as a loose list, each is now **owned by a planned phase** above so it ships as part of a coherent release. This table is the index; the detail for the still-open code-quality items follows under [Engineering Hygiene Backlog](#engineering-hygiene-backlog).
+
+| Gap | Owning phase |
+|-----|--------------|
+| Engine-level entropy-threshold gating | Phase 9 |
+| okta / shopify / bitbucket verification never reaches verified (missing `ExtraData`) | Phase 9 |
+| Supabase service-role JWT not detected (only management PAT) | Phase 9 |
+| Unbounded in-memory result buffering | Phase 9 |
+| `--remediation-format brief\|full` flag not implemented | Phase 9 (minor) |
+| Per-provider rate limiting, verification caching, exponential backoff/retry | Phase 11 |
+| Slack file scanning (`--include-files` is a no-op) | Phase 12 |
+
+> **Minor item — `--remediation-format`:** today only a boolean `--remediation` flag exists; the `brief|full` variant referenced in the Phase 6 deliverables and the verification guide is unimplemented. Small UX task, folded into Phase 9.
+
+---
+
+## Engineering Hygiene Backlog
+
+These are **not feature phases** — they are ongoing code-quality and correctness items that run in parallel with the roadmap: features the documentation promised but the code did not deliver (now resolved), code-quality findings from the PR #6 cleanup pass, and refactors flagged by SonarCloud that warrant their own focused review. Tracked here so nothing slips through the cracks.
 
 **Source:** PR #6 (chore/docs-cleanup-and-sonar-alignment) verification pass and SonarCloud scan of `cemililik_Leakwatch` taken 2026-05-21.
 
@@ -592,9 +753,12 @@ Source packages (no formal standard, but visible gaps):
 | `v1.3.2` | Phase 8.2 | CLI UX improvements | 2026-03-25 |
 | `v1.4.0` | Phase 8.3 | Scan summary, `init` command, colored table, security patches | 2026-04-08 |
 | `v1.5.0` | Phase 8.4 | False positive reduction, ADO.NET support | 2026-04-09 |
-| `v1.6.0` | Phase 9 | Confluence/Jira scanning | — |
-| `v1.7.0` | Phase 10 | Secrets inventory (SQLite) | — |
-| `v1.8.0` | Phase 11 | Honeytokens | — |
+| `v1.6.0` | Phase 9 | Detection accuracy & false-positive reduction | — |
+| `v1.7.0` | Phase 10 | Detector library expansion | — |
+| `v1.8.0` | Phase 11 | Verification depth & credential impact | — |
+| `v1.9.0` | Phase 12 | Source expansion (Confluence/Jira, org-scale) | — |
+| `v1.10.0` | Phase 13 | Secrets inventory (SQLite) | — |
+| `v1.11.0` | Phase 14 | Honeytokens | — |
 | `v2.x.x` | Future | ML detection, SaaS platform, Vault | Ongoing |
 
 > **Note on v1.1.0 / v1.2.0:** Phase 6 (Remediation Guidance) and Phase 7 (Slack Scanning) were completed and merged into `main`, but no `v1.1.0` or `v1.2.0` git tags were ever created. The features shipped as part of the `v1.3.0` release. The version slots are preserved here to keep the phase-to-version mapping consistent.
@@ -620,9 +784,9 @@ Source packages (no formal standard, but visible gaps):
 |--------|----------------|-----------------|
 | GitHub Stars | 500+ | 2,000+ |
 | Contributors | 5+ | 15+ |
-| Detector count | 50+ | 200+ |
-| Verifier count | 54 (achieved) | 60+ |
-| Source count | 6 (fs, git, container, S3, GCS, Slack) | 8+ |
+| Detector count | 63 (achieved) | 120+ |
+| Verifier count | 54 (achieved) | 80+ |
+| Source count | 6 (fs, git, container, S3, GCS, Slack) | 9+ |
 
 ---
 
@@ -640,14 +804,14 @@ Source packages (no formal standard, but visible gaps):
 
 ## Master Review — Documented-but-Unimplemented Gaps
 
-> This section consolidates gaps found in the 2026-05-22 full-project review. Each item is **planned / not yet implemented** — the documentation or public interface promises the feature but the code does not deliver it.
+> This section is the **detailed reference** for the gaps found in the 2026-05-22 full-project review. Each item is now scheduled into a planned phase (see the concise [Documented Gap Traceability](#documented-gap-traceability) index); the "Owning phase" column below shows where each is delivered. Each remains **not yet implemented** — the documentation or public interface promises the feature but the code does not deliver it.
 
-| # | Gap | One-line description | Area affected |
-|---|-----|----------------------|---------------|
-| 1 | **Slack file scanning** | `--include-files` flag is accepted and documented but is a no-op; the `SlackSource` never fetches file content from the Slack Files API. | `internal/source/slack/slack.go`, `docs/guides/slack-scanning.md`, CHANGELOG v1.2.0 |
-| 2 | **Per-provider rate limiting, verification caching, exponential backoff/retry** | The verifier engine has a single global token-bucket rate limiter; there is no per-provider limit, no response caching, and no retry with backoff. Phase 8 deliverables and the ROADMAP claim per-provider rate limiting is implemented. | `internal/verifier/engine.go`, Phase 8 deliverables table, v1.3.0 highlights |
-| 3 | **`--remediation-format brief\|full` flag** | Only a boolean `--remediation` flag exists; the two-value `brief\|full` variant mentioned in Phase 6 deliverables and `docs/guides/secret-verification.md` is not implemented. | `cmd/scan_common.go`, Phase 6 deliverables table |
-| 4 | **Engine-level entropy-threshold gating** | The `detection.entropy.threshold` config value is read and displayed in scan summaries, but the detection engine does not gate findings on it; only custom YAML rules apply their own per-rule entropy threshold. | `internal/engine/`, `internal/config/`, `docs/guides/configuration.md` |
-| 5 | **okta / shopify / bitbucket live verification** | The verifiers for these three providers exist and compile, but their `Verify()` implementations read `ExtraData` keys (`domain`, `store_domain`, `username` respectively) that no detector currently emits. The findings will always produce a `StatusUnverified` result until the corresponding detectors are updated to populate those `ExtraData` fields. | `internal/verifier/okta/`, `internal/verifier/shopify/`, `internal/verifier/bitbucket/`, and their matching detectors |
-| 6 | **Supabase real service-role JWT detection** | The `supabase` detector matches the `sbp_` prefix which identifies Supabase Management PATs, not service-role JWTs. Service-role JWTs (`eyJ...` with `role: service_role`) are not detected; the name `supabase-service-key` implies broader coverage than is implemented. | `internal/detector/supabase/supabase_key.go`, README detector table |
-| 7 | **Unbounded in-memory result buffering** | The scan engine collects all raw findings into a single in-memory slice before passing them to the verification phase — there is no streaming path and no cap on the buffer size. This is acceptable for typical inputs but is a known limitation for very large or adversarial inputs (e.g., a repository engineered to maximise regex matches) where memory consumption could become excessive. Streaming verification or an explicit buffer cap is planned. | `internal/engine/engine.go` |
+| # | Gap | One-line description | Area affected | Owning phase |
+|---|-----|----------------------|---------------|--------------|
+| 1 | **Slack file scanning** | `--include-files` flag is accepted and documented but is a no-op; the `SlackSource` never fetches file content from the Slack Files API. | `internal/source/slack/slack.go`, `docs/guides/slack-scanning.md`, CHANGELOG v1.2.0 | Phase 12 |
+| 2 | **Per-provider rate limiting, verification caching, exponential backoff/retry** | The verifier engine has a single global token-bucket rate limiter; there is no per-provider limit, no response caching, and no retry with backoff. Phase 8 deliverables and the ROADMAP claim per-provider rate limiting is implemented. | `internal/verifier/engine.go`, Phase 8 deliverables table, v1.3.0 highlights | Phase 11 |
+| 3 | **`--remediation-format brief\|full` flag** | Only a boolean `--remediation` flag exists; the two-value `brief\|full` variant mentioned in Phase 6 deliverables and `docs/guides/secret-verification.md` is not implemented. | `cmd/scan_common.go`, Phase 6 deliverables table | Phase 9 (minor) |
+| 4 | **Engine-level entropy-threshold gating** | The `detection.entropy.threshold` config value is read and displayed in scan summaries, but the detection engine does not gate findings on it; only custom YAML rules apply their own per-rule entropy threshold. | `internal/engine/`, `internal/config/`, `docs/guides/configuration.md` | Phase 9 |
+| 5 | **okta / shopify / bitbucket live verification** | The verifiers for these three providers exist and compile, but their `Verify()` implementations read `ExtraData` keys (`domain`, `store_domain`, `username` respectively) that no detector currently emits. The findings will always produce a `StatusUnverified` result until the corresponding detectors are updated to populate those `ExtraData` fields. | `internal/verifier/okta/`, `internal/verifier/shopify/`, `internal/verifier/bitbucket/`, and their matching detectors | Phase 9 |
+| 6 | **Supabase real service-role JWT detection** | The `supabase` detector matches the `sbp_` prefix which identifies Supabase Management PATs, not service-role JWTs. Service-role JWTs (`eyJ...` with `role: service_role`) are not detected; the name `supabase-service-key` implies broader coverage than is implemented. | `internal/detector/supabase/supabase_key.go`, README detector table | Phase 9 |
+| 7 | **Unbounded in-memory result buffering** | The scan engine collects all raw findings into a single in-memory slice before passing them to the verification phase — there is no streaming path and no cap on the buffer size. This is acceptable for typical inputs but is a known limitation for very large or adversarial inputs (e.g., a repository engineered to maximise regex matches) where memory consumption could become excessive. Streaming verification or an explicit buffer cap is planned. | `internal/engine/engine.go` | Phase 9 |
