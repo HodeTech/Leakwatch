@@ -84,11 +84,12 @@ SARIF yüklemesi, işin `permissions: security-events: write` bildirmesini gerek
 | `remediation` | `false` | Çıktıya giderme (remediation) rehberi ekle. |
 | `config` | `` | Bir `.leakwatch.yaml` yapılandırma dosyasının yolu. |
 | `scan-diff` | `auto` | `git` taramalarında yalnızca olaya yeni gelen commit'leri tara. `auto`, bunu `pull_request`/`push` olaylarında etkinleştirir; `true` zorlar; `false` her zaman tüm geçmişi tarar. `actions/checkout` ile `fetch-depth: 0` gerektirir. |
-| `extra-args` | `` | `leakwatch scan` komutuna eklenen ek ham argümanlar (boşlukla ayrılmış). |
+| `extra-args` | `` | `leakwatch scan` komutuna eklenen ek ham argümanlar (boşlukla ayrılmış). Action'ın kendi yönettiği bayraklar (`--format`, `--output`, `--config`, `--show-raw`) reddedilir — bunun yerine ilgili input'ları kullanın. |
 | `working-directory` | `.` | Taramanın çalıştırılacağı dizin. |
 | `sarif-upload` | `false` | Taramadan sonra SARIF sonuçlarını GitHub Code Scanning'e yükle. |
 | `fail-on-findings` | `true` | Bulgular raporlandığında (çıkış kodu 1) iş akışı adımını başarısız kıl. `false` olarak ayarlandığında adım başarısız olmak yerine `::warning::` ek açıklaması yayar. Ciddi hatalar (çıkış kodu ≥ 2) bu ayardan bağımsız olarak her zaman adımı başarısız kılar. |
 | `version` | `latest` | Kurulacak Leakwatch sürümü: `latest` veya belirli bir sürümü sabitlemek için `v1.5.0` gibi bir etiket. |
+| `release-repo` | `HodeTech/Leakwatch` | Sürüm ikilisinin indirileceği depo (`owner/name`). Yalnızca fork veya kendi sunucunuzdaki aynalar için değiştirin. |
 
 ## Çıktılar
 

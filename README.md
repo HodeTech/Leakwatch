@@ -52,8 +52,8 @@ go install github.com/HodeTech/leakwatch@latest
 # Docker
 docker run --rm -v $(pwd):/scan ghcr.io/hodetech/leakwatch:latest scan fs /scan
 
-# Binary download
-curl -sSfL https://github.com/HodeTech/Leakwatch/releases/latest/download/leakwatch_$(uname -s)_$(uname -m).tar.gz | tar xz
+# Binary download — pick the archive for your OS/arch from the releases page:
+#   https://github.com/HodeTech/Leakwatch/releases  (e.g. leakwatch_1.5.0_linux_amd64.tar.gz)
 ```
 
 ### Quick Setup
@@ -197,7 +197,8 @@ leakwatch scan fs . --remediation
 - uses: HodeTech/Leakwatch@v1
   with:
     scan-type: git
-    only-verified: true  # only report verified live secrets (action default: false)
+    no-verify: false      # turn verification ON (required for only-verified)
+    only-verified: true   # report only secrets confirmed live
     sarif-upload: true
 ```
 

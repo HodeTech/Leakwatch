@@ -84,11 +84,12 @@ SARIF upload requires the job to declare `permissions: security-events: write`. 
 | `remediation` | `false` | Include remediation guidance in the output. |
 | `config` | `` | Path to a `.leakwatch.yaml` configuration file. |
 | `scan-diff` | `auto` | For `git` scans, scan only commits new to the event. `auto` enables this on `pull_request`/`push`, `true` forces it, `false` always scans full history. Requires `actions/checkout` with `fetch-depth: 0`. |
-| `extra-args` | `` | Additional raw arguments appended to the `leakwatch scan` command (space-separated). |
+| `extra-args` | `` | Additional raw arguments appended to the `leakwatch scan` command (space-separated). Flags the action manages itself (`--format`, `--output`, `--config`, `--show-raw`) are rejected — use the dedicated inputs instead. |
 | `working-directory` | `.` | Directory to run the scan from. |
 | `sarif-upload` | `false` | Upload SARIF results to GitHub Code Scanning after the scan. |
 | `fail-on-findings` | `true` | Fail the workflow step when findings are reported (exit code 1). When `false`, a `::warning::` annotation is emitted instead so the scan does not block the pipeline. Hard errors (exit code ≥ 2) always fail the step regardless of this setting. |
 | `version` | `latest` | Leakwatch version to install: `latest`, or a release tag such as `v1.5.0` to pin a specific release. |
+| `release-repo` | `HodeTech/Leakwatch` | Repository (`owner/name`) to download the release binary from. Override only for forks or self-hosted mirrors. |
 
 ## Outputs
 

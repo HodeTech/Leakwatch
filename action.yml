@@ -67,6 +67,10 @@ inputs:
     description: 'Leakwatch version to install: "latest" or a release tag such as v1.5.0.'
     required: false
     default: 'latest'
+  release-repo:
+    description: 'GitHub repository (owner/name) to download the release binary from. Defaults to the canonical Leakwatch repo; override only for forks or self-hosted mirrors.'
+    required: false
+    default: 'HodeTech/Leakwatch'
 
 outputs:
   findings-count:
@@ -83,7 +87,7 @@ runs:
       shell: bash
       env:
         LW_VERSION: ${{ inputs.version }}
-        LW_REPO: HodeTech/Leakwatch
+        LW_REPO: ${{ inputs.release-repo }}
       run: |
         set -euo pipefail
 
@@ -121,8 +125,14 @@ runs:
         BASE_URL="https://github.com/${LW_REPO}/releases/download/${TAG}"
         TMP="$(mktemp -d)"
         echo "Installing Leakwatch ${TAG} (${ARCHIVE})"
-        curl -fsSL -o "${TMP}/${ARCHIVE}"     "${BASE_URL}/${ARCHIVE}"
-        curl -fsSL -o "${TMP}/checksums.txt"  "${BASE_URL}/checksums.txt"
+        if ! curl -fsSL --retry 3 --retry-delay 2 -o "${TMP}/${ARCHIVE}" "${BASE_URL}/${ARCHIVE}"; then
+          echo "::error::Failed to download ${ARCHIVE}. Is '${TAG}' a valid release in ${LW_REPO}? See https://github.com/${LW_REPO}/releases"
+          exit 1
+        fi
+        if ! curl -fsSL --retry 3 --retry-delay 2 -o "${TMP}/checksums.txt" "${BASE_URL}/checksums.txt"; then
+          echo "::error::Failed to download checksums.txt for ${TAG} from ${LW_REPO}."
+          exit 1
+        fi
 
         expected="$(awk -v f="$ARCHIVE" '$2 == f {print $1}' "${TMP}/checksums.txt")"
         if [ -z "$expected" ]; then
@@ -191,11 +201,12 @@ runs:
         fi
         if [ "$INPUT_FORMAT" = "sarif" ] && [ -n "$OUT" ]; then
           # Report the path relative to the repo root so a later upload step finds it.
-          if [ "$WORKDIR" = "." ]; then
-            echo "sarif-file=$OUT" >> "$GITHUB_OUTPUT"
-          else
-            echo "sarif-file=${WORKDIR%/}/$OUT" >> "$GITHUB_OUTPUT"
-          fi
+          case "$WORKDIR" in
+            .)  echo "sarif-file=$OUT" >> "$GITHUB_OUTPUT" ;;
+            /*) echo "::warning::working-directory is absolute; the SARIF upload step may not locate the file. Use a repository-relative working-directory."
+                echo "sarif-file=$OUT" >> "$GITHUB_OUTPUT" ;;
+            *)  echo "sarif-file=${WORKDIR%/}/$OUT" >> "$GITHUB_OUTPUT" ;;
+          esac
         fi
 
         [ "$INPUT_ONLY_VERIFIED" = "true" ] && ARGS+=(--only-verified)
@@ -203,7 +214,17 @@ runs:
         [ "$INPUT_REMEDIATION" = "true" ]   && ARGS+=(--remediation)
         [ -n "$INPUT_CONFIG" ]              && ARGS+=(--config "$INPUT_CONFIG")
 
+        # only-verified needs verification ON. With no-verify (the default), nothing
+        # can be "verified active", so the scan would silently report zero findings.
+        if [ "$INPUT_ONLY_VERIFIED" = "true" ] && [ "$INPUT_NO_VERIFY" = "true" ]; then
+          echo "::warning::only-verified is set while no-verify is also true (the default). Verification is OFF, so no finding can be 'verified active' and the scan will report nothing. Set no-verify: false to use only-verified."
+        fi
+
         # PR-diff: for git scans, limit to commits introduced by this event.
+        case "$INPUT_SCAN_DIFF" in
+          auto|true|false) ;;
+          *) echo "::error::Invalid scan-diff '${INPUT_SCAN_DIFF}' (expected auto, true, or false)."; exit 1 ;;
+        esac
         diff_enabled=false
         case "$INPUT_SCAN_DIFF" in
           true) diff_enabled=true ;;
@@ -212,24 +233,45 @@ runs:
               diff_enabled=true
             fi ;;
         esac
-        if [ "$diff_enabled" = "true" ] && [ "$INPUT_SCAN_TYPE" = "git" ]; then
+        if [ "$diff_enabled" = "true" ]; then
+          if [ "$INPUT_SCAN_TYPE" != "git" ]; then
+            # Only "true" reaches here for a non-git scan (auto never enables it);
+            # fail loudly so "true" is never silently ignored.
+            echo "::error::scan-diff requires scan-type: git (got '${INPUT_SCAN_TYPE}')."; exit 1
+          fi
           base=""
           [ "$GH_EVENT_NAME" = "pull_request" ] && base="$GH_PR_BASE_SHA"
           [ "$GH_EVENT_NAME" = "push" ]         && base="$GH_PUSH_BEFORE"
-          # Skip the all-zero SHA (first push of a branch, which has no parent).
-          if [ -n "$base" ] && [ "$base" != "0000000000000000000000000000000000000000" ]; then
+          # The all-zero SHA means no parent (first push of a branch).
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
+            if [ "$INPUT_SCAN_DIFF" = "true" ]; then
+              echo "::error::scan-diff: true but no base commit is available for event '${GH_EVENT_NAME}'. Use pull_request/push and checkout with fetch-depth: 0."; exit 1
+            fi
+            echo "::notice::scan-diff: auto found no base commit for '${GH_EVENT_NAME}'; scanning full history."
+          else
             ARGS+=(--since-commit "$base")
           fi
         fi
 
-        # Append any extra raw arguments (deliberate word-splitting).
+        # Append any extra raw arguments (deliberate word-splitting). Reject the
+        # flags the action manages itself, so its output/summary/upload bookkeeping
+        # can never silently disagree with the actual CLI invocation.
         if [ -n "$INPUT_EXTRA_ARGS" ]; then
           # shellcheck disable=SC2206
           extra=($INPUT_EXTRA_ARGS)
+          for a in "${extra[@]}"; do
+            case "$a" in
+              -f|--format|--format=*|-o|--output|--output=*|--config|--config=*|--show-raw|--show-raw=*)
+                echo "::error::extra-args may not contain '${a%%=*}'; use the dedicated action input (format/output/config) instead."
+                exit 1 ;;
+            esac
+          done
           ARGS+=("${extra[@]}")
         fi
 
-        echo "+ leakwatch ${ARGS[*]}"
+        # Do NOT echo the assembled args: path/extra-args may carry credentials
+        # (tokens, authenticated URLs) that GitHub log masking would not catch.
+        echo "Running leakwatch scan (type=${INPUT_SCAN_TYPE}, format=${INPUT_FORMAT})"
         leakwatch "${ARGS[@]}"
         EXIT_CODE=$?
 
@@ -248,6 +290,10 @@ runs:
                 echo "| Level | Detector | Location |"
                 echo "| --- | --- | --- |"
                 jq -r '.runs[].results[] | "| \(.level) | \(.ruleId) | \((.locations[0].physicalLocation.artifactLocation.uri // "-"))\(if .locations[0].physicalLocation.region.startLine then ":" + (.locations[0].physicalLocation.region.startLine | tostring) else "" end) |"' "$OUT" 2>/dev/null | head -50
+                if [ "${total:-0}" -gt 50 ] 2>/dev/null; then
+                  echo ""
+                  echo "_…showing the first 50 of ${total} findings._"
+                fi
               fi
             elif [ "$EXIT_CODE" -eq 0 ]; then
               echo "✅ No secrets detected."
@@ -284,7 +330,9 @@ runs:
 
     - name: Upload SARIF
       if: always() && inputs.sarif-upload == 'true' && inputs.format == 'sarif'
-      uses: github/codeql-action/upload-sarif@v3
+      # github/codeql-action/upload-sarif@v3.36.0 (SHA-pinned: this runs inside
+      # consumers' repositories, so the floating tag is the most important to pin).
+      uses: github/codeql-action/upload-sarif@03e4368ac7daa2bd82b3e85262f3bf87ee112f57
       with:
         sarif_file: ${{ steps.scan.outputs.sarif-file }}
         category: leakwatch

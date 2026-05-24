@@ -101,15 +101,11 @@ jobs:
         with:
           fetch-depth: 0  # Required for full Git history
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-
       - name: Leakwatch Scan
         uses: HodeTech/Leakwatch@v1
         with:
           scan-type: fs
+          no-verify: false      # verification ON (required for only-verified)
           only-verified: true
 ```
 
@@ -139,11 +135,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
 
       - name: Leakwatch Scan
         uses: HodeTech/Leakwatch@v1
@@ -248,11 +239,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-
       - name: Full history scan
         uses: HodeTech/Leakwatch@v1
         with:
@@ -337,10 +323,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-
       - name: Filesystem scan
         uses: HodeTech/Leakwatch@v1
         with:
@@ -358,10 +340,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
 
       - name: Full history scan
         uses: HodeTech/Leakwatch@v1

@@ -2,6 +2,7 @@ package github
 
 import (
 	"bytes"
+	"errors"
 	"strings"
 	"testing"
 
@@ -9,6 +10,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// errWriter always fails, to exercise the Format write-error path.
+type errWriter struct{}
+
+func (errWriter) Write([]byte) (int, error) { return 0, errors.New("disk full") }
 
 func TestFormatter_Format_EmptyFindings_WritesNothing(t *testing.T) {
 	f := &Formatter{}
@@ -222,6 +228,75 @@ func TestFormatter_Format_UnknownSeverity_FallsBackToNotice(t *testing.T) {
 	}})
 	require.NoError(t, err)
 	assert.True(t, strings.HasPrefix(buf.String(), "::notice "))
+}
+
+func TestFormatter_Format_VerifiedActiveLowSeverity_ElevatedToError(t *testing.T) {
+	f := &Formatter{}
+	var buf bytes.Buffer
+
+	// A live-verified secret is an incident even at a low nominal severity, so it
+	// must be emitted as ::error, not ::notice.
+	err := f.Format(&buf, []finding.Finding{{
+		DetectorID:     "generic-api-key",
+		Severity:       finding.SeverityLow,
+		Redacted:       "abc****xyz",
+		SourceMetadata: finding.SourceMetadata{FilePath: "a.txt", Line: 1},
+		Verification:   finding.VerificationResult{Status: finding.StatusVerifiedActive},
+	}})
+	require.NoError(t, err)
+	assert.True(t, strings.HasPrefix(buf.String(), "::error "), "verified-active must elevate to error, got %q", buf.String())
+}
+
+func TestFormatter_Format_VerifyError_NoVerdictSuffix(t *testing.T) {
+	f := &Formatter{}
+	var buf bytes.Buffer
+
+	err := f.Format(&buf, []finding.Finding{{
+		DetectorID:     "github-token",
+		Severity:       finding.SeverityHigh,
+		Redacted:       "ghp_****",
+		SourceMetadata: finding.SourceMetadata{FilePath: ".env", Line: 3},
+		Verification:   finding.VerificationResult{Status: finding.StatusVerifyError},
+	}})
+	require.NoError(t, err)
+
+	out := buf.String()
+	assert.NotContains(t, out, "ACTIVE")
+	assert.NotContains(t, out, "inactive")
+	// A verify error is not a confirmed-active verdict, so it stays a warning.
+	assert.True(t, strings.HasPrefix(out, "::warning "))
+}
+
+func TestFormatter_Format_EscapesPercentAndCarriageReturn(t *testing.T) {
+	f := &Formatter{}
+	var buf bytes.Buffer
+
+	// '%' must be encoded first (so the encodings below are not double-escaped),
+	// and a carriage return must become %0D.
+	err := f.Format(&buf, []finding.Finding{{
+		DetectorID:     "generic-api-key",
+		Severity:       finding.SeverityLow,
+		Redacted:       "a%b\rc",
+		SourceMetadata: finding.SourceMetadata{FilePath: "f.txt", Line: 1},
+	}})
+	require.NoError(t, err)
+
+	out := buf.String()
+	assert.Contains(t, out, "a%25b%0Dc")
+	assert.NotContains(t, out, "%2525", "percent must not be double-escaped")
+}
+
+func TestFormatter_Format_WriteError_IsWrapped(t *testing.T) {
+	f := &Formatter{}
+	err := f.Format(errWriter{}, []finding.Finding{{
+		DetectorID:     "aws-access-key-id",
+		Severity:       finding.SeverityCritical,
+		Redacted:       "AKIA****",
+		SourceMetadata: finding.SourceMetadata{FilePath: "a", Line: 1},
+	}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "GitHub annotations")
+	assert.Contains(t, err.Error(), "disk full")
 }
 
 func TestFormatter_FileExtension_ReturnsTXT(t *testing.T) {

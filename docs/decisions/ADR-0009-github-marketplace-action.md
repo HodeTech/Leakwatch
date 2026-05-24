@@ -67,8 +67,11 @@ flowchart TD
   in lock-step with the tool, leverages the repo's existing visibility, and
   avoids the synchronization burden of a second repository.
 - **Prebuilt over `go install`.** Reuses artifacts the release already ships;
-  scans start in seconds with no Go toolchain, and the checksum step adds
-  supply-chain integrity.
+  scans start in seconds with no Go toolchain. The mandatory checksum step
+  guards against a corrupted or truncated download. (It is **not** full
+  supply-chain provenance: the archive and `checksums.txt` come from the same
+  release, so an attacker who can replace one can replace both. Cryptographic
+  provenance — cosign/minisign/SLSA — is a future enhancement; see below.)
 
 ## Alternatives Considered
 
@@ -111,6 +114,10 @@ flowchart TD
 - The `v1` tag must be maintained automatically (handled in the release
   workflow) and consumers who want strict reproducibility should pin a full
   release tag or commit SHA.
+- **No cryptographic provenance yet.** The checksum step only detects a
+  corrupted/truncated download, not a malicious release. A future enhancement
+  should add signed artifacts (cosign/minisign) and/or SLSA build provenance,
+  with the action verifying the signature before running.
 
 ## Publishing to the Marketplace (maintainer runbook)
 

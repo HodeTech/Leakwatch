@@ -56,12 +56,22 @@ func writeCommand(b *strings.Builder, fd finding.Finding) {
 	props = append(props, "title="+escapeProperty(annotationTitle(fd)))
 
 	b.WriteString("::")
-	b.WriteString(severityToLevel(fd.Severity))
+	b.WriteString(annotationLevel(fd))
 	b.WriteByte(' ')
 	b.WriteString(strings.Join(props, ","))
 	b.WriteString("::")
 	b.WriteString(escapeData(annotationMessage(fd)))
 	b.WriteByte('\n')
+}
+
+// annotationLevel decides the GitHub annotation level for a finding. A secret
+// confirmed live by verification is an incident and is always emitted as an
+// error, regardless of its nominal severity; otherwise severity decides.
+func annotationLevel(fd finding.Finding) string {
+	if fd.Verification.Status == finding.StatusVerifiedActive {
+		return "error"
+	}
+	return severityToLevel(fd.Severity)
 }
 
 // severityToLevel maps a finding severity to a GitHub annotation level. GitHub

@@ -59,11 +59,13 @@ jobs:
           SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          MAJOR="${TAG%%.*}"   # v1.5.0 -> v1
-          if [ "$MAJOR" = "$TAG" ] || [ -z "$MAJOR" ]; then
-            echo "Could not derive a major tag from '$TAG'; skipping."
+          # Only move the major tag for a proper vMAJOR.MINOR.PATCH release tag, so
+          # a malformed tag (e.g. vnext.1) can never force-move an unrelated ref.
+          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Tag '$TAG' is not a vX.Y.Z release tag; skipping major-tag move."
             exit 0
           fi
+          MAJOR="${TAG%%.*}"   # v1.5.0 -> v1
           echo "Pointing ${MAJOR} at ${SHA} (${TAG})"
           if gh api "repos/${REPO}/git/refs/tags/${MAJOR}" >/dev/null 2>&1; then
             gh api -X PATCH "repos/${REPO}/git/refs/tags/${MAJOR}" -f sha="${SHA}" -F force=true >/dev/null

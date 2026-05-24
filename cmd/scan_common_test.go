@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	csvout "github.com/HodeTech/leakwatch/internal/output/csv"
+	githubout "github.com/HodeTech/leakwatch/internal/output/github"
 	jsonout "github.com/HodeTech/leakwatch/internal/output/json"
 	sarifout "github.com/HodeTech/leakwatch/internal/output/sarif"
 	tableout "github.com/HodeTech/leakwatch/internal/output/table"
@@ -95,6 +96,12 @@ func TestSelectFormatter_AllFormats_ReturnsCorrectType(t *testing.T) {
 			format:       "table",
 			showRaw:      false,
 			expectedType: &tableout.Formatter{},
+		},
+		{
+			name:         "github format",
+			format:       "github",
+			showRaw:      false,
+			expectedType: &githubout.Formatter{},
 		},
 		{
 			name:         "unknown format defaults to json",
