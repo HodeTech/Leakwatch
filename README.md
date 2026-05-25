@@ -53,7 +53,7 @@ go install github.com/HodeTech/leakwatch@latest
 docker run --rm -v $(pwd):/scan ghcr.io/hodetech/leakwatch:latest scan fs /scan
 
 # Binary download — pick the archive for your OS/arch from the releases page:
-#   https://github.com/HodeTech/Leakwatch/releases  (e.g. leakwatch_1.5.0_linux_amd64.tar.gz)
+#   https://github.com/HodeTech/Leakwatch/releases  (e.g. leakwatch_1.6.0_linux_amd64.tar.gz)
 ```
 
 ### Quick Setup
@@ -202,13 +202,15 @@ leakwatch scan fs . --remediation
     sarif-upload: true
 ```
 
+Use `format: github` for inline pull-request annotations, or `format: sarif` with `sarif-upload: true` to surface findings as Code Scanning alerts. See the [GitHub Action guide](docs/guides/ci-cd-integration.md) for all inputs.
+
 ### Pre-commit Hook
 
 ```yaml
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/HodeTech/Leakwatch
-    rev: v1.5.0
+    rev: v1.6.0
     hooks:
       - id: leakwatch
 ```
@@ -273,7 +275,7 @@ flowchart LR
 
     Sources -->|Chunks| Engine
     Engine -->|Findings| Verify
-    Verify --> Output["JSON / SARIF / CSV"]
+    Verify --> Output["JSON / SARIF / CSV / Table / GitHub"]
 ```
 
 Detailed architecture: [docs/architecture/03-ARCHITECTURE.md](docs/architecture/03-ARCHITECTURE.md)
