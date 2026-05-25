@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Tests
 - **`detector/dbconn` coverage** raised from 51.5% to 97.0% (CLAUDE.md standard is 95%). New table-driven tests cover ADO.NET parsing, the placeholder list (case-insensitive), `redactADONet`, and the `url.Parse` error path of `redactPassword`.
+- **Generated `detectors.js` is guarded against silent detector drops** — a new test pins the web-playground bundle (`site/js/detectors.js`) to the live detector registry, so a detector whose regex is not a single AST-extractable ``regexp.MustCompile(`literal`)`` (e.g. concatenated fragments) fails CI instead of silently vanishing from the playground. Also adds an explicit GitHub `/user` 403 verifier case documenting that a live stateless installation token maps to verify-error, never a false active/revoked.
 
 ### Security
 - **`action/action.yml` shell injection (SonarCloud `githubactions:S7630`, 8 BLOCKER findings)** — every `${{ inputs.* }}` interpolation moved into an `env:` block; bash args switched from a whitespace-joined string to an array. CWE-94 closed.
