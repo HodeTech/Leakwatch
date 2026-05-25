@@ -29,6 +29,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
           go-version: '1.25.10'
@@ -53,6 +55,8 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
 
       # Build the fixture at runtime so no secret-shaped literal is ever committed
       # (which would trip push protection / secret scanning). Reassembled at
@@ -87,8 +91,12 @@ jobs:
         run: |
           set -euo pipefail
           echo "findings-count=$COUNT sarif-file=$SARIF"
-          [ "$COUNT" = "1" ] || { echo "::error::expected findings-count=1, got '$COUNT'"; exit 1; }
-          [ -n "$SARIF" ] && [ -f "$SARIF" ] || { echo "::error::expected SARIF file at '$SARIF'"; exit 1; }
+          if [ "$COUNT" != "1" ]; then
+            echo "::error::expected findings-count=1, got '$COUNT'"; exit 1
+          fi
+          if [ -z "$SARIF" ] || [ ! -f "$SARIF" ]; then
+            echo "::error::expected SARIF file at '$SARIF'"; exit 1
+          fi
           echo "OK: finding detected and SARIF written"
 
       - name: Scan clean fixture (expect no findings)
@@ -121,6 +129,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
           go-version: '1.25.10'

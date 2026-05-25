@@ -202,13 +202,14 @@ runs:
           ARGS+=(--output "$OUT")
         fi
         if [ "$INPUT_FORMAT" = "sarif" ] && [ -n "$OUT" ]; then
-          # Report the path relative to the repo root so a later upload step finds it.
-          case "$WORKDIR" in
-            .)  echo "sarif-file=$OUT" >> "$GITHUB_OUTPUT" ;;
-            /*) echo "::warning::working-directory is absolute; the SARIF upload step may not locate the file. Use a repository-relative working-directory."
-                echo "sarif-file=$OUT" >> "$GITHUB_OUTPUT" ;;
-            *)  echo "sarif-file=${WORKDIR%/}/$OUT" >> "$GITHUB_OUTPUT" ;;
-          esac
+          # Report where the upload step should look: $OUT as-is when running from
+          # the repo root, otherwise prefixed with the working directory. This is
+          # correct for both relative and absolute working-directory values.
+          if [ "$WORKDIR" = "." ]; then
+            echo "sarif-file=$OUT" >> "$GITHUB_OUTPUT"
+          else
+            echo "sarif-file=${WORKDIR%/}/$OUT" >> "$GITHUB_OUTPUT"
+          fi
         fi
 
         [ "$INPUT_ONLY_VERIFIED" = "true" ] && ARGS+=(--only-verified)
@@ -267,8 +268,12 @@ runs:
         # flags the action manages itself, so its output/summary/upload bookkeeping
         # can never silently disagree with the actual CLI invocation.
         if [ -n "$INPUT_EXTRA_ARGS" ]; then
+          # Disable globbing so an arg like --exclude=*.go is not expanded against
+          # the working directory; the word-splitting into separate args is intended.
+          set -f
           # shellcheck disable=SC2206
           extra=($INPUT_EXTRA_ARGS)
+          set +f
           for a in "${extra[@]}"; do
             # Prefix-match so combined shorthand (-fcsv, -o/tmp/x) and =forms are
             # all caught. -f/-o are format/output here and have no other meaning.

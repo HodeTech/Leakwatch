@@ -45,7 +45,7 @@ While existing open-source tools (TruffleHog, Gitleaks) are strong in certain ar
 - High memory consumption with large repositories
 - Verification can hit API rate limits
 - Unverified results are still noisy
-- Adding custom detectors requires writing Go code and recompiling
+- Custom regex detectors can be defined in YAML (`config.yaml` `detectors:`), but adding custom **verification** logic requires writing Go code and recompiling
 - `.secretsignore` / allowlist mechanism is less mature compared to competitors
 
 ---
@@ -214,7 +214,7 @@ While existing open-source tools (TruffleHog, Gitleaks) are strong in certain ar
 **Leakwatch Opportunity:** A unique position in the open-source market with an MIT-licensed, modular verification system.
 
 #### Opportunity 2: Easy Extensibility
-**Situation:** Adding custom detectors in TruffleHog requires writing Go code and recompiling. Gitleaks' TOML rules are simple but do not allow adding verification logic.
+**Situation:** TruffleHog supports custom regex detectors in YAML (`config.yaml` `detectors:`), but adding custom verification logic requires writing Go code and recompiling. Gitleaks' TOML rules are simple but do not allow adding verification logic.
 
 **Leakwatch Opportunity:** Two-tier extensibility with YAML-based rule definitions + Go plugin interface. YAML is sufficient for simple regex rules; Go interface for advanced verification.
 
