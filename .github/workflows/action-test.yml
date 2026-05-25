@@ -1,0 +1,149 @@
+name: Action Test
+
+# Validates the composite GitHub Action (install → scan → exit-code/outputs) on
+# real runners, lints all workflow files, and exercises the new `github` output
+# format with a binary built from this branch. The run-action job installs a
+# released binary via the action, pointing release-repo at the current repo so it
+# works both pre- and post-org-transfer.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'action.yml'
+      - '.github/workflows/action-test.yml'
+      - 'internal/output/github/**'
+  pull_request:
+    paths:
+      - 'action.yml'
+      - '.github/workflows/action-test.yml'
+      - 'internal/output/github/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+        with:
+          go-version: '1.25.10'
+      - name: Install actionlint
+        run: go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+      # shellcheck is preinstalled on ubuntu runners, so actionlint also lints
+      # the run: scripts inside the workflows.
+      - name: Run actionlint
+        run: |
+          GOBIN="$(go env GOPATH)/bin"
+          "$GOBIN/actionlint" -color
+
+  run-action:
+    name: run-action (${{ matrix.os }})
+    needs: actionlint
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+
+      # Build the fixture at runtime so no secret-shaped literal is ever committed
+      # (which would trip push protection / secret scanning). Reassembled at
+      # runtime, the canonical AWS docs example key triggers the
+      # aws-access-key-id detector.
+      - name: Create fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p _lwtest _lwclean
+          printf 'AWS_ACCESS_KEY_ID=%s%s\n' 'AKIA' 'IOSFODNN7EXAMPLE' > _lwtest/leak.env
+          echo 'just some harmless text, no secrets here' > _lwclean/ok.txt
+
+      - name: Scan dirty fixture (expect a finding)
+        id: detect
+        uses: ./
+        with:
+          scan-type: fs
+          path: _lwtest
+          format: sarif
+          no-verify: 'true'
+          fail-on-findings: 'false'
+          # Download from the repo running this workflow (works pre- and
+          # post-org-transfer); consumers use the default HodeTech/Leakwatch.
+          release-repo: ${{ github.repository }}
+
+      - name: Assert a finding was reported
+        shell: bash
+        env:
+          COUNT: ${{ steps.detect.outputs.findings-count }}
+          SARIF: ${{ steps.detect.outputs.sarif-file }}
+        run: |
+          set -euo pipefail
+          echo "findings-count=$COUNT sarif-file=$SARIF"
+          if [ "$COUNT" != "1" ]; then
+            echo "::error::expected findings-count=1, got '$COUNT'"; exit 1
+          fi
+          if [ -z "$SARIF" ] || [ ! -f "$SARIF" ]; then
+            echo "::error::expected SARIF file at '$SARIF'"; exit 1
+          fi
+          echo "OK: finding detected and SARIF written"
+
+      - name: Scan clean fixture (expect no findings)
+        id: clean
+        uses: ./
+        with:
+          scan-type: fs
+          path: _lwclean
+          format: table
+          no-verify: 'true'
+          fail-on-findings: 'true'
+          release-repo: ${{ github.repository }}
+
+      - name: Assert no findings reported
+        shell: bash
+        env:
+          COUNT: ${{ steps.clean.outputs.findings-count }}
+        run: |
+          set -euo pipefail
+          [ "$COUNT" = "0" ] || { echo "::error::expected findings-count=0, got '$COUNT'"; exit 1; }
+          echo "OK: clean directory reported no findings"
+
+  # The released binary the action installs predates the `github` output format,
+  # so exercise that format with a binary built from this branch.
+  cli-github-format:
+    name: cli-github-format
+    needs: actionlint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+        with:
+          go-version: '1.25.10'
+      - name: Build leakwatch from this branch
+        run: go build -o "${RUNNER_TEMP}/leakwatch" .
+      - name: github format emits inline annotations
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p _fx
+          printf 'AWS_ACCESS_KEY_ID=%s%s\n' 'AKIA' 'IOSFODNN7EXAMPLE' > _fx/leak.env
+          out="$("${RUNNER_TEMP}/leakwatch" scan fs _fx --format github --no-verify 2>/dev/null)"
+          echo "$out"
+          echo "$out" | grep -q '^::error .*aws-access-key-id' \
+            || { echo "::error::expected an ::error annotation for aws-access-key-id"; exit 1; }
+          echo "OK: --format github emitted an inline annotation"

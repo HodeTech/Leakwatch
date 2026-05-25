@@ -40,7 +40,7 @@ func init() {
 	scanCmd.AddCommand(scanFsCmd)
 
 	flags := scanFsCmd.Flags()
-	flags.StringP("format", "f", "json", "output format (json, sarif, csv, table)")
+	flags.StringP("format", "f", "json", "output format (json, sarif, csv, table, github)")
 	flags.StringP("output", "o", "", "output file (default: stdout)")
 	flags.IntP("concurrency", "c", runtime.NumCPU(), "number of concurrent workers")
 	flags.Int64("max-file-size", 10*1024*1024, "maximum file size in bytes")

@@ -45,7 +45,7 @@ While existing open-source tools (TruffleHog, Gitleaks) are strong in certain ar
 - High memory consumption with large repositories
 - Verification can hit API rate limits
 - Unverified results are still noisy
-- Adding custom detectors requires writing Go code and recompiling
+- Custom regex detectors can be defined in YAML (`config.yaml` `detectors:`), but adding custom **verification** logic requires writing Go code and recompiling
 - `.secretsignore` / allowlist mechanism is less mature compared to competitors
 
 ---
@@ -188,15 +188,19 @@ While existing open-source tools (TruffleHog, Gitleaks) are strong in certain ar
 | **Container Images** | Yes | No | No | No | Yes | **Yes** |
 | **Cloud Sources** | Yes (S3, GCS) | No | No | No | No | **Yes (Phase 5)** |
 | **SaaS Scanning** | Yes (Slack, Jira) | No | No | No | Public monitoring | **Planned** |
-| **Aho-Corasick** | Partial | No | No | Unknown | Unknown | **Yes** |
+| **Aho-Corasick** | Yes | Yes | No | Unknown | Unknown | **Yes** |
 | **Entropy Analysis** | Yes | As filter | Yes | No | With ML | **Yes (hybrid)** |
-| **SARIF Output** | Yes | Yes | No | Native | Yes | **Yes** |
+| **SARIF Output** | No | Yes | No | Native | Yes | **Yes** |
 | **Pre-commit** | Yes | Yes (primary) | Yes | Push Protection | Yes | **Yes** |
-| **Custom Rules** | Requires Go code | TOML (easy) | Plugin (Python) | Limited | Enterprise | **YAML (easy)** |
+| **Custom Rules** | YAML config | TOML (easy) | Plugin (Python) | Limited | Enterprise | **YAML (easy)** |
 | **Allowlist/Ignore** | Basic | Advanced | Baseline | None | Yes | **Advanced** |
 | **License** | AGPL-3.0 | MIT* | Apache 2.0 | Commercial | Commercial | **MIT** |
 | **Single Binary** | Yes | Yes | No (Python) | N/A | No (Python) | **Yes** |
 | **Remediation** | No | No | No | Partner revoke | Dashboard | **Planned** |
+
+> \* The Gitleaks CLI is MIT-licensed; the official `gitleaks-action` runs under a commercial EULA and requires a free license key for **organization** accounts (personal accounts are exempt).
+>
+> **TruffleHog notes:** it fully uses Aho-Corasick keyword pre-filtering (`pkg/engine/ahocorasick/`); it has **no native SARIF** output (JSON / plain / GitHub-Actions only); and it **does** support custom detectors via a YAML `config.yaml` (`detectors:` block) — not "Go code only".
 
 ---
 
@@ -210,7 +214,7 @@ While existing open-source tools (TruffleHog, Gitleaks) are strong in certain ar
 **Leakwatch Opportunity:** A unique position in the open-source market with an MIT-licensed, modular verification system.
 
 #### Opportunity 2: Easy Extensibility
-**Situation:** Adding custom detectors in TruffleHog requires writing Go code and recompiling. Gitleaks' TOML rules are simple but do not allow adding verification logic.
+**Situation:** TruffleHog supports custom regex detectors in YAML (`config.yaml` `detectors:`), but adding custom verification logic requires writing Go code and recompiling. Gitleaks' TOML rules are simple but do not allow adding verification logic.
 
 **Leakwatch Opportunity:** Two-tier extensibility with YAML-based rule definitions + Go plugin interface. YAML is sufficient for simple regex rules; Go interface for advanced verification.
 

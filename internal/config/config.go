@@ -13,10 +13,11 @@ import (
 
 // Supported output formats.
 var validFormats = map[string]bool{
-	"json":  true,
-	"sarif": true,
-	"csv":   true,
-	"table": true,
+	"json":   true,
+	"sarif":  true,
+	"csv":    true,
+	"table":  true,
+	"github": true,
 }
 
 // Supported severity levels for output.severity-threshold.

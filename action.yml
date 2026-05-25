@@ -1,0 +1,355 @@
+name: 'Leakwatch Secret Scanner'
+description: 'Detect, verify & report leaked secrets (API keys, tokens, credentials) in code, Git history, and container images.'
+author: 'HodeTech'
+
+branding:
+  icon: 'shield'
+  color: 'red'
+
+inputs:
+  scan-type:
+    description: 'What to scan: fs (filesystem), git (repository history), or image (container image).'
+    required: false
+    default: 'fs'
+  path:
+    description: 'Path to scan (for fs/git) or image reference (for image).'
+    required: false
+    default: '.'
+  format:
+    description: 'Output format: sarif, json, csv, table, or github (inline pull-request annotations).'
+    required: false
+    default: 'sarif'
+  output:
+    description: 'Write formatted output to this file (relative to working-directory). Ignored for format=github. When empty and format=sarif, defaults to results.sarif.'
+    required: false
+    default: ''
+  only-verified:
+    description: 'Report only findings confirmed active by live verification.'
+    required: false
+    default: 'false'
+  no-verify:
+    description: 'Disable live verification (no outbound calls to provider APIs). Recommended in CI.'
+    required: false
+    default: 'true'
+  min-severity:
+    description: 'Minimum severity to report: low, medium, high, or critical.'
+    required: false
+    default: 'low'
+  remediation:
+    description: 'Include remediation guidance in the output.'
+    required: false
+    default: 'false'
+  config:
+    description: 'Path to a .leakwatch.yaml configuration file.'
+    required: false
+    default: ''
+  scan-diff:
+    description: 'For git scans, scan only commits new to the event instead of full history. "auto" enables this on pull_request/push events, "true" forces it, "false" always scans full history. Requires a checkout with fetch-depth: 0.'
+    required: false
+    default: 'auto'
+  extra-args:
+    description: 'Additional raw arguments appended to the leakwatch scan command (space-separated).'
+    required: false
+    default: ''
+  working-directory:
+    description: 'Directory to run the scan from.'
+    required: false
+    default: '.'
+  sarif-upload:
+    description: 'Upload SARIF results to GitHub Code Scanning. Requires format=sarif and permissions: security-events: write.'
+    required: false
+    default: 'false'
+  fail-on-findings:
+    description: 'Fail the workflow step when leakwatch reports findings (exit code 1). When "false", a ::warning:: is emitted instead so the scan does not block the pipeline. Hard errors (exit code >= 2) always fail the step regardless of this setting.'
+    required: false
+    default: 'true'
+  version:
+    description: 'Leakwatch version to install: "latest" or a release tag such as v1.5.0.'
+    required: false
+    default: 'latest'
+  release-repo:
+    description: 'GitHub repository (owner/name) to download the release binary from. Defaults to the canonical Leakwatch repo; override only for forks or self-hosted mirrors.'
+    required: false
+    default: 'HodeTech/Leakwatch'
+
+outputs:
+  findings-count:
+    description: 'Whether secrets were reported: 1 if any finding was reported, else 0 (mirrors the leakwatch exit code; not a count).'
+    value: ${{ steps.scan.outputs.findings-count }}
+  sarif-file:
+    description: 'Path to the SARIF output file relative to the repository root (set when format=sarif).'
+    value: ${{ steps.scan.outputs.sarif-file }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Leakwatch
+      shell: bash
+      env:
+        LW_VERSION: ${{ inputs.version }}
+        LW_REPO: ${{ inputs.release-repo }}
+      run: |
+        set -euo pipefail
+
+        # ---- Resolve OS/arch (Linux and macOS only) ----------------------------
+        case "$RUNNER_OS" in
+          Linux)  GOOS=linux;  EXT=tar.gz; BIN=leakwatch ;;
+          macOS)  GOOS=darwin; EXT=tar.gz; BIN=leakwatch ;;
+          *)
+            echo "::error::The Leakwatch action supports Linux and macOS runners only (got '$RUNNER_OS'). Use ubuntu-latest or macos-latest, or run the container image ghcr.io/hodetech/leakwatch."
+            exit 1 ;;
+        esac
+        case "$RUNNER_ARCH" in
+          X64)   GOARCH=amd64 ;;
+          ARM64) GOARCH=arm64 ;;
+          *)
+            echo "::error::Unsupported runner architecture '$RUNNER_ARCH' (expected X64 or ARM64)."
+            exit 1 ;;
+        esac
+
+        # ---- Resolve the release tag ------------------------------------------
+        if [ "$LW_VERSION" = "latest" ]; then
+          # `|| true` so a 404 (repo has no releases) does not abort under set -e
+          # before the curated error below can run.
+          eff="$(curl -fsSLI -o /dev/null -w '%{url_effective}' "https://github.com/${LW_REPO}/releases/latest" || true)"
+          TAG="${eff##*/}"
+        else
+          TAG="$LW_VERSION"
+        fi
+        if [ -z "$TAG" ] || [ "$TAG" = "latest" ] || [ "$TAG" = "releases" ]; then
+          echo "::error::Could not resolve the latest release tag for ${LW_REPO}. Does it have any releases? See https://github.com/${LW_REPO}/releases"
+          exit 1
+        fi
+        VER="${TAG#v}"  # goreleaser archive names omit the leading 'v'
+
+        # ---- Download, verify, extract ----------------------------------------
+        ARCHIVE="leakwatch_${VER}_${GOOS}_${GOARCH}.${EXT}"
+        BASE_URL="https://github.com/${LW_REPO}/releases/download/${TAG}"
+        TMP="$(mktemp -d)"
+        echo "Installing Leakwatch ${TAG} (${ARCHIVE})"
+        if ! curl -fsSL --retry 3 --retry-delay 2 -o "${TMP}/${ARCHIVE}" "${BASE_URL}/${ARCHIVE}"; then
+          echo "::error::Failed to download ${ARCHIVE}. Is '${TAG}' a valid release in ${LW_REPO}? See https://github.com/${LW_REPO}/releases"
+          exit 1
+        fi
+        if ! curl -fsSL --retry 3 --retry-delay 2 -o "${TMP}/checksums.txt" "${BASE_URL}/checksums.txt"; then
+          echo "::error::Failed to download checksums.txt for ${TAG} from ${LW_REPO}."
+          exit 1
+        fi
+
+        expected="$(awk -v f="$ARCHIVE" '$2 == f {print $1}' "${TMP}/checksums.txt")"
+        if [ -z "$expected" ]; then
+          echo "::error::Checksum for ${ARCHIVE} not found in checksums.txt."
+          exit 1
+        fi
+        if command -v sha256sum >/dev/null 2>&1; then
+          actual="$(sha256sum "${TMP}/${ARCHIVE}" | awk '{print $1}')"
+        elif command -v shasum >/dev/null 2>&1; then
+          actual="$(shasum -a 256 "${TMP}/${ARCHIVE}" | awk '{print $1}')"
+        else
+          echo "::error::No sha256 tool (sha256sum/shasum) available to verify the download."
+          exit 1
+        fi
+        if [ "$expected" != "$actual" ]; then
+          echo "::error::Checksum mismatch for ${ARCHIVE} (expected ${expected}, got ${actual})."
+          exit 1
+        fi
+
+        tar -xzf "${TMP}/${ARCHIVE}" -C "$TMP"
+
+        # ---- Install onto PATH for the next step ------------------------------
+        INSTALL_DIR="${TMP}/bin"
+        mkdir -p "$INSTALL_DIR"
+        mv "${TMP}/${BIN}" "${INSTALL_DIR}/${BIN}"
+        chmod +x "${INSTALL_DIR}/${BIN}"
+        echo "$INSTALL_DIR" >> "$GITHUB_PATH"
+        "${INSTALL_DIR}/${BIN}" version || true
+
+    - name: Run scan
+      id: scan
+      shell: bash
+      env:
+        INPUT_SCAN_TYPE: ${{ inputs.scan-type }}
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_FORMAT: ${{ inputs.format }}
+        INPUT_OUTPUT: ${{ inputs.output }}
+        INPUT_MIN_SEVERITY: ${{ inputs.min-severity }}
+        INPUT_ONLY_VERIFIED: ${{ inputs.only-verified }}
+        INPUT_NO_VERIFY: ${{ inputs.no-verify }}
+        INPUT_REMEDIATION: ${{ inputs.remediation }}
+        INPUT_CONFIG: ${{ inputs.config }}
+        INPUT_SCAN_DIFF: ${{ inputs.scan-diff }}
+        INPUT_EXTRA_ARGS: ${{ inputs.extra-args }}
+        INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
+        INPUT_FAIL_ON_FINDINGS: ${{ inputs.fail-on-findings }}
+        GH_EVENT_NAME: ${{ github.event_name }}
+        GH_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        GH_PUSH_BEFORE: ${{ github.event.before }}
+      run: |
+        set -uo pipefail
+
+        WORKDIR="${INPUT_WORKING_DIRECTORY:-.}"
+        cd "$WORKDIR" || { echo "::error::working-directory not found: $WORKDIR"; exit 1; }
+
+        ARGS=(scan "$INPUT_SCAN_TYPE" "$INPUT_PATH" --format "$INPUT_FORMAT" --min-severity "$INPUT_MIN_SEVERITY")
+
+        # Output file: explicit value, or default results.sarif for SARIF.
+        # The github format streams workflow commands to stdout, so it has no file.
+        OUT="$INPUT_OUTPUT"
+        if [ -z "$OUT" ] && [ "$INPUT_FORMAT" = "sarif" ]; then
+          OUT="results.sarif"
+        fi
+        if [ -n "$OUT" ] && [ "$INPUT_FORMAT" != "github" ]; then
+          ARGS+=(--output "$OUT")
+        fi
+        if [ "$INPUT_FORMAT" = "sarif" ] && [ -n "$OUT" ]; then
+          # Report where the upload step should look: $OUT as-is when running from
+          # the repo root, otherwise prefixed with the working directory. This is
+          # correct for both relative and absolute working-directory values.
+          if [ "$WORKDIR" = "." ]; then
+            echo "sarif-file=$OUT" >> "$GITHUB_OUTPUT"
+          else
+            echo "sarif-file=${WORKDIR%/}/$OUT" >> "$GITHUB_OUTPUT"
+          fi
+        fi
+
+        [ "$INPUT_ONLY_VERIFIED" = "true" ] && ARGS+=(--only-verified)
+        [ "$INPUT_NO_VERIFY" = "true" ]     && ARGS+=(--no-verify)
+        [ "$INPUT_REMEDIATION" = "true" ]   && ARGS+=(--remediation)
+        [ -n "$INPUT_CONFIG" ]              && ARGS+=(--config "$INPUT_CONFIG")
+
+        # only-verified needs verification ON. With no-verify (the default), nothing
+        # can be "verified active", so the scan would silently report zero findings.
+        if [ "$INPUT_ONLY_VERIFIED" = "true" ] && [ "$INPUT_NO_VERIFY" = "true" ]; then
+          echo "::warning::only-verified is set while no-verify is also true (the default). Verification is OFF, so no finding can be 'verified active' and the scan will report nothing. Set no-verify: false to use only-verified."
+        fi
+
+        # PR-diff: for git scans, limit to commits introduced by this event.
+        case "$INPUT_SCAN_DIFF" in
+          auto|true|false) ;;
+          *) echo "::error::Invalid scan-diff '${INPUT_SCAN_DIFF}' (expected auto, true, or false)."; exit 1 ;;
+        esac
+        diff_enabled=false
+        case "$INPUT_SCAN_DIFF" in
+          true) diff_enabled=true ;;
+          auto)
+            if [ "$INPUT_SCAN_TYPE" = "git" ] && { [ "$GH_EVENT_NAME" = "pull_request" ] || [ "$GH_EVENT_NAME" = "push" ]; }; then
+              diff_enabled=true
+            fi ;;
+        esac
+        if [ "$diff_enabled" = "true" ]; then
+          if [ "$INPUT_SCAN_TYPE" != "git" ]; then
+            # Only "true" reaches here for a non-git scan (auto never enables it);
+            # fail loudly so "true" is never silently ignored.
+            echo "::error::scan-diff requires scan-type: git (got '${INPUT_SCAN_TYPE}')."; exit 1
+          fi
+          base=""
+          [ "$GH_EVENT_NAME" = "pull_request" ] && base="$GH_PR_BASE_SHA"
+          [ "$GH_EVENT_NAME" = "push" ]         && base="$GH_PUSH_BEFORE"
+          # The all-zero SHA means no parent (first push of a branch).
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
+            if [ "$INPUT_SCAN_DIFF" = "true" ]; then
+              echo "::error::scan-diff: true but no base commit is available for event '${GH_EVENT_NAME}'. Use pull_request/push and checkout with fetch-depth: 0."; exit 1
+            fi
+            echo "::notice::scan-diff: auto found no base commit for '${GH_EVENT_NAME}'; scanning full history."
+          elif git -C "$INPUT_PATH" cat-file -e "${base}^{commit}" 2>/dev/null; then
+            ARGS+=(--since-commit "$base")
+          elif [ "$INPUT_SCAN_DIFF" = "true" ]; then
+            # The base exists upstream but not in this clone (default fetch-depth: 1).
+            # leakwatch would hard-fail (exit 2); since the user forced diff, fail
+            # with actionable guidance rather than silently scanning everything.
+            echo "::error::scan-diff: true but base commit ${base} is not in the local clone. Check out with fetch-depth: 0."; exit 1
+          else
+            # auto: degrade gracefully instead of hard-failing a pipeline.
+            echo "::warning::scan-diff: auto could not find base commit ${base} locally (shallow checkout?); scanning full history. Use fetch-depth: 0 for diff scans."
+          fi
+        fi
+
+        # Append any extra raw arguments (deliberate word-splitting). Reject the
+        # flags the action manages itself, so its output/summary/upload bookkeeping
+        # can never silently disagree with the actual CLI invocation.
+        if [ -n "$INPUT_EXTRA_ARGS" ]; then
+          # Disable globbing so an arg like --exclude=*.go is not expanded against
+          # the working directory; the word-splitting into separate args is intended.
+          set -f
+          # shellcheck disable=SC2206
+          extra=($INPUT_EXTRA_ARGS)
+          set +f
+          for a in "${extra[@]}"; do
+            # Prefix-match so combined shorthand (-fcsv, -o/tmp/x) and =forms are
+            # all caught. -f/-o are format/output here and have no other meaning.
+            case "$a" in
+              -f*|--format*|-o*|--output*|--config*|--show-raw*)
+                echo "::error::extra-args may not set format/output/config/show-raw ('$a'); use the dedicated action inputs instead."
+                exit 1 ;;
+            esac
+          done
+          ARGS+=("${extra[@]}")
+        fi
+
+        # Do NOT echo the assembled args: path/extra-args may carry credentials
+        # (tokens, authenticated URLs) that GitHub log masking would not catch.
+        echo "Running leakwatch scan (type=${INPUT_SCAN_TYPE}, format=${INPUT_FORMAT})"
+        leakwatch "${ARGS[@]}"
+        EXIT_CODE=$?
+
+        # ---- Job summary ------------------------------------------------------
+        if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+          {
+            echo "## 🔍 Leakwatch secret scan"
+            echo ""
+            if [ "$INPUT_FORMAT" = "sarif" ] && [ -n "$OUT" ] && [ -f "$OUT" ] && command -v jq >/dev/null 2>&1; then
+              total="$(jq '[.runs[].results[]] | length' "$OUT" 2>/dev/null || echo 0)"
+              if [ "${total:-0}" = "0" ]; then
+                echo "✅ No secrets detected."
+              else
+                echo "Found **${total}** potential secret(s):"
+                echo ""
+                echo "| Level | Detector | Location |"
+                echo "| --- | --- | --- |"
+                jq -r '.runs[].results[] | "| \(.level) | \(.ruleId) | \((.locations[0].physicalLocation.artifactLocation.uri // "-"))\(if .locations[0].physicalLocation.region.startLine then ":" + (.locations[0].physicalLocation.region.startLine | tostring) else "" end) |"' "$OUT" 2>/dev/null | head -50
+                if [ "${total:-0}" -gt 50 ] 2>/dev/null; then
+                  echo ""
+                  echo "_…showing the first 50 of ${total} findings._"
+                fi
+              fi
+            elif [ "$EXIT_CODE" -eq 0 ]; then
+              echo "✅ No secrets detected."
+            elif [ "$EXIT_CODE" -eq 1 ]; then
+              echo "⚠️ Potential secrets detected. See the step log above for details."
+            else
+              echo "❌ Scan failed (exit code ${EXIT_CODE})."
+            fi
+            echo ""
+            echo "<sub>Scanned with [Leakwatch](https://github.com/HodeTech/Leakwatch) · type: \`${INPUT_SCAN_TYPE}\` · format: \`${INPUT_FORMAT}\`</sub>"
+          } >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+        # ---- Exit-code mapping ------------------------------------------------
+        # leakwatch exit codes (see cmd/root.go):
+        #   0   — no findings
+        #   1   — findings reported (gated by fail-on-findings)
+        #   >=2 — hard error (always fails the step)
+        if [ "$EXIT_CODE" -eq 0 ]; then
+          echo "findings-count=0" >> "$GITHUB_OUTPUT"
+        elif [ "$EXIT_CODE" -eq 1 ]; then
+          echo "findings-count=1" >> "$GITHUB_OUTPUT"
+          if [ "$INPUT_FAIL_ON_FINDINGS" = "true" ]; then
+            echo "::error::Leakwatch found secrets in your code"
+            exit 1
+          else
+            echo "::warning::Leakwatch found secrets in your code (fail-on-findings=false; step will not fail)"
+          fi
+        else
+          echo "findings-count=0" >> "$GITHUB_OUTPUT"
+          echo "::error::Leakwatch scan failed with exit code ${EXIT_CODE}"
+          exit "$EXIT_CODE"
+        fi
+
+    - name: Upload SARIF
+      if: always() && inputs.sarif-upload == 'true' && inputs.format == 'sarif'
+      # github/codeql-action/upload-sarif@v3.36.0 (SHA-pinned: this runs inside
+      # consumers' repositories, so the floating tag is the most important to pin).
+      uses: github/codeql-action/upload-sarif@03e4368ac7daa2bd82b3e85262f3bf87ee112f57
+      with:
+        sarif_file: ${{ steps.scan.outputs.sarif-file }}
+        category: leakwatch

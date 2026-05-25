@@ -29,3 +29,4 @@ Each ADR follows the structure below:
 | [ADR-0006](ADR-0006-container-library.md) | Container Library: go-containerregistry | Accepted | 2026-03-24 |
 | [ADR-0007](ADR-0007-license.md) | License: MIT | Accepted | 2026-03-24 |
 | [ADR-0008](ADR-0008-concurrency-model.md) | Concurrency: Worker Pool | Accepted | 2026-03-24 |
+| [ADR-0009](ADR-0009-github-marketplace-action.md) | GitHub Marketplace Action: Location & Runtime | Accepted | 2026-05-24 |

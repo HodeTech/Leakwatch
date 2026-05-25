@@ -50,7 +50,7 @@ verification:
   timeout: 10s             # Per-request timeout
 
 output:
-  format: json             # Output format: json, sarif, csv, table
+  format: json             # Output format: json, sarif, csv, table, github
   show-raw: false          # Never show raw secret values
 
 filter:

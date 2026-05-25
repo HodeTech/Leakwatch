@@ -5,7 +5,11 @@ description: "Use the official Leakwatch GitHub Action to scan for secrets in yo
 
 # GitHub Action
 
-Every push to your repository is an opportunity for a secret to slip through. The official **Leakwatch GitHub Action** (`HodeTech/leakwatch-action@v1`) integrates Leakwatch directly into your GitHub workflow — it installs the tool, runs a scan, maps exit codes, and optionally uploads SARIF results to GitHub Code Scanning, all without any external service dependency.
+Every push to your repository is an opportunity for a secret to slip through. The official **Leakwatch GitHub Action** — published on the GitHub Marketplace and used as `HodeTech/Leakwatch@v1` — integrates Leakwatch directly into your GitHub workflow. It downloads the prebuilt Leakwatch binary for the runner (no Go toolchain or compilation step), runs a scan, maps exit codes, writes a job summary, and optionally uploads SARIF results to GitHub Code Scanning — all without any external service dependency.
+
+:::note
+**Supported runners:** the action runs on Linux (`ubuntu-*`) and macOS (`macos-*`) runners. Windows runners are not supported yet; run the scan on a Linux/macOS runner or use the container image `ghcr.io/hodetech/leakwatch`.
+:::
 
 ## Quick start
 
@@ -22,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: HodeTech/leakwatch-action@v1
+      - uses: HodeTech/Leakwatch@v1
 ```
 
 With only the defaults, the action scans the filesystem (`scan-type: fs`), produces SARIF output, skips live verification (`no-verify: true`), and fails the job if any finding is reported.
@@ -51,7 +55,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Scan for secrets
-        uses: HodeTech/leakwatch-action@v1
+        uses: HodeTech/Leakwatch@v1
         with:
           scan-type: fs
           path: .
@@ -72,13 +76,20 @@ SARIF upload requires the job to declare `permissions: security-events: write`. 
 |-------|---------|-------------|
 | `scan-type` | `fs` | Scan type to run: `fs`, `git`, or `image`. |
 | `path` | `.` | Path to scan (for `fs`/`git`) or image reference (for `image`). |
-| `format` | `sarif` | Output format: `json`, `sarif`, `csv`, or `table`. |
+| `format` | `sarif` | Output format: `sarif`, `json`, `csv`, `table`, or `github` (inline pull-request annotations). |
+| `output` | `` | Write formatted output to this file (relative to `working-directory`). Ignored for `format: github`. When empty and `format: sarif`, defaults to `results.sarif`. |
 | `only-verified` | `false` | Report only findings confirmed active by live verification. |
 | `no-verify` | `true` | Disable secret verification (no outbound calls to providers). |
 | `min-severity` | `low` | Minimum severity to report: `low`, `medium`, `high`, or `critical`. |
+| `remediation` | `false` | Include remediation guidance in the output. |
+| `config` | `` | Path to a `.leakwatch.yaml` configuration file. |
+| `scan-diff` | `auto` | For `git` scans, scan only commits new to the event. `auto` enables this on `pull_request`/`push`, `true` forces it, `false` always scans full history. Requires `actions/checkout` with `fetch-depth: 0`. |
+| `extra-args` | `` | Additional raw arguments appended to the `leakwatch scan` command (space-separated). Flags the action manages itself (`--format`, `--output`, `--config`, `--show-raw`) are rejected — use the dedicated inputs instead. |
+| `working-directory` | `.` | Directory to run the scan from. |
 | `sarif-upload` | `false` | Upload SARIF results to GitHub Code Scanning after the scan. |
-| `fail-on-findings` | `true` | Fail the workflow step when findings are reported (exit code 1). When `false`, a `::warning::` annotation is emitted instead so the scan does not block the pipeline. Hard errors (exit code 2) always fail the step regardless of this setting. |
-| `version` | `latest` | Leakwatch version to install. Use a tag such as `v1.5.0` to pin a specific release. |
+| `fail-on-findings` | `true` | Fail the workflow step when findings are reported (exit code 1). When `false`, a `::warning::` annotation is emitted instead so the scan does not block the pipeline. Hard errors (exit code ≥ 2) always fail the step regardless of this setting. |
+| `version` | `latest` | Leakwatch version to install: `latest`, or a release tag such as `v1.5.0` to pin a specific release. |
+| `release-repo` | `HodeTech/Leakwatch` | Repository (`owner/name`) to download the release binary from. Override only for forks or self-hosted mirrors. |
 
 ## Outputs
 
@@ -94,7 +105,7 @@ By default, `no-verify` is `true` — live verification is **off** in CI. This k
 To enable verification in CI, set `no-verify: "false"`:
 
 ```yaml
-- uses: HodeTech/leakwatch-action@v1
+- uses: HodeTech/Leakwatch@v1
   with:
     no-verify: "false"
 ```
@@ -118,7 +129,7 @@ The upload step runs with `if: always()`, so results are uploaded even when `fai
 ```yaml
 - name: Scan for secrets
   id: scan
-  uses: HodeTech/leakwatch-action@v1
+  uses: HodeTech/Leakwatch@v1
   with:
     fail-on-findings: "false"   # let the workflow continue
 
@@ -131,12 +142,46 @@ The upload step runs with `if: always()`, so results are uploaded even when `fai
 For reproducible builds, pin `version` to a specific tag:
 
 ```yaml
-- uses: HodeTech/leakwatch-action@v1
+- uses: HodeTech/Leakwatch@v1
   with:
     version: "v1.5.0"
 ```
 
-This installs exactly `github.com/HodeTech/leakwatch@v1.5.0` via `go install`.
+This downloads the prebuilt `v1.5.0` binary from the [Leakwatch releases](https://github.com/HodeTech/Leakwatch/releases) and verifies its SHA-256 checksum before running. For maximum supply-chain safety you can also pin the action itself to a commit SHA, e.g. `uses: HodeTech/Leakwatch@<sha>`.
+
+## Scanning only changed code (pull-request diff)
+
+For `git` scans the action can limit the scan to the commits a pull request or push actually introduces, instead of the full history. This is faster and surfaces only newly added secrets. It is controlled by `scan-diff` (default `auto`) and requires a full checkout so the base commit is available locally:
+
+```yaml
+jobs:
+  leakwatch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # required so the PR base commit is present
+      - uses: HodeTech/Leakwatch@v1
+        with:
+          scan-type: git
+          path: .
+          # scan-diff: auto (default) — on pull_request/push, scans base..HEAD only
+```
+
+On a `pull_request` event the action scans from `github.event.pull_request.base.sha`; on a `push` event from `github.event.before`. Set `scan-diff: "false"` to always scan the full history, or `scan-diff: "true"` to force diff mode. `scan-diff` has no effect on `fs`/`image` scans.
+
+## Inline pull-request annotations
+
+Set `format: github` to emit the findings as GitHub Actions workflow commands, which appear as inline annotations on the pull request's **Files changed** view and in the run log:
+
+```yaml
+- uses: HodeTech/Leakwatch@v1
+  with:
+    format: github
+    fail-on-findings: "false"   # annotate without blocking, if you prefer
+```
+
+Annotations always show the **redacted** value only — the raw secret is never written to the (often public) PR UI or logs. Use `format: github` for fast, visible PR feedback, or `format: sarif` with `sarif-upload: true` to record findings as Code Scanning alerts under the **Security** tab.
 
 ## See also
 

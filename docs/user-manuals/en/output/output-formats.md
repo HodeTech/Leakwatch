@@ -1,17 +1,18 @@
 ---
 title: "Output Formats"
-description: "The four output formats Leakwatch supports — JSON, SARIF, CSV, and table — with examples and guidance on when to use each."
+description: "The five output formats Leakwatch supports — JSON, SARIF, CSV, table, and GitHub annotations — with examples and guidance on when to use each."
 ---
 
 # Output Formats
 
-Leakwatch supports four output formats, covering machine-readable pipelines, security tooling integrations, spreadsheet exports, and human-readable terminal review. Select a format with `--format` (or `-f`); write to a file instead of stdout with `--output` (or `-o`).
+Leakwatch supports five output formats, covering machine-readable pipelines, security tooling integrations, spreadsheet exports, human-readable terminal review, and GitHub Actions annotations. Select a format with `--format` (or `-f`); write to a file instead of stdout with `--output` (or `-o`).
 
 ```bash
 leakwatch scan fs . --format json
 leakwatch scan fs . --format sarif --output results.sarif
 leakwatch scan fs . --format csv   --output findings.csv
 leakwatch scan fs . --format table
+leakwatch scan fs . --format github   # GitHub Actions annotations (CI use)
 ```
 
 The default format is `json`.
@@ -146,11 +147,33 @@ HIGH       aws-access-key-id config/aws.yml        AKIA****K7NP           unveri
 Found 2 secrets (1 critical, 1 high).
 ```
 
+## GitHub annotations
+
+The `github` format emits [GitHub Actions workflow commands](https://docs.github.com/actions/using-workflows/workflow-commands-for-github-actions) (`::error` / `::warning` / `::notice`) so findings appear as **inline annotations** on a pull request's *Files changed* view and in the run log. It is intended to be streamed to the runner's stdout — writing it to a file has no effect.
+
+Severity maps to the annotation level: `critical` → `error`, `high` → `warning`, `medium`/`low` → `notice`. A finding with a file path is anchored to that file and line; a finding without one becomes a run-level annotation.
+
+For safety, this format **never** prints the raw secret — only the redacted value is shown, even with `--show-raw`, because annotations render in the (often public) PR UI and logs.
+
+### Example invocation
+
+```bash
+leakwatch scan fs . --format github
+```
+
+### Example output
+
+```text
+::error file=config/prod.env,line=12,title=Leakwatch%3A aws-access-key-id::Potential secret detected by aws-access-key-id (critical): AKIA****K7NP
+```
+
+This format is normally driven by the [GitHub Action](#/ci-cd/github-action) (`format: github`) rather than invoked by hand.
+
 ## Common output flags
 
 | Flag | Short | Description |
 |---|---|---|
-| `--format` | `-f` | Output format: `json`, `sarif`, `csv`, `table` (default `json`) |
+| `--format` | `-f` | Output format: `json`, `sarif`, `csv`, `table`, `github` (default `json`) |
 | `--output` | `-o` | Write to file instead of stdout |
 | `--show-raw` | | Include unredacted secret value in output |
 | `--min-severity` | | Drop findings below this severity level |

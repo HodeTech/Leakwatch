@@ -42,7 +42,7 @@ func init() {
 	scanCmd.AddCommand(scanReposCmd)
 
 	flags := scanReposCmd.Flags()
-	flags.StringP("format", "f", "json", "output format (json, sarif, csv, table)")
+	flags.StringP("format", "f", "json", "output format (json, sarif, csv, table, github)")
 	flags.StringP("output", "o", "", "output file (default: stdout)")
 	flags.IntP("concurrency", "c", runtime.NumCPU(), "number of concurrent workers per repo")
 	flags.Int("parallel", 3, "number of repositories to scan in parallel")

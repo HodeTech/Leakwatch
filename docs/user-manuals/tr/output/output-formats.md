@@ -1,17 +1,18 @@
 ---
 title: "Çıktı Formatları"
-description: "Leakwatch'ın desteklediği dört çıktı formatı — JSON, SARIF, CSV ve tablo — örnekler ve her birini ne zaman kullanacağınıza dair rehberlik."
+description: "Leakwatch'ın desteklediği beş çıktı formatı — JSON, SARIF, CSV, tablo ve GitHub ek açıklamaları — örnekler ve her birini ne zaman kullanacağınıza dair rehberlik."
 ---
 
 # Çıktı Formatları
 
-Leakwatch dört çıktı formatını destekler: makine tarafından okunabilir hatlar, güvenlik araç entegrasyonları, elektronik tablo dışa aktarmaları ve insan tarafından okunabilir terminal incelemesi. `--format` (veya `-f`) ile bir format seçin; stdout yerine bir dosyaya yazmak için `--output` (veya `-o`) kullanın.
+Leakwatch beş çıktı formatını destekler: makine tarafından okunabilir hatlar, güvenlik araç entegrasyonları, elektronik tablo dışa aktarmaları, insan tarafından okunabilir terminal incelemesi ve GitHub Actions ek açıklamaları. `--format` (veya `-f`) ile bir format seçin; stdout yerine bir dosyaya yazmak için `--output` (veya `-o`) kullanın.
 
 ```bash
 leakwatch scan fs . --format json
 leakwatch scan fs . --format sarif --output results.sarif
 leakwatch scan fs . --format csv   --output findings.csv
 leakwatch scan fs . --format table
+leakwatch scan fs . --format github   # GitHub Actions ek açıklamaları (CI kullanımı)
 ```
 
 Varsayılan format `json`'dur.
@@ -146,11 +147,33 @@ HIGH       aws-access-key-id config/aws.yml        AKIA****K7NP           unveri
 Found 2 secrets (1 critical, 1 high).
 ```
 
+## GitHub ek açıklamaları
+
+`github` formatı, [GitHub Actions iş akışı komutlarını](https://docs.github.com/actions/using-workflows/workflow-commands-for-github-actions) (`::error` / `::warning` / `::notice`) yayar; böylece bulgular bir pull request'in *Files changed* görünümünde ve çalışma günlüğünde **satır içi ek açıklamalar** olarak görünür. Runner'ın stdout'una akıtılmak üzere tasarlanmıştır — bir dosyaya yazmanın etkisi yoktur.
+
+Önem derecesi ek açıklama seviyesine eşlenir: `critical` → `error`, `high` → `warning`, `medium`/`low` → `notice`. Dosya yolu olan bir bulgu o dosya ve satıra bağlanır; dosya yolu olmayan bir bulgu çalışma düzeyinde (run-level) bir ek açıklama olur.
+
+Güvenlik için bu format ham sırrı **asla** yazdırmaz — `--show-raw` ile bile yalnızca redakte edilmiş değer gösterilir; çünkü ek açıklamalar (çoğu zaman herkese açık olan) PR arayüzünde ve günlüklerde görüntülenir.
+
+### Örnek çağrı
+
+```bash
+leakwatch scan fs . --format github
+```
+
+### Örnek çıktı
+
+```text
+::error file=config/prod.env,line=12,title=Leakwatch%3A aws-access-key-id::Potential secret detected by aws-access-key-id (critical): AKIA****K7NP
+```
+
+Bu format normalde elle çağrılmak yerine [GitHub Action](#/ci-cd/github-action) (`format: github`) tarafından kullanılır.
+
 ## Yaygın çıktı bayrakları
 
 | Bayrak | Kısa | Açıklama |
 |---|---|---|
-| `--format` | `-f` | Çıktı formatı: `json`, `sarif`, `csv`, `table` (varsayılan `json`) |
+| `--format` | `-f` | Çıktı formatı: `json`, `sarif`, `csv`, `table`, `github` (varsayılan `json`) |
 | `--output` | `-o` | stdout yerine dosyaya yaz |
 | `--show-raw` | | Çıktıya maskelenmemiş sır değerini dahil et |
 | `--min-severity` | | Bu önem seviyesinin altındaki bulguları bırak |

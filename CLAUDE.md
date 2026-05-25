@@ -45,7 +45,7 @@ leakwatch/
 │   ├── config/             # Viper-based configuration
 │   └── filter/             # .leakwatchignore, inline ignore
 ├── pkg/                    # Public packages (finding model)
-├── action/                 # GitHub Action definition
+├── action.yml              # GitHub Action definition (Marketplace, repo root)
 ├── Formula/                # Homebrew formula
 ├── Dockerfile              # Multi-stage Docker build
 ├── docs/                   # Documentation
@@ -71,6 +71,7 @@ Architecture decisions are documented in ADR format under `docs/decisions/`. The
 | [ADR-0006](docs/decisions/ADR-0006-container-library.md) | go-containerregistry | Daemonless, layer-based analysis |
 | [ADR-0007](docs/decisions/ADR-0007-license.md) | MIT | Enterprise adoption, open-core compatibility |
 | [ADR-0008](docs/decisions/ADR-0008-concurrency-model.md) | Worker Pool | Fixed worker count, channel-based |
+| [ADR-0009](docs/decisions/ADR-0009-github-marketplace-action.md) | Marketplace Action | Root `action.yml`, prebuilt-binary composite, `@v1` |
 
 ## Coding Standards
 

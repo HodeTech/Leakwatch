@@ -4,6 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Go Report Card](https://goreportcard.com/badge/github.com/HodeTech/leakwatch)](https://goreportcard.com/report/github.com/HodeTech/leakwatch)
 [![Go Reference](https://pkg.go.dev/badge/github.com/HodeTech/leakwatch.svg)](https://pkg.go.dev/github.com/HodeTech/leakwatch)
+[![GitHub Marketplace](https://img.shields.io/badge/Marketplace-Leakwatch%20Secret%20Scanner-2ea44f?logo=github)](https://github.com/marketplace/actions/leakwatch-secret-scanner)
 
 > Next-generation secret scanning platform — fast, accurate, open source.
 
@@ -15,18 +16,21 @@
 
 | Feature | Leakwatch | TruffleHog | Gitleaks |
 |---------|-----------|------------|----------|
-| **License** | MIT | AGPL-3.0 | MIT* |
+| **License** | MIT | AGPL-3.0 | MIT [^gl-action] |
 | **Secret Verification** | Yes (54 verifiers, 51 packages) | Yes | No |
 | **Container Scanning** | Yes | Yes | No |
-| **Aho-Corasick** | Yes | Partial | No |
-| **Entropy Analysis** | Hybrid | Yes | Filter |
-| **YAML Custom Rules** | Yes | No (Go) | TOML |
-| **SARIF Output** | Yes | Yes | Yes |
+| **SARIF Output** | Yes | No [^th-sarif] | Yes |
+| **Aho-Corasick Prefilter** | Yes | Yes | Yes |
+| **Entropy Analysis** | Yes | Yes | Yes |
+| **Custom Rules** | YAML | YAML (config) | TOML |
+
+[^gl-action]: The Gitleaks CLI is MIT-licensed. The official `gitleaks-action` GitHub Action, however, runs under a commercial EULA and requires a (free) license key for **organization** accounts (personal accounts are exempt).
+[^th-sarif]: TruffleHog emits JSON / plain / GitHub-Actions output; it has no native SARIF formatter (SARIF requires an external converter). All three tools use Aho-Corasick keyword pre-filtering and Shannon-entropy filtering, and all three support custom rules (Leakwatch: YAML, TruffleHog: `config.yaml` `detectors:` block, Gitleaks: TOML).
 
 **What makes Leakwatch different:**
-- **Verification + MIT license** — A unique combination in the open source world
+- **MIT license _with_ verification** — Among these tools, Leakwatch is the only one that is both permissively licensed (MIT, unlike TruffleHog's AGPL-3.0) and performs live secret verification (unlike Gitleaks, which is detection-only)
 - **85.7% verification coverage** — 54 of 63 detectors have live API or format validation verification
-- **Hybrid detection engine** — Low false positives with Aho-Corasick + Regex + Entropy
+- **Verification + container + SARIF in one MIT binary** — TruffleHog lacks SARIF; Gitleaks lacks verification and container scanning
 - **Easy extensibility** — YAML for simple rules, Go plugin for advanced ones
 - **Single binary, zero dependencies** — Runs on every platform
 - **Scan summary** — Every scan prints a summary to stderr (date, source, target, files scanned, duration, findings)
@@ -48,8 +52,8 @@ go install github.com/HodeTech/leakwatch@latest
 # Docker
 docker run --rm -v $(pwd):/scan ghcr.io/hodetech/leakwatch:latest scan fs /scan
 
-# Binary download
-curl -sSfL https://github.com/HodeTech/Leakwatch/releases/latest/download/leakwatch_$(uname -s)_$(uname -m).tar.gz | tar xz
+# Binary download — pick the archive for your OS/arch from the releases page:
+#   https://github.com/HodeTech/Leakwatch/releases  (e.g. leakwatch_1.5.0_linux_amd64.tar.gz)
 ```
 
 ### Quick Setup
@@ -190,10 +194,11 @@ leakwatch scan fs . --remediation
 ### GitHub Actions
 
 ```yaml
-- uses: HodeTech/leakwatch-action@v1
+- uses: HodeTech/Leakwatch@v1
   with:
     scan-type: git
-    only-verified: true  # only report verified live secrets (action default: false)
+    no-verify: false      # turn verification ON (required for only-verified)
+    only-verified: true   # report only secrets confirmed live
     sarif-upload: true
 ```
 
