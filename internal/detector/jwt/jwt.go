@@ -67,13 +67,22 @@ func (d *JWT) Scan(_ context.Context, data []byte) []detector.RawFinding {
 // of a GitHub stateless installation token (ghs_APPID_<jwt>). RE2 has no
 // lookbehind, so it walks back over the contiguous token run (base64url plus the
 // ghs_/app-ID separators) immediately preceding the match and checks whether
-// that run begins with the literal "ghs_".
+// that run contains the literal "ghs_".
+//
+// Contains rather than HasPrefix: the run may carry leading base64url bytes with
+// no delimiter (e.g. "xghs_APPID_"). Wherever "ghs_" appears in the run, the run
+// has no dots (dots are not token bytes) so it is glued straight onto this JWT,
+// forming a "ghs_...eyJ.eyJ.sig" shape that the github-oauth-token detector
+// captures in full — its per-segment floors ({8,}) are at or below this
+// detector's ({10,}). Suppressing here therefore only removes a duplicate of a
+// secret the github detector already reports; it can never drop one. (This
+// assumes the github-oauth-token detector is active, which it is by default.)
 func isGitHubStatelessBody(data []byte, start int) bool {
 	i := start
 	for i > 0 && isTokenByte(data[i-1]) {
 		i--
 	}
-	return bytes.HasPrefix(data[i:start], ghsPrefix)
+	return bytes.Contains(data[i:start], ghsPrefix)
 }
 
 // isTokenByte reports whether b is part of a contiguous token run: a base64url

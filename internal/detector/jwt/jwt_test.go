@@ -97,6 +97,15 @@ func TestJWT_Scan_SuppressesGitHubStatelessTokenBody(t *testing.T) {
 			expected: 0,
 		},
 		{
+			// A base64url char glued directly before "ghs_" (no delimiter) must
+			// still be recognised as a ghs_ body: the github-oauth-token detector
+			// matches "ghs_..." mid-string, so reporting the JWT too would double
+			// the same secret.
+			name:     "stateless token glued to a preceding token char is suppressed",
+			input:    "x" + statelessToken,
+			expected: 0,
+		},
+		{
 			name:     "standalone JWT is still reported",
 			input:    jwtBody,
 			expected: 1,
