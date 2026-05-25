@@ -289,6 +289,10 @@ runs:
         # Do NOT echo the assembled args: path/extra-args may carry credentials
         # (tokens, authenticated URLs) that GitHub log masking would not catch.
         echo "Running leakwatch scan (type=${INPUT_SCAN_TYPE}, format=${INPUT_FORMAT})"
+        # GitHub invokes bash with -e; findings legitimately exit 1, so disable
+        # errexit around the scan and map the exit code ourselves below (otherwise
+        # the step would abort here and fail-on-findings: false would be ignored).
+        set +e
         leakwatch "${ARGS[@]}"
         EXIT_CODE=$?
 
