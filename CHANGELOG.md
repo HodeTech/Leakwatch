@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **`structured-config-secret` decodes TOML 1.1 `\xHH` escapes** — with
+  `github.com/pelletier/go-toml/v2` v2.4 (TOML 1.1), a quoted TOML value such
+  as `"abc\x2Ddef"` is now decoded (`abc-def`) instead of being rejected as
+  invalid TOML. Escapes that exist only in Go (`\a`, `\v`, octal) are still
+  rejected. The same upgrade bounds array/inline-table nesting depth in the
+  TOML parser.
+
 ### Security
 
 - **Go toolchain moved to 1.26.10** — the Go 1.25 line is end-of-life and no

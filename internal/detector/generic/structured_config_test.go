@@ -383,8 +383,18 @@ func TestStructuredConfigDetector_LineSyntaxEdges(t *testing.T) {
 		decoded, _, _, scalarOK = parseLineScalar([]byte(`"fixture\u002Dsecret-9mN2pQ7r"`), 0, formatTOML)
 		assert.True(t, scalarOK)
 		assert.Equal(t, "fixture-secret-9mN2pQ7r", decoded)
-		_, _, _, scalarOK = parseLineScalar([]byte(`"fixture\x2Dsecret-9mN2pQ7r"`), 0, formatTOML)
-		assert.False(t, scalarOK, "Go-only escapes must not be accepted as TOML")
+		// TOML 1.1 added \xHH escapes, so they decode like any other TOML escape.
+		decoded, _, _, scalarOK = parseLineScalar([]byte(`"fixture\x2Dsecret-9mN2pQ7r"`), 0, formatTOML)
+		assert.True(t, scalarOK, "TOML 1.1 \\xHH escapes must be accepted")
+		assert.Equal(t, "fixture-secret-9mN2pQ7r", decoded)
+		for _, goOnly := range []string{
+			`"fixture\asecret-9mN2pQ7r"`,   // \a: Go/C bell escape, not TOML
+			`"fixture\vsecret-9mN2pQ7r"`,   // \v: Go/C vertical-tab escape, not TOML
+			`"fixture\055secret-9mN2pQ7r"`, // octal: Go-only, not TOML
+		} {
+			_, _, _, scalarOK = parseLineScalar([]byte(goOnly), 0, formatTOML)
+			assert.False(t, scalarOK, "Go-only escapes must not be accepted as TOML: %s", goOnly)
+		}
 		_, _, _, scalarOK = parseLineScalar([]byte(`'fixture-it''s-secret-9mN2pQ7r'`), 0, formatTOML)
 		assert.False(t, scalarOK, "YAML doubled-quote syntax must not be accepted as TOML")
 	})
