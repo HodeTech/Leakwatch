@@ -30,6 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `google.golang.org/grpc` v1.83.2 and `go.opentelemetry.io/otel/sdk` v1.45.0,
   clearing every reachable `govulncheck` finding (plus the imported-but-unused
   grpc GO-2026-6443 and module-level x/net advisories).
+- **Release pipeline cache hardening** — the release job (which signs and
+  publishes artifacts) and the GitHub Pages build no longer restore Go
+  module/build caches written by other workflow runs, closing a
+  cache-poisoning path into published output.
 
 ## [v1.8.0] - 2026-08-11
 
