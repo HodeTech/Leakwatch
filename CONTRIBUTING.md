@@ -13,9 +13,9 @@ go test -race ./...
 
 ## Requirements
 
-- Go 1.25+
+- Go 1.26.10 or later within the 1.26 line (the `go` directive in `go.mod`; CI pins 1.26.10). Go 1.27 is not supported for development yet: the pinned `golangci-lint` v2.11.4 cannot read Go 1.27 export data.
 - gofumpt
-- golangci-lint v2+
+- golangci-lint v2.11.4 (the version CI installs)
 - Git 2.30+
 
 ## Development Workflow

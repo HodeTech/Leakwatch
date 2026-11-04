@@ -13,7 +13,7 @@ Bir sırrı yakalamak için en ucuz an, onu depoya girmeden önce durdurmaktır.
 
 - Python 3.8+ (pre-commit bir Python aracıdır).
 - Genel olarak kurulmuş [pre-commit](https://pre-commit.com/#install) (`pip install pre-commit` veya `brew install pre-commit`).
-- `PATH` üzerinde Go 1.25+ — kanca dili `golang` olduğundan pre-commit, ilk çalıştırmada Leakwatch'ı kaynaktan derler.
+- `PATH` üzerinde Go 1.26.10+ — kanca dili `golang` olduğundan pre-commit, ilk çalıştırmada Leakwatch'ı kaynaktan derler.
 
 ## Yapılandırma
 

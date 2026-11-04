@@ -1,7 +1,7 @@
 # Leakwatch - Git Repository Scanning Guide
 
-> **Document Version:** 1.1
-> **Date:** 2026-08-11
+> **Document Version:** 1.2
+> **Date:** 2026-11-05
 > **Status:** Approved
 
 ---
@@ -365,7 +365,7 @@ jobs:
 ```yaml
 secret-scan:
   stage: test
-  image: golang:1.25-alpine
+  image: golang:1.26-alpine
   before_script:
     - go install github.com/HodeTech/leakwatch@latest
   script:

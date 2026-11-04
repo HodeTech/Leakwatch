@@ -33,7 +33,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
-          go-version: '1.25.12'
+          go-version: '1.26.10'
           cache: true
       - name: Enforce reviewed provider-contract freshness
         run: go test ./internal/meta -run '^TestVerificationCapabilities_ReviewedContractsAreFresh$' -count=1

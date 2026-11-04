@@ -1,7 +1,7 @@
 # Leakwatch - Slack Workspace Scanning Guide
 
-> **Document Version:** 1.1
-> **Date:** 2026-08-11
+> **Document Version:** 1.2
+> **Date:** 2026-11-05
 > **Status:** Approved
 
 ---
@@ -279,7 +279,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25'
+          go-version: '1.26'
 
       - name: Install Leakwatch
         run: go install github.com/HodeTech/leakwatch@latest

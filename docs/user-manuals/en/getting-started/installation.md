@@ -19,7 +19,7 @@ The tap is hosted at [github.com/HodeTech/homebrew-tap](https://github.com/HodeT
 
 ## Go install
 
-If you have Go 1.25 or later installed, you can build and install the latest release directly from source:
+If you have Go 1.26.10 or later installed, you can build and install the latest release directly from source:
 
 ```bash
 go install github.com/HodeTech/leakwatch@latest
