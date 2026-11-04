@@ -1,4 +1,4 @@
-// ESLint flat config for the Leakwatch VS Code extension (ESLint 9 + typescript-eslint 8).
+// ESLint flat config for the Leakwatch VS Code extension (typescript-eslint).
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 
