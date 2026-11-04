@@ -12,7 +12,7 @@
 
 | Tool | Minimum Version | Purpose |
 |------|-----------------|---------|
-| Go | 1.26+ | Primary programming language |
+| Go | 1.26.10+ | Primary programming language |
 | Git | 2.30+ | Version control |
 | golangci-lint | 2.11+ | Static analysis and linting |
 | goreleaser | 2.0+ | Build and release automation |

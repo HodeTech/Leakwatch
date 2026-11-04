@@ -60,7 +60,7 @@ You can use one of the following methods to install Leakwatch on your system.
 
 ### 2.1 Go Install
 
-If Go 1.26 or higher is installed:
+If Go 1.26.10 or higher is installed:
 
 ```bash
 go install github.com/HodeTech/leakwatch@latest

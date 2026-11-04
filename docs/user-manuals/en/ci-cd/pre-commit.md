@@ -13,7 +13,7 @@ You need:
 
 - Python 3.8+ (pre-commit is a Python tool).
 - [pre-commit](https://pre-commit.com/#install) installed globally (`pip install pre-commit` or `brew install pre-commit`).
-- Go 1.26+ on `PATH` — the hook language is `golang`, so pre-commit compiles Leakwatch from source on first run.
+- Go 1.26.10+ on `PATH` — the hook language is `golang`, so pre-commit compiles Leakwatch from source on first run.
 
 ## Configuration
 

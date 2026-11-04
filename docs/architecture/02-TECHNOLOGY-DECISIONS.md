@@ -216,7 +216,7 @@ Rust would be the best choice in terms of raw performance. However:
 
 ## 5. Minimum Go Version
 
-**Go 1.26+** (current: 1.26.10 as declared in `go.mod`)
+**Go 1.26.10+** (as declared by the `go` directive in `go.mod`)
 
 **Rationale:**
 - `io/fs` package (Go 1.16+) — filesystem abstraction

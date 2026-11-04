@@ -19,7 +19,7 @@ Tap, [github.com/HodeTech/homebrew-tap](https://github.com/HodeTech/homebrew-tap
 
 ## go install
 
-Go 1.26 veya daha yeni bir sürümü yüklüyse, en son sürümü doğrudan kaynaktan derleyip kurabilirsiniz:
+Go 1.26.10 veya daha yeni bir sürümü yüklüyse, en son sürümü doğrudan kaynaktan derleyip kurabilirsiniz:
 
 ```bash
 go install github.com/HodeTech/leakwatch@latest
