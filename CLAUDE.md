@@ -79,7 +79,7 @@ Full standards: [docs/standards/04-DEVELOPMENT-STANDARDS.md](docs/standards/04-D
 
 ### Critical Rules
 
-- **Language:** Go 1.26.10+, `CGO_ENABLED=0`
+- **Language:** Go 1.26.10+ within the 1.26 line (CI pins 1.26.10; Go 1.27 is not yet supported by the pinned golangci-lint v2.11.4), `CGO_ENABLED=0`
 - **Style:** Effective Go + Uber Go Style Guide
 - **Linting:** `golangci-lint v2` is mandatory — **run locally before every commit:** `golangci-lint run ./... --config .golangci.yml`
 - **Formatting:** `gofumpt` (strict gofmt) — run `gofumpt -w .` to auto-fix formatting issues

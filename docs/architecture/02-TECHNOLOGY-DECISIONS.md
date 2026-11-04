@@ -1,7 +1,7 @@
 # Leakwatch - Technology Decisions and Rationale
 
-> **Document Version:** 1.1
-> **Date:** 2026-05-22
+> **Document Version:** 1.2
+> **Date:** 2026-11-05
 > **Status:** Approved
 
 ---

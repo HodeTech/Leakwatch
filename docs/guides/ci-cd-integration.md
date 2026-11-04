@@ -1,7 +1,7 @@
 # Leakwatch - CI/CD Integration Guide
 
-> **Document Version:** 1.1
-> **Date:** 2026-08-11
+> **Document Version:** 1.2
+> **Date:** 2026-11-05
 > **Status:** Approved
 
 ---
