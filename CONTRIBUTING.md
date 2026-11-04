@@ -13,7 +13,7 @@ go test -race ./...
 
 ## Requirements
 
-- Go 1.25+
+- Go 1.26+
 - gofumpt
 - golangci-lint v2+
 - Git 2.30+

@@ -74,7 +74,7 @@ The following `.gitlab-ci.yml` job installs Leakwatch, runs a filesystem scan, a
 ```yaml
 leakwatch:
   stage: test
-  image: golang:1.25-alpine
+  image: golang:1.26-alpine
   script:
     - go install github.com/HodeTech/leakwatch@v1.8.0
     - leakwatch scan fs . --format json -o leakwatch.json --no-verify

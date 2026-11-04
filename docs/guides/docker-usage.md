@@ -422,13 +422,13 @@ The Leakwatch Docker image uses a multi-stage build:
 
 | Stage | Image | Purpose |
 |-------|-------|---------|
-| Builder | `golang:1.25-alpine` | Compiles the Go binary with `CGO_ENABLED=0` |
-| Runtime | `alpine:3.20` | Minimal runtime with `ca-certificates` and `git` |
+| Builder | `golang:1.26-alpine` | Compiles the Go binary with `CGO_ENABLED=0` |
+| Runtime | `alpine:3.24` | Minimal runtime with `ca-certificates` only (no `git` binary; go-git is pure Go, see ADR-0003) |
 
 ### Security Features
 
 - **Non-root user** -- The container runs as the `leakwatch` user, not root.
-- **Minimal attack surface** -- Only `ca-certificates` and `git` are installed in the runtime image.
+- **Minimal attack surface** -- Only `ca-certificates` is installed in the runtime image; there is no `git` binary.
 - **Static binary** -- Built with `CGO_ENABLED=0` and stripped (`-ldflags="-s -w"`), resulting in a small, self-contained binary.
 - **Working directory** -- Default working directory is `/scan`.
 

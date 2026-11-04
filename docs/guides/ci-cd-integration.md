@@ -194,7 +194,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25'
+          go-version: '1.26'
 
       # Find the PR base commit
       - name: Determine base commit
@@ -301,7 +301,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.25'
+          go-version: '1.26'
 
       - name: Determine base commit
         id: base
@@ -380,7 +380,7 @@ stages:
 
 leakwatch-scan:
   stage: security
-  image: golang:1.25-alpine
+  image: golang:1.26-alpine
   before_script:
     - go install github.com/HodeTech/leakwatch@latest
   script:
@@ -408,7 +408,7 @@ stages:
 
 leakwatch-mr-scan:
   stage: security
-  image: golang:1.25-alpine
+  image: golang:1.26-alpine
   before_script:
     - apk add --no-cache git
     - go install github.com/HodeTech/leakwatch@latest
@@ -428,7 +428,7 @@ leakwatch-mr-scan:
 
 leakwatch-full-scan:
   stage: security
-  image: golang:1.25-alpine
+  image: golang:1.26-alpine
   before_script:
     - apk add --no-cache git
     - go install github.com/HodeTech/leakwatch@latest
@@ -638,7 +638,7 @@ jobs:
           python-version: '3.12'
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.25'
+          go-version: '1.26'
       - run: pip install pre-commit
       - run: pre-commit run --all-files
 ```
@@ -675,7 +675,7 @@ You can perform secret scanning during the build stage within your own Dockerfil
 
 ```dockerfile
 # Build stage
-FROM golang:1.25-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 RUN apk add --no-cache git
 
