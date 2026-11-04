@@ -17,9 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   workflow, and the `Dockerfile` builder image now use Go 1.26.10. Building
   from source now requires **Go 1.26.10 or later**.
 - **Vulnerable modules patched** — `github.com/go-git/go-git/v5` v5.19.2,
-  `golang.org/x/net` v0.60.0, `golang.org/x/crypto` v0.57.0,
-  `google.golang.org/grpc` v1.83.1 and `go.opentelemetry.io/otel/sdk` v1.45.0,
-  clearing every reachable `govulncheck` finding.
+  `golang.org/x/net` v0.62.0, `golang.org/x/crypto` v0.58.0,
+  `google.golang.org/grpc` v1.83.2 and `go.opentelemetry.io/otel/sdk` v1.45.0,
+  clearing every reachable `govulncheck` finding (plus the imported-but-unused
+  grpc GO-2026-6443 and module-level x/net advisories).
 
 ## [v1.8.0] - 2026-08-11
 
