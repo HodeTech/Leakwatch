@@ -67,6 +67,18 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: "chore(deps)"
+    ignore:
+      # The typings must describe the oldest VS Code the extension supports
+      # (package.json `engines.vscode`). `vsce package` refuses to build when
+      # the @types/vscode range is newer than engines.vscode, and newer typings
+      # would let code compile against APIs that older hosts do not have.
+      # Raise engines.vscode and @types/vscode together, by hand.
+      - dependency-name: "@types/vscode"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      # @types/node follows the Node.js runtime embedded in the minimum
+      # supported VS Code, not the latest Node.js release.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       vscode:
         patterns:
