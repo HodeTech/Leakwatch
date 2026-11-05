@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [v1.8.1] - 2026-11-06
+
 ### Changed
 
 - **`structured-config-secret` decodes TOML 1.1 `\xHH` escapes** — with
@@ -15,6 +17,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   invalid TOML. Escapes that exist only in Go (`\a`, `\v`, octal) are still
   rejected. The same upgrade bounds array/inline-table nesting depth in the
   TOML parser.
+
+### Fixed
+
+- **Docker image tags in the manuals** — the installation and Docker usage
+  pages listed `:vX.Y.Z` as the exact-release image tag. GHCR publishes exact
+  releases without the `v` prefix (`ghcr.io/hodetech/leakwatch:1.8.1`), and the
+  floating minor pin is `:v1.8`. The EN/TR manuals now show the published tags,
+  and a documentation contract test checks these tables against
+  `.goreleaser.yml`.
 
 ### Security
 

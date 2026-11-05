@@ -16,8 +16,8 @@ ghcr.io/hodetech/leakwatch
 | Etiket | Açıklama |
 |--------|----------|
 | `:latest` | En son sürüm |
-| `:v1.8.0` | Güncel sürüme tam sabitleme |
-| `:v1.7` | Güncel küçük sürüme sabitleme (yama sürümlerini takip eder) |
+| `:1.8.1` | Güncel sürüme tam sabitleme |
+| `:v1.8` | Güncel küçük sürüme sabitleme (yama sürümlerini takip eder) |
 
 İmaj Alpine tabanlıdır, root olmayan `leakwatch` kullanıcısı olarak çalışır, çalışma dizini olarak `/scan` kullanır ve giriş noktası olarak `leakwatch`'ı ayarlar.
 

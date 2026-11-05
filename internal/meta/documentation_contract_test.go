@@ -29,6 +29,8 @@ var (
 		regexp.MustCompile(`(?i)leakwatch[[:space:]]+(?:version|sürümü).*?(` + releaseVersionTokenPattern + `)(?:[^0-9A-Za-z._-]|$)`),
 	}
 	historicalVersionMarker = regexp.MustCompile(`(?i)<!--[[:space:]]*leakwatch-version:[[:space:]]*historical[[:space:]]+(` + releaseVersionTokenPattern + `)[[:space:]]*-->`)
+	// leakwatchImageTagCell matches a backtick-quoted image tag cell such as `:1.8.1`.
+	leakwatchImageTagCell = regexp.MustCompile("`:([0-9A-Za-z][0-9A-Za-z._-]*)`")
 )
 
 type documentationBlock struct {
@@ -333,7 +335,7 @@ func markLeakwatchImageTagTables(blocks []documentationBlock) {
 		if strings.Contains(strings.ToLower(blocks[index].text), "ghcr.io/hodetech/leakwatch") {
 			pendingTagTable = true
 		}
-		if pendingTagTable && strings.HasPrefix(trimmed, "|") && strings.Contains(blocks[index].text, "`:v") {
+		if pendingTagTable && strings.HasPrefix(trimmed, "|") && leakwatchImageTagCell.MatchString(blocks[index].text) {
 			blocks[index].leakwatchImageTags = true
 			pendingTagTable = false
 		}
@@ -476,4 +478,115 @@ func blockMarksHistoricalVersion(block, version string) bool {
 		}
 	}
 	return false
+}
+
+// TestDocumentation_LeakwatchImageTagTablesUsePublishedTags keeps the manuals'
+// GHCR tag tables aligned with the manifests .goreleaser.yml actually pushes:
+// the exact release without the "v" prefix ({{ .Version }}), the floating
+// minor pin (v{{ .Major }}.{{ .Minor }}), and latest.
+func TestDocumentation_LeakwatchImageTagTablesUsePublishedTags(t *testing.T) {
+	root := filepath.Join("..", "..")
+	goreleaser, err := os.ReadFile(filepath.Join(root, ".goreleaser.yml"))
+	require.NoError(t, err)
+	for _, manifest := range []string{
+		"ghcr.io/hodetech/leakwatch:{{ .Version }}",
+		"ghcr.io/hodetech/leakwatch:latest",
+		"ghcr.io/hodetech/leakwatch:v{{ .Major }}.{{ .Minor }}",
+	} {
+		require.Contains(t, string(goreleaser), "name_template: "+manifest+"\n",
+			"isPublishedImageTag must mirror the docker_manifests in .goreleaser.yml")
+	}
+
+	paths, err := currentDocumentationMarkdownPaths(root)
+	require.NoError(t, err)
+	exact, minor := publishedImageTags(ReleaseVersion)
+	tables := 0
+	for _, path := range paths {
+		contents, readErr := os.ReadFile(path)
+		require.NoError(t, readErr)
+		for _, block := range markdownContractBlocks(string(contents)) {
+			tags := leakwatchImageTableTags(block)
+			if len(tags) == 0 {
+				continue
+			}
+			tables++
+			for _, tag := range tags {
+				if !isPublishedImageTag(tag.tag, ReleaseVersion) {
+					t.Errorf("%s:%d documents image tag :%s, which GHCR does not publish for %s; use :%s, :%s, or :latest",
+						filepath.ToSlash(path), tag.line, tag.tag, ReleaseVersion, exact, minor)
+				}
+			}
+		}
+	}
+	assert.NotZero(t, tables, "the manuals must keep at least one Leakwatch image tag table")
+}
+
+func TestLeakwatchImageTableTags_PublishedTagMatrix(t *testing.T) {
+	exact, minor := publishedImageTags("v1.6.2")
+	assert.Equal(t, "1.6.2", exact)
+	assert.Equal(t, "v1.6", minor)
+
+	const table = "```text\nghcr.io/hodetech/leakwatch\n```\n\nAvailable tags:\n\n| Tag | Description |\n|---|---|\n"
+	tests := []struct {
+		name          string
+		contents      string
+		wantTags      []string
+		wantPublished []bool
+	}{
+		{name: "published tags", contents: table + "| `:latest` | latest |\n| `:1.6.2` | exact |\n| `:v1.6` | minor |", wantTags: []string{"latest", "1.6.2", "v1.6"}, wantPublished: []bool{true, true, true}},
+		{name: "table without a v-prefixed tag is still recognized", contents: table + "| `:latest` | latest |\n| `:1.6.2` | exact |", wantTags: []string{"latest", "1.6.2"}, wantPublished: []bool{true, true}},
+		{name: "v-prefixed exact tag is not published", contents: table + "| `:v1.6.2` | exact |", wantTags: []string{"v1.6.2"}, wantPublished: []bool{false}},
+		{name: "stale exact tag", contents: table + "| `:1.6.1` | exact |", wantTags: []string{"1.6.1"}, wantPublished: []bool{false}},
+		{name: "stale minor pin", contents: table + "| `:v1.5` | minor |", wantTags: []string{"v1.5"}, wantPublished: []bool{false}},
+		{name: "unprefixed minor pin is not published", contents: table + "| `:1.6` | minor |", wantTags: []string{"1.6"}, wantPublished: []bool{false}},
+		{name: "table for an unrelated image is ignored", contents: "Available tags:\n\n| Tag | Description |\n|---|---|\n| `:9.8.7` | unrelated |"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var gotTags []string
+			var gotPublished []bool
+			for _, block := range markdownContractBlocks(tc.contents) {
+				for _, tag := range leakwatchImageTableTags(block) {
+					gotTags = append(gotTags, tag.tag)
+					gotPublished = append(gotPublished, isPublishedImageTag(tag.tag, "v1.6.2"))
+				}
+			}
+			assert.Equal(t, tc.wantTags, gotTags)
+			assert.Equal(t, tc.wantPublished, gotPublished)
+		})
+	}
+}
+
+type imageTag struct {
+	line int
+	tag  string
+}
+
+// publishedImageTags returns the exact ({{ .Version }}) and floating minor
+// (v{{ .Major }}.{{ .Minor }}) GHCR tags that GoReleaser publishes for release.
+func publishedImageTags(release string) (exact, minor string) {
+	exact = strings.TrimPrefix(release, "v")
+	if parts := strings.SplitN(exact, ".", 3); len(parts) == 3 {
+		minor = "v" + parts[0] + "." + parts[1]
+	}
+	return exact, minor
+}
+
+func isPublishedImageTag(tag, release string) bool {
+	exact, minor := publishedImageTags(release)
+	return tag == "latest" || tag == exact || (minor != "" && tag == minor)
+}
+
+func leakwatchImageTableTags(block documentationBlock) []imageTag {
+	if !block.leakwatchImageTags {
+		return nil
+	}
+	var tags []imageTag
+	for _, match := range leakwatchImageTagCell.FindAllStringSubmatchIndex(block.text, -1) {
+		tags = append(tags, imageTag{
+			line: block.startLine + strings.Count(block.text[:match[2]], "\n"),
+			tag:  block.text[match[2]:match[3]],
+		})
+	}
+	return tags
 }

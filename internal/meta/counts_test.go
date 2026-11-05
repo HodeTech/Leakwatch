@@ -97,8 +97,11 @@ func TestReleaseMetadata_MatchesPublishedDocumentation(t *testing.T) {
 	roadmap, err := os.ReadFile(filepath.Join("..", "..", "docs", "05-ROADMAP.md"))
 	require.NoError(t, err)
 	assert.Contains(t, string(roadmap),
-		"| Phase 9 — Detection Accuracy & FP Reduction | Completed | `"+ReleaseVersion+"` | "+ReleaseDate+" |",
+		"| Security Maintenance Release | Released | `"+ReleaseVersion+"` | "+ReleaseDate+" |",
 		"roadmap release record must match canonical release metadata")
+	assert.Contains(t, string(roadmap),
+		"| Phase 9 — Detection Accuracy & FP Reduction | Completed | `v1.8.0` | 2026-08-11 |",
+		"the completed Phase 9 release record must stay intact")
 	assert.Contains(t, string(roadmap),
 		"| Phase 10 — Detector Library Expansion | Planned | `v1.9.0` | — |",
 		"the next minor version must remain assigned to planned Phase 10")

@@ -3,7 +3,7 @@
 > **Document Version:** 7.2
 > **Date:** 2026-04-09
 > **Status:** Approved
-> **Last Updated:** 2026-08-11
+> **Last Updated:** 2026-11-06
 
 ---
 
@@ -26,6 +26,7 @@
 | Phase 8.5 — GitHub Marketplace Action & Distribution | Completed | `v1.6.0` | 2026-05-25 |
 | Review Remediation Release | Released | `v1.7.0` | 2026-07-20 |
 | Phase 9 — Detection Accuracy & FP Reduction | Completed | `v1.8.0` | 2026-08-11 |
+| Security Maintenance Release | Released | `v1.8.1` | 2026-11-06 |
 | Phase 10 — Detector Library Expansion | Planned | `v1.9.0` | — |
 | Phase 11 — Verification Depth & Credential Impact | Planned | `v1.10.0` | — |
 | Phase 12 — Source Expansion (Confluence/Jira, org-scale) | Planned | `v1.11.0` | — |
@@ -33,6 +34,13 @@
 | Phase 14 — Honeytokens | Planned | `v1.13.0` | — |
 
 > **Prioritization note (v7.0):** the planned sequence is re-ordered so the work that most strengthens the core promise — accurate, verified, low-noise findings — comes first. Detection accuracy and false-positive reduction (Phase 9, completed in `v1.8.0`), broader coverage of high-blast-radius credential types (Phase 10), and deeper verification with credential-impact insight (Phase 11) precede new scan sources (Phase 12) and the inventory/honeytoken platform features (Phases 13–14). Rationale is detailed in [Planned Work — Prioritization](#planned-work--prioritization).
+
+### v1.8.1 Highlights
+
+- **Supported, patched toolchain** — builds, CI, release binaries, and the Docker image use Go 1.27.3 (the Go 1.25 line is end-of-life). Building from source requires Go 1.27.3 or later
+- **Patched dependencies** — every reachable `govulncheck` finding in `go-git`, `x/net`, `x/crypto`, `grpc`, and `otel/sdk` is cleared
+- **Release-pipeline hardening** — the signing and publishing job and the Pages build no longer restore Go caches written by other workflow runs
+- **Accurate Docker tags** — the manuals now list the image tags GHCR actually publishes (`:1.8.1`, `:v1.8`, `:latest`)
 
 ### v1.8.0 Highlights
 
@@ -802,6 +810,7 @@ Source packages (no formal standard, but visible gaps):
 | `v1.6.0` | Phase 8.5 | GitHub Marketplace Action, `github` output format, config wiring | 2026-05-25 |
 | `v1.7.0` | Review Remediation | Full-project review remediation, correctness, security, and CI hardening | 2026-07-20 |
 | `v1.8.0` | Phase 9 | Detection accuracy & false-positive reduction | 2026-08-11 |
+| `v1.8.1` | Maintenance | Go 1.27.3 toolchain, patched dependencies, release-pipeline hardening | 2026-11-06 |
 | `v1.9.0` | Phase 10 | Detector library expansion | — |
 | `v1.10.0` | Phase 11 | Verification depth & credential impact | — |
 | `v1.11.0` | Phase 12 | Source expansion (Confluence/Jira, org-scale) | — |
