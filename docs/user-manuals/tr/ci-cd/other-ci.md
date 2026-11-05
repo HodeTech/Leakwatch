@@ -13,6 +13,8 @@ Runner ortamınıza en uygun yöntemi seçin:
 
 ### `go install` aracılığıyla (runner'da Go gerektirir)
 
+Runner'da Go 1.27.3 veya daha yeni bir sürüm gerekir; bu, Leakwatch'ın `go.mod` dosyasındaki `go` yönergesinin belirlediği alt sınırdır.
+
 ```bash
 go install github.com/HodeTech/leakwatch@latest
 ```
@@ -20,7 +22,7 @@ go install github.com/HodeTech/leakwatch@latest
 Yeniden üretilebilir derlemeler için belirli bir sürüme sabitleyin:
 
 ```bash
-go install github.com/HodeTech/leakwatch@v1.8.0
+go install github.com/HodeTech/leakwatch@v1.8.1
 ```
 
 ### Docker imajı aracılığıyla (Go gerekmez)
@@ -76,7 +78,7 @@ leakwatch:
   stage: test
   image: golang:1.27-alpine
   script:
-    - go install github.com/HodeTech/leakwatch@v1.8.0
+    - go install github.com/HodeTech/leakwatch@v1.8.1
     - leakwatch scan fs . --format json -o leakwatch.json --no-verify
   artifacts:
     when: always
@@ -108,7 +110,7 @@ leakwatch scan fs . --no-verify --format sarif -o results.sarif
 
 ```yaml
 - script: |
-    go install github.com/HodeTech/leakwatch@v1.8.0
+    go install github.com/HodeTech/leakwatch@v1.8.1
     leakwatch scan fs . --format sarif -o $(Build.ArtifactStagingDirectory)/leakwatch.sarif --no-verify
   displayName: "Leakwatch sır taraması"
 
@@ -124,7 +126,7 @@ leakwatch scan fs . --no-verify --format sarif -o results.sarif
 stage('Sır taraması') {
     steps {
         sh '''
-            go install github.com/HodeTech/leakwatch@v1.8.0
+            go install github.com/HodeTech/leakwatch@v1.8.1
             leakwatch scan fs . --format json -o leakwatch.json --no-verify
         '''
         archiveArtifacts artifacts: 'leakwatch.json', allowEmptyArchive: true

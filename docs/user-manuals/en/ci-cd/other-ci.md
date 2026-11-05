@@ -13,6 +13,8 @@ Choose the method that best suits your runner environment:
 
 ### via `go install` (requires Go on the runner)
 
+The runner needs Go 1.27.3 or later, the minimum set by the `go` directive in Leakwatch's `go.mod`.
+
 ```bash
 go install github.com/HodeTech/leakwatch@latest
 ```
@@ -20,7 +22,7 @@ go install github.com/HodeTech/leakwatch@latest
 Pin to a specific version for reproducible builds:
 
 ```bash
-go install github.com/HodeTech/leakwatch@v1.8.0
+go install github.com/HodeTech/leakwatch@v1.8.1
 ```
 
 ### via the Docker image (no Go required)
@@ -76,7 +78,7 @@ leakwatch:
   stage: test
   image: golang:1.27-alpine
   script:
-    - go install github.com/HodeTech/leakwatch@v1.8.0
+    - go install github.com/HodeTech/leakwatch@v1.8.1
     - leakwatch scan fs . --format json -o leakwatch.json --no-verify
   artifacts:
     when: always
@@ -108,7 +110,7 @@ leakwatch scan fs . --no-verify --format sarif -o results.sarif
 
 ```yaml
 - script: |
-    go install github.com/HodeTech/leakwatch@v1.8.0
+    go install github.com/HodeTech/leakwatch@v1.8.1
     leakwatch scan fs . --format sarif -o $(Build.ArtifactStagingDirectory)/leakwatch.sarif --no-verify
   displayName: "Leakwatch secret scan"
 
@@ -124,7 +126,7 @@ leakwatch scan fs . --no-verify --format sarif -o results.sarif
 stage('Secret scan') {
     steps {
         sh '''
-            go install github.com/HodeTech/leakwatch@v1.8.0
+            go install github.com/HodeTech/leakwatch@v1.8.1
             leakwatch scan fs . --format json -o leakwatch.json --no-verify
         '''
         archiveArtifacts artifacts: 'leakwatch.json', allowEmptyArchive: true

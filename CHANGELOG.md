@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [v1.8.1] - 2026-11-06
+
 ### Changed
 
 - **`structured-config-secret` decodes TOML 1.1 `\xHH` escapes** — with
@@ -15,6 +17,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   invalid TOML. Escapes that exist only in Go (`\a`, `\v`, octal) are still
   rejected. The same upgrade bounds array/inline-table nesting depth in the
   TOML parser.
+
+### Fixed
+
+- **Docker image tags in the manuals** — the installation and Docker usage
+  pages listed `:vX.Y.Z` as the exact-release image tag. GHCR publishes exact
+  releases without the `v` prefix (`ghcr.io/hodetech/leakwatch:1.8.1`), and the
+  floating minor pin is `:v1.8`. The EN/TR manuals now show the published tags,
+  and a documentation contract test checks these tables against
+  `.goreleaser.yml`.
 
 ### Security
 
@@ -27,11 +38,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   supported release line. CI now lints with golangci-lint v2.15.0 and scans
   with govulncheck v1.9.0, both of which support Go 1.27. Building from source
   now requires **Go 1.27.3 or later**.
-- **Vulnerable modules patched** — `github.com/go-git/go-git/v5` v5.19.2,
-  `golang.org/x/net` v0.62.0, `golang.org/x/crypto` v0.58.0,
-  `google.golang.org/grpc` v1.83.2 and `go.opentelemetry.io/otel/sdk` v1.45.0,
-  clearing every reachable `govulncheck` finding (plus the imported-but-unused
-  grpc GO-2026-6443 and module-level x/net advisories).
+- **Vulnerable modules patched** — this release ships
+  `github.com/go-git/go-git/v5` v5.19.3, `golang.org/x/net` v0.62.0,
+  `golang.org/x/crypto` v0.58.0, `google.golang.org/grpc` v1.84.0 and
+  `go.opentelemetry.io/otel/sdk` v1.47.0. Together they clear every reachable
+  `govulncheck` finding, plus grpc's GO-2026-6443 (imported but never called)
+  and the module-level x/net advisories.
 - **Release pipeline cache hardening** — the release job (which signs and
   publishes artifacts) and the GitHub Pages build no longer restore Go
   module/build caches written by other workflow runs, closing a
