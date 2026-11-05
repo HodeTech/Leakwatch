@@ -43,6 +43,8 @@ Detect leaked secrets directly in your editor with real-time diagnostics.
 
 ## Development
 
+Requires Node.js 22 or later (the minimum for the `@vscode/vsce` packager).
+
 ```bash
 cd vscode
 npm install
