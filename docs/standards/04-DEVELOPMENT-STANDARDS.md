@@ -14,7 +14,7 @@
 |------|-----------------|---------|
 | Go | 1.27.3+ | Primary programming language |
 | Git | 2.30+ | Version control |
-| golangci-lint | 2.11+ | Static analysis and linting |
+| golangci-lint | 2.13+ | Static analysis and linting (2.13 is the first release that supports Go 1.27) |
 | goreleaser | 2.0+ | Build and release automation |
 | pre-commit | 3.0+ | Git hook management |
 
@@ -278,7 +278,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.27'
-      - run: go install golang.org/x/vuln/cmd/govulncheck@latest
+      - run: go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
       - run: govulncheck ./...
 ```
 
