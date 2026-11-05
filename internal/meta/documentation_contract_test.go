@@ -483,42 +483,65 @@ func blockMarksHistoricalVersion(block, version string) bool {
 // TestDocumentation_LeakwatchImageTagTablesUsePublishedTags keeps the manuals'
 // GHCR tag tables aligned with the manifests .goreleaser.yml actually pushes:
 // the exact release without the "v" prefix ({{ .Version }}), the floating
-// minor pin (v{{ .Major }}.{{ .Minor }}), and latest.
+// minor pin (v{{ .Major }}.{{ .Minor }}), and latest. Every table must list
+// all three, and both manual languages must keep a table.
 func TestDocumentation_LeakwatchImageTagTablesUsePublishedTags(t *testing.T) {
 	root := filepath.Join("..", "..")
-	goreleaser, err := os.ReadFile(filepath.Join(root, ".goreleaser.yml"))
+	raw, err := os.ReadFile(filepath.Join(root, ".goreleaser.yml"))
 	require.NoError(t, err)
-	for _, manifest := range []string{
+	var goreleaser struct {
+		DockerManifests []struct {
+			NameTemplate string `yaml:"name_template"`
+		} `yaml:"docker_manifests"`
+	}
+	require.NoError(t, yaml.Unmarshal(raw, &goreleaser))
+	manifests := make([]string, 0, len(goreleaser.DockerManifests))
+	for _, manifest := range goreleaser.DockerManifests {
+		manifests = append(manifests, manifest.NameTemplate)
+	}
+	require.ElementsMatch(t, []string{
 		"ghcr.io/hodetech/leakwatch:{{ .Version }}",
 		"ghcr.io/hodetech/leakwatch:latest",
 		"ghcr.io/hodetech/leakwatch:v{{ .Major }}.{{ .Minor }}",
-	} {
-		require.Contains(t, string(goreleaser), "name_template: "+manifest+"\n",
-			"isPublishedImageTag must mirror the docker_manifests in .goreleaser.yml")
-	}
+	}, manifests, "isPublishedImageTag must mirror the active docker_manifests in .goreleaser.yml")
 
 	paths, err := currentDocumentationMarkdownPaths(root)
 	require.NoError(t, err)
 	exact, minor := publishedImageTags(ReleaseVersion)
-	tables := 0
+	languages := []string{"en", "tr"}
+	tablesByLanguage := make(map[string]int, len(languages))
 	for _, path := range paths {
 		contents, readErr := os.ReadFile(path)
 		require.NoError(t, readErr)
+		slashPath := filepath.ToSlash(path)
 		for _, block := range markdownContractBlocks(string(contents)) {
 			tags := leakwatchImageTableTags(block)
 			if len(tags) == 0 {
 				continue
 			}
-			tables++
+			for _, language := range languages {
+				if strings.Contains(slashPath, "/user-manuals/"+language+"/") {
+					tablesByLanguage[language]++
+				}
+			}
+			listed := make(map[string]bool, len(tags))
 			for _, tag := range tags {
+				listed[tag.tag] = true
 				if !isPublishedImageTag(tag.tag, ReleaseVersion) {
 					t.Errorf("%s:%d documents image tag :%s, which GHCR does not publish for %s; use :%s, :%s, or :latest",
-						filepath.ToSlash(path), tag.line, tag.tag, ReleaseVersion, exact, minor)
+						slashPath, tag.line, tag.tag, ReleaseVersion, exact, minor)
+				}
+			}
+			for _, want := range []string{"latest", exact, minor} {
+				if !listed[want] {
+					t.Errorf("%s:%d image tag table omits the published tag :%s", slashPath, block.startLine, want)
 				}
 			}
 		}
 	}
-	assert.NotZero(t, tables, "the manuals must keep at least one Leakwatch image tag table")
+	for _, language := range languages {
+		assert.NotZero(t, tablesByLanguage[language], "the %s manual must keep a Leakwatch image tag table", language)
+	}
 }
 
 func TestLeakwatchImageTableTags_PublishedTagMatrix(t *testing.T) {
