@@ -18,13 +18,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
-- **Go toolchain moved to 1.26.10** — the Go 1.25 line is end-of-life and no
+- **Go toolchain moved to 1.27.3** — the Go 1.25 line is end-of-life and no
   longer receives security backports, so `govulncheck` reported reachable
   standard-library vulnerabilities (`crypto/x509`, `crypto/tls`, `net/http`,
   `net/url`, `net/textproto`, `html/template`, `encoding/xml`, `encoding/asn1`)
-  that are only fixed in Go 1.26.9/1.26.10. `go.mod`, every CI/release
-  workflow, and the `Dockerfile` builder image now use Go 1.26.10. Building
-  from source now requires **Go 1.26.10 or later**.
+  that are fixed only in Go 1.26.9 and later. `go.mod`, every CI/release
+  workflow, and the `Dockerfile` builder image now use Go 1.27.3, the newest
+  supported release line. CI now lints with golangci-lint v2.15.0 and scans
+  with govulncheck v1.9.0, both of which support Go 1.27. Building from source
+  now requires **Go 1.27.3 or later**.
 - **Vulnerable modules patched** — `github.com/go-git/go-git/v5` v5.19.2,
   `golang.org/x/net` v0.62.0, `golang.org/x/crypto` v0.58.0,
   `google.golang.org/grpc` v1.83.2 and `go.opentelemetry.io/otel/sdk` v1.45.0,

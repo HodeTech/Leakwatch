@@ -1,7 +1,7 @@
 # Leakwatch - Container Image Scanning Guide
 
-> **Document Version:** 1.2
-> **Date:** 2026-11-05
+> **Document Version:** 1.3
+> **Date:** 2026-11-06
 > **Status:** Approved
 
 ---
@@ -243,7 +243,7 @@ The `layer_idx` field indicates which layer the secret was found in. This inform
 **Scenario 1: SSH key added and deleted during build**
 
 ```dockerfile
-FROM golang:1.26-alpine AS builder
+FROM golang:1.27-alpine AS builder
 COPY id_rsa /root/.ssh/id_rsa
 RUN go mod download
 RUN rm /root/.ssh/id_rsa
@@ -414,7 +414,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.26'
+          go-version: '1.27'
 
       - name: Install Leakwatch
         run: go install github.com/HodeTech/leakwatch@latest
@@ -528,7 +528,7 @@ A malicious or misconfigured image layer could declare an extreme compression ra
 
 ```dockerfile
 # Build stage — secrets may remain here but do not pass to the final image
-FROM golang:1.26-alpine AS builder
+FROM golang:1.27-alpine AS builder
 RUN --mount=type=secret,id=github_token \
     GITHUB_TOKEN=$(cat /run/secrets/github_token) go mod download
 RUN CGO_ENABLED=0 go build -o /app

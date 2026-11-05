@@ -1,7 +1,7 @@
 # Leakwatch - Development Standards and Infrastructure
 
-> **Document Version:** 1.2
-> **Date:** 2026-11-05
+> **Document Version:** 1.3
+> **Date:** 2026-11-06
 > **Status:** Approved
 
 ---
@@ -12,7 +12,7 @@
 
 | Tool | Minimum Version | Purpose |
 |------|-----------------|---------|
-| Go | 1.26.10+ | Primary programming language |
+| Go | 1.27.3+ | Primary programming language |
 | Git | 2.30+ | Version control |
 | golangci-lint | 2.11+ | Static analysis and linting |
 | goreleaser | 2.0+ | Build and release automation |
@@ -248,7 +248,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: ['1.26']
+        go-version: ['1.27']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -267,8 +267,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.26'
-      - run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.4
+          go-version: '1.27'
+      - run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
       - run: golangci-lint run ./... --config .golangci.yml
 
   security:
@@ -277,7 +277,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.26'
+          go-version: '1.27'
       - run: go install golang.org/x/vuln/cmd/govulncheck@latest
       - run: govulncheck ./...
 ```
@@ -303,7 +303,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.26'
+          go-version: '1.27'
       - uses: goreleaser/goreleaser-action@v6
         with:
           version: '~> v2'

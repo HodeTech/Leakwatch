@@ -1,7 +1,7 @@
 # Leakwatch - Technology Decisions and Rationale
 
-> **Document Version:** 1.2
-> **Date:** 2026-11-05
+> **Document Version:** 1.3
+> **Date:** 2026-11-06
 > **Status:** Approved
 
 ---
@@ -216,7 +216,7 @@ Rust would be the best choice in terms of raw performance. However:
 
 ## 5. Minimum Go Version
 
-**Go 1.26.10+** (as declared by the `go` directive in `go.mod`)
+**Go 1.27.3+** (as declared by the `go` directive in `go.mod`)
 
 **Rationale:**
 - `io/fs` package (Go 1.16+) — filesystem abstraction
@@ -224,7 +224,7 @@ Rust would be the best choice in terms of raw performance. However:
 - `log/slog` (Go 1.21+) — structured logging
 - Improved GC performance (Go 1.22+)
 - `range over func` (Go 1.23+) — iterator support
-- Toolchain improvements and security patches (Go 1.26+; the Go 1.25 line is end-of-life)
+- Toolchain improvements and security patches (Go 1.27+, the newest supported release line)
 
 ---
 
