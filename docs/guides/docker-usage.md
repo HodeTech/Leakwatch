@@ -1,7 +1,7 @@
 # Leakwatch - Docker Usage Guide
 
-> **Document Version:** 1.2
-> **Date:** 2026-11-05
+> **Document Version:** 1.3
+> **Date:** 2026-11-06
 > **Status:** Approved
 
 ---
@@ -422,7 +422,7 @@ The Leakwatch Docker image uses a multi-stage build:
 
 | Stage | Image | Purpose |
 |-------|-------|---------|
-| Builder | `golang:1.26-alpine` | Compiles the Go binary with `CGO_ENABLED=0` |
+| Builder | `golang:1.27-alpine` | Compiles the Go binary with `CGO_ENABLED=0` |
 | Runtime | `alpine:3.24` | Minimal runtime with `ca-certificates` only (no `git` binary; go-git is pure Go, see ADR-0003) |
 
 ### Security Features

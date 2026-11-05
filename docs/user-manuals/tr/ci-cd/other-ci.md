@@ -74,7 +74,7 @@ Aşağıdaki `.gitlab-ci.yml` işi Leakwatch'ı kurar, dosya sistemi taraması �
 ```yaml
 leakwatch:
   stage: test
-  image: golang:1.26-alpine
+  image: golang:1.27-alpine
   script:
     - go install github.com/HodeTech/leakwatch@v1.8.0
     - leakwatch scan fs . --format json -o leakwatch.json --no-verify

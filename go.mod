@@ -1,6 +1,6 @@
 module github.com/HodeTech/leakwatch
 
-go 1.26.10
+go 1.27.3
 
 require (
 	cloud.google.com/go/storage v1.70.0
@@ -14,6 +14,7 @@ require (
 	github.com/go-git/go-git/v5 v5.19.3
 	github.com/google/go-containerregistry v0.22.1
 	github.com/mattn/go-runewidth v0.0.31
+	github.com/pelletier/go-toml/v2 v2.4.3
 	github.com/slack-go/slack v0.33.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
@@ -21,11 +22,7 @@ require (
 	github.com/stretchr/testify v1.12.1
 	golang.org/x/time v0.16.0
 	google.golang.org/api v0.310.0
-)
-
-require (
-	github.com/clipperhouse/uax29/v2 v2.2.0 // indirect
-	go.opentelemetry.io/otel/log v1.47.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -55,6 +52,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.39.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.44.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/clipperhouse/uax29/v2 v2.2.0 // indirect
 	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/cncf/xds/go v0.0.0-20260202195803-dba9d589def2 // indirect
 	github.com/cyphar/filepath-securejoin v0.6.1 // indirect
@@ -83,7 +81,6 @@ require (
 	github.com/klauspost/compress v1.19.2 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
-	github.com/pelletier/go-toml/v2 v2.4.3
 	github.com/pjbgf/sha1cd v0.7.0 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/sagikazarmark/locafero v0.11.0 // indirect
@@ -101,6 +98,7 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.68.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.69.0 // indirect
 	go.opentelemetry.io/otel v1.47.0 // indirect
+	go.opentelemetry.io/otel/log v1.47.0 // indirect
 	go.opentelemetry.io/otel/metric v1.47.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.47.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.47.0 // indirect
@@ -118,6 +116,5 @@ require (
 	google.golang.org/grpc v1.84.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
-	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.2 // indirect
 )
