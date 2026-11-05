@@ -1,7 +1,7 @@
 # Leakwatch - VS Code Extension Guide
 
-> **Document Version:** 1.1
-> **Date:** 2026-08-11
+> **Document Version:** 1.2
+> **Date:** 2026-11-05
 > **Status:** Approved
 
 ---
@@ -50,6 +50,8 @@ Repository administrators must configure that environment before the first publi
 The publish job queries GitHub's environment and environment-secret metadata APIs. It fails before loading the VSIX or Marketplace PAT unless the required-reviewer, self-review, and protected-branch policies are present and `VSCE_PAT` actually exists in the protected environment. `VSCODE_ENV_AUDIT_TOKEN` is read-only and is never sent to the Marketplace; `VSCE_PAT` is never placed in process arguments. The environment approval itself remains an external GitHub control; this runbook and the executable audit make that dependency explicit rather than assuming an environment name is sufficient.
 
 ### 2.3 Build from Source
+
+Building from source requires Node.js 22 or later, the minimum supported by the `@vscode/vsce` packager. CI builds with Node.js 22. This is only the build toolchain: the packaged extension runs on the Node.js runtime embedded in VS Code.
 
 ```bash
 # Clone the repository
