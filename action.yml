@@ -363,7 +363,7 @@ runs:
       if: always() && inputs.sarif-upload == 'true' && inputs.format == 'sarif'
       # github/codeql-action/upload-sarif@v3.36.0 (SHA-pinned: this runs inside
       # consumers' repositories, so the floating tag is the most important to pin).
-      uses: github/codeql-action/upload-sarif@03e4368ac7daa2bd82b3e85262f3bf87ee112f57
+      uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066
       with:
         sarif_file: ${{ steps.scan.outputs.sarif-file }}
         category: leakwatch
