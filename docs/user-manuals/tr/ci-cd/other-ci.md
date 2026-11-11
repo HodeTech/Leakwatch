@@ -13,7 +13,7 @@ Runner ortamınıza en uygun yöntemi seçin:
 
 ### `go install` aracılığıyla (runner'da Go gerektirir)
 
-Runner'da Go 1.27.3 veya daha yeni bir sürüm gerekir; bu, Leakwatch'ın `go.mod` dosyasındaki `go` yönergesinin belirlediği alt sınırdır.
+Runner'da Go 1.27.4 veya daha yeni bir sürüm gerekir; bu, Leakwatch'ın `go.mod` dosyasındaki `go` yönergesinin belirlediği alt sınırdır.
 
 ```bash
 go install github.com/HodeTech/leakwatch@latest

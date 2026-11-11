@@ -1,7 +1,7 @@
 # Leakwatch - Development Standards and Infrastructure
 
-> **Document Version:** 1.3
-> **Date:** 2026-11-06
+> **Document Version:** 1.4
+> **Date:** 2026-11-12
 > **Status:** Approved
 
 ---
@@ -12,7 +12,7 @@
 
 | Tool | Minimum Version | Purpose |
 |------|-----------------|---------|
-| Go | 1.27.3+ | Primary programming language |
+| Go | 1.27.4+ | Primary programming language |
 | Git | 2.30+ | Version control |
 | golangci-lint | 2.13+ | Static analysis and linting (2.13 is the first release that supports Go 1.27) |
 | goreleaser | 2.0+ | Build and release automation |

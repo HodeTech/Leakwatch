@@ -6,7 +6,7 @@ This file defines the standards and context that Claude Code should reference wh
 
 Leakwatch is a high-performance, open source (MIT) security tool that detects, verifies, and reports leaked secrets (API keys, passwords, certificates) in codebases, Git histories, and container images.
 
-**Language:** Go (1.27.3+)
+**Language:** Go (1.27.4+)
 **License:** MIT
 **Repo:** https://github.com/HodeTech/Leakwatch
 
@@ -79,7 +79,7 @@ Full standards: [docs/standards/04-DEVELOPMENT-STANDARDS.md](docs/standards/04-D
 
 ### Critical Rules
 
-- **Language:** Go 1.27.3+ (CI pins 1.27.3), `CGO_ENABLED=0`
+- **Language:** Go 1.27.4+ (CI pins 1.27.4), `CGO_ENABLED=0`
 - **Style:** Effective Go + Uber Go Style Guide
 - **Linting:** `golangci-lint v2` is mandatory — **run locally before every commit:** `golangci-lint run ./... --config .golangci.yml`
 - **Formatting:** `gofumpt` (strict gofmt) — run `gofumpt -w .` to auto-fix formatting issues
