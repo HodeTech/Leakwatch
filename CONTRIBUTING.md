@@ -13,7 +13,7 @@ go test -race ./...
 
 ## Requirements
 
-- Go 1.27.3 or later (the `go` directive in `go.mod`; CI pins 1.27.3)
+- Go 1.27.4 or later (the `go` directive in `go.mod`; CI pins 1.27.4)
 - gofumpt
 - golangci-lint v2.15.0 (the version CI installs; build it with Go 1.27 so it can load Go 1.27 export data)
 - Git 2.30+

@@ -1,7 +1,7 @@
 # Leakwatch - Getting Started Guide
 
-> **Document Version:** 1.3
-> **Date:** 2026-11-06
+> **Document Version:** 1.4
+> **Date:** 2026-11-12
 > **Status:** Approved
 
 ---
@@ -60,7 +60,7 @@ You can use one of the following methods to install Leakwatch on your system.
 
 ### 2.1 Go Install
 
-If Go 1.27.3 or higher is installed:
+If Go 1.27.4 or higher is installed:
 
 ```bash
 go install github.com/HodeTech/leakwatch@latest

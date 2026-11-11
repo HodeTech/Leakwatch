@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Security
+
+- **Go toolchain moved to 1.27.4** — Go 1.27.4 fixes GO-2026-6859 (an HTTP/1
+  server crash caused by a `MaxBytesReader` header race in `net/http`). The
+  `go` directive, every CI workflow, the release workflow, the site deployment
+  workflow, and the `Dockerfile` builder image now use Go 1.27.4. Building from
+  source (`go install`, the pre-commit hook) now requires **Go 1.27.4 or
+  later**.
+- **`github.com/klauspost/compress` v1.20.2** — fixes GO-2026-6865 (a panic on
+  specially crafted two-block zstd frames). The module is pulled in by
+  `go-containerregistry` to decompress zstd image layers, and `govulncheck`
+  reported Leakwatch as affected.
+
 ## [v1.8.1] - 2026-11-06
 
 ### Changed

@@ -1,6 +1,6 @@
 module github.com/HodeTech/leakwatch
 
-go 1.27.3
+go 1.27.4
 
 require (
 	cloud.google.com/go/storage v1.70.0
@@ -78,7 +78,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
-	github.com/klauspost/compress v1.19.2 // indirect
+	github.com/klauspost/compress v1.20.2 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/pjbgf/sha1cd v0.7.0 // indirect

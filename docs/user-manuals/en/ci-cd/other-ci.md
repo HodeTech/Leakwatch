@@ -13,7 +13,7 @@ Choose the method that best suits your runner environment:
 
 ### via `go install` (requires Go on the runner)
 
-The runner needs Go 1.27.3 or later, the minimum set by the `go` directive in Leakwatch's `go.mod`.
+The runner needs Go 1.27.4 or later, the minimum set by the `go` directive in Leakwatch's `go.mod`.
 
 ```bash
 go install github.com/HodeTech/leakwatch@latest

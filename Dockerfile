@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.27.3-alpine@sha256:fa4881266890ef051f0ce63afdfaccb69bbe8186084387f4fafd60d7ecbabc71 AS builder
+FROM golang:1.27.4-alpine@sha256:0a5f7fe796599ff487605987432e7619ae45beeb2fba4c2ce0b907879932aebf AS builder
 
 # Commit hash for -X main.commit=. Not read from `git rev-parse` here: .git is
 # excluded from the build context by .dockerignore (so git would always

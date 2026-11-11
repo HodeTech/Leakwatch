@@ -1,7 +1,7 @@
 # Leakwatch - Technology Decisions and Rationale
 
-> **Document Version:** 1.3
-> **Date:** 2026-11-06
+> **Document Version:** 1.4
+> **Date:** 2026-11-12
 > **Status:** Approved
 
 ---
@@ -216,7 +216,7 @@ Rust would be the best choice in terms of raw performance. However:
 
 ## 5. Minimum Go Version
 
-**Go 1.27.3+** (as declared by the `go` directive in `go.mod`)
+**Go 1.27.4+** (as declared by the `go` directive in `go.mod`)
 
 **Rationale:**
 - `io/fs` package (Go 1.16+) — filesystem abstraction
