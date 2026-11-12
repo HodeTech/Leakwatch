@@ -63,6 +63,10 @@ func TestPreviousReleaseVersion_ChangelogHeadings_ReturnsReleaseBelowCurrentOrEr
 		{name: "skips unreleased and subsections", input: changelog, current: "v1.8.2", want: "v1.8.1"},
 		{name: "pre-release is the previous heading", input: "## [v1.9.0] - d\n\n## [v1.9.0-rc.1] - d\n", current: "v1.9.0", want: "v1.9.0-rc.1"},
 		{name: "heading-shaped line in a fenced example is not a release", input: "## [v1.8.3] - d\n\n```md\n## [v9.9.9] - example\n```\n\n## [v1.8.2] - d\n", current: "v1.8.3", want: "v1.8.2"},
+		{name: "longer outer fence is not closed by a shorter inner fence", input: "## [v1.8.3] - d\n\n````md\n```\n## [v9.9.9] - example\n````\n\n## [v1.8.2] - d\n", current: "v1.8.3", want: "v1.8.2"},
+		{name: "tilde fence is not closed by a backtick fence", input: "## [v1.8.3] - d\n\n~~~md\n```\n## [v9.9.9] - example\n~~~\n\n## [v1.8.2] - d\n", current: "v1.8.3", want: "v1.8.2"},
+		{name: "closing fence with trailing text does not close", input: "## [v1.8.3] - d\n\n```md\n``` not a close\n## [v9.9.9] - example\n```\n\n## [v1.8.2] - d\n", current: "v1.8.3", want: "v1.8.2"},
+		{name: "inline code on a line is not a fence", input: "## [v1.8.3] - d\n\n```code``` inline\n\n## [v1.8.2] - d\n", current: "v1.8.3", want: "v1.8.2"},
 		{name: "current release is not in the changelog", input: changelog, current: "v1.8.4", wantErr: "no heading for v1.8.4"},
 		{name: "current release is the oldest entry", input: changelog, current: "v1.8.1", wantErr: "no release below v1.8.1"},
 		{name: "unreleased only", input: "## [Unreleased]\n", current: "v1.8.3", wantErr: "no heading for v1.8.3"},
@@ -121,16 +125,23 @@ func TestStalePreviousReleaseLines_MentionBoundariesAndMarkers_ReportsOnlyUnmark
 
 // changelogReleaseVersions returns the released versions in the order their
 // headings appear. A heading-shaped line inside a fenced code block is example
-// text, not a release.
+// text, not a release. Fences follow CommonMark: a block closes only on a fence
+// of the same character that is at least as long as the opener and has nothing
+// but whitespace after it, so a shorter or different fence inside is content.
 func changelogReleaseVersions(changelog string) []string {
 	var versions []string
-	inFence := false
+	var openChar byte
+	openLength := 0
 	for _, line := range strings.Split(strings.ReplaceAll(changelog, "\r\n", "\n"), "\n") {
-		if startsMarkdownFence(line) {
-			inFence = !inFence
+		char, length, rest, isFence := markdownFenceRun(line)
+		if openLength > 0 {
+			if isFence && char == openChar && length >= openLength && strings.TrimSpace(rest) == "" {
+				openLength = 0
+			}
 			continue
 		}
-		if inFence {
+		if isFence {
+			openChar, openLength = char, length
 			continue
 		}
 		if match := changelogReleaseHeading.FindStringSubmatch(line); match != nil {
@@ -138,6 +149,27 @@ func changelogReleaseVersions(changelog string) []string {
 		}
 	}
 	return versions
+}
+
+// markdownFenceRun reports whether line starts with a code-fence run: three or
+// more backticks or tildes after at most three spaces of indentation. It
+// returns the fence character, the run length and the text after the run. A
+// backtick run followed by another backtick on the same line is inline code,
+// not a fence.
+func markdownFenceRun(line string) (char byte, length int, rest string, ok bool) {
+	trimmed := strings.TrimLeft(line, " ")
+	if len(line)-len(trimmed) > 3 || trimmed == "" || (trimmed[0] != '`' && trimmed[0] != '~') {
+		return 0, 0, "", false
+	}
+	char = trimmed[0]
+	for length < len(trimmed) && trimmed[length] == char {
+		length++
+	}
+	rest = trimmed[length:]
+	if length < 3 || (char == '`' && strings.Contains(rest, "`")) {
+		return 0, 0, "", false
+	}
+	return char, length, rest, true
 }
 
 // previousReleaseVersion returns the release listed directly below current in
