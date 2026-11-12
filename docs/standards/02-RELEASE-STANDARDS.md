@@ -309,6 +309,22 @@ git push origin v0.2.1
 | Hotfix release time | < 4 hours |
 | Time to flag problematic release | < 30 minutes |
 
+### 7.4 Release workflow fails after the images are pushed
+
+GoReleaser publishes in a fixed order: container images, then the multi-arch manifests (`:X.Y.Z`, `:vX.Y`, `:latest`), then cosign signatures for both, and only then the GitHub Release, the Homebrew formula, and the floating major tag. A failure while signing therefore leaves the registry tags already moved but signed incompletely, while no GitHub Release, Homebrew formula, or major-tag move has happened yet.
+
+1. Do not announce the release and do not delete the tag.
+2. Re-run the failed `Release` workflow run for the same tag. Nothing downstream of signing has run, so the re-run repeats the image push and the signing and then continues to the release.
+3. Before announcing, confirm the signatures from a clean machine:
+
+```bash
+cosign verify ghcr.io/hodetech/leakwatch:latest \
+  --certificate-identity-regexp '^https://github\.com/HodeTech/Leakwatch/\.github/workflows/release\.yml@refs/tags/v' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+If the re-run keeps failing, treat the release as faulty and publish the next PATCH version as described in 7.2.
+
 ---
 
 ## 8. Security Releases

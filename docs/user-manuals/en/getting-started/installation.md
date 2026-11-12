@@ -70,38 +70,50 @@ Releases up to and including v1.8.2 signed only the per-architecture images, so 
 
 ## Prebuilt binary
 
-Every release publishes archives for all supported platforms on the [GitHub Releases](https://github.com/HodeTech/Leakwatch/releases) page. Download the archive for your platform, extract it, and place the binary on your `PATH`.
+Every release publishes archives for all supported platforms on the [GitHub Releases](https://github.com/HodeTech/Leakwatch/releases) page. Download the archive for your platform, verify it, extract it, and place the binary on your `PATH`.
 
 **Supported platforms:** Linux, macOS, and Windows on amd64 and arm64.
 
+Archive names follow the pattern `leakwatch_<VERSION>_<OS>_<ARCH>.tar.gz` (`.zip` on Windows), where `<VERSION>` has no leading `v` (for example `1.8.2`), `<OS>` is `linux`, `darwin`, or `windows`, and `<ARCH>` is `amd64` or `arm64`. Release assets always carry the version in their name, so a `latest/download/...` URL needs the current version spelled out too; the commands below pin it explicitly.
+
+The three steps below share shell variables, so run them in the same terminal session.
+
+### 1. Download
+
+Set `OS` and `ARCH` to match your platform (the example is Linux amd64):
+
 ```bash
-# Example for Linux amd64 — replace the OS and ARCH to match your platform
 LEAKWATCH_VERSION=v1.8.2
-curl -LO "https://github.com/HodeTech/Leakwatch/releases/download/${LEAKWATCH_VERSION}/leakwatch_${LEAKWATCH_VERSION#v}_linux_amd64.tar.gz"
-tar -xzf "leakwatch_${LEAKWATCH_VERSION#v}_linux_amd64.tar.gz"
-sudo mv leakwatch /usr/local/bin/leakwatch
+OS=linux      # linux or darwin (Windows ships .zip archives: download one from the Releases page)
+ARCH=amd64    # amd64 or arm64
+ARCHIVE="leakwatch_${LEAKWATCH_VERSION#v}_${OS}_${ARCH}.tar.gz"
+BASE_URL="https://github.com/HodeTech/Leakwatch/releases/download/${LEAKWATCH_VERSION}"
+curl -LO "${BASE_URL}/${ARCHIVE}"
 ```
 
-Archive names follow the pattern `leakwatch_<VERSION>_<OS>_<ARCH>.tar.gz` (`.zip` on Windows), where `<VERSION>` has no leading `v` (for example `1.8.2`), `<OS>` is `linux`, `darwin`, or `windows`, and `<ARCH>` is `amd64` or `arm64`. Release assets always carry the version in their name, so a `latest/download/...` URL needs the current version spelled out too; the example above pins it explicitly.
+### 2. Verify (recommended)
 
-### Verifying a download
-
-Every release also publishes a Software Bill of Materials (SBOM) for each archive (`<archive>.sbom.json`), a `checksums.txt` file, and a [Sigstore/cosign](https://github.com/sigstore/cosign) keyless signature bundle (`checksums.txt.bundle`) over that checksums file. In supply-chain-sensitive environments, verify the signature on `checksums.txt` first, then check your archive against it:
+Every release also publishes a Software Bill of Materials (SBOM) for each archive (`<archive>.sbom.json`), a `checksums.txt` file, and a [Sigstore/cosign](https://github.com/sigstore/cosign) keyless signature bundle (`checksums.txt.bundle`) over that checksums file. In supply-chain-sensitive environments, verify the signature on `checksums.txt` first, then check your archive against it, **before** you extract or run anything. Each command runs only if the previous one succeeded, so a failed signature check stops the sequence:
 
 ```bash
-curl -LO "https://github.com/HodeTech/Leakwatch/releases/download/${LEAKWATCH_VERSION}/checksums.txt"
-curl -LO "https://github.com/HodeTech/Leakwatch/releases/download/${LEAKWATCH_VERSION}/checksums.txt.bundle"
-
+curl -LO "${BASE_URL}/checksums.txt" && \
+curl -LO "${BASE_URL}/checksums.txt.bundle" && \
 cosign verify-blob \
   --bundle checksums.txt.bundle \
   --certificate-identity-regexp '^https://github\.com/HodeTech/Leakwatch/\.github/workflows/release\.yml@refs/tags/v' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  checksums.txt
-
-grep " leakwatch_${LEAKWATCH_VERSION#v}_linux_amd64.tar.gz\$" checksums.txt | sha256sum --check
+  checksums.txt && \
+grep " ${ARCHIVE}\$" checksums.txt | sha256sum --check
 ```
 
-On macOS, replace `sha256sum --check` with `shasum -a 256 --check`.
+On macOS, replace `sha256sum --check` with `shasum -a 256 --check`. A missing or mismatching checksum entry makes the last command exit non-zero.
+
+### 3. Install
+
+```bash
+tar -xzf "${ARCHIVE}"
+sudo mv leakwatch /usr/local/bin/leakwatch
+```
 
 ## Verifying your installation
 

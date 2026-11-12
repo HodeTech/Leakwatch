@@ -25,10 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   at `leakwatch_Linux_amd64.tar.gz` / `leakwatch_$(uname -s)_$(uname -m)`
   assets that do not exist (HTTP 404); release archives are named
   `leakwatch_<version>_<os>_<arch>.tar.gz` with a lowercase OS and no `v`. The
-  examples now pin the version explicitly, and the installation manual
-  documents the real signature files (`checksums.txt.bundle`, not
-  `checksums.txt.sig`/`.pem`) with tested `cosign verify-blob` and checksum
-  commands, plus image-signature verification.
+  examples now pin the version explicitly, and the installation manual walks
+  through download → verify → install (verification happens before the archive
+  is extracted, and a failed signature check stops the sequence). It documents
+  the real signature files (`checksums.txt.bundle`, not
+  `checksums.txt.sig`/`.pem`) with `cosign verify-blob` and checksum commands
+  that were run against a real release, plus image-signature verification. The
+  release standards gain a recovery procedure for a release workflow that fails
+  after the images are pushed.
 - **`leakwatch version` output in the docs** — the manuals and the getting-started
   guide showed `leakwatch v1.8.2 (…)` or a stale `leakwatch 1.6.0 (…)`; the
   binary prints the bare version (`leakwatch 1.8.2 (…)`). The examples now match,
