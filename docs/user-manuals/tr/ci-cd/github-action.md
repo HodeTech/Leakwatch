@@ -88,7 +88,7 @@ SARIF yüklemesi, işin `permissions: security-events: write` bildirmesini gerek
 | `working-directory` | `.` | Taramanın çalıştırılacağı dizin. |
 | `sarif-upload` | `false` | Taramadan sonra SARIF sonuçlarını GitHub Code Scanning'e yükle. |
 | `fail-on-findings` | `true` | Bulgular raporlandığında (çıkış kodu 1) iş akışı adımını başarısız kıl. `false` olarak ayarlandığında adım başarısız olmak yerine `::warning::` ek açıklaması yayar. Ciddi hatalar (çıkış kodu ≥ 2) bu ayardan bağımsız olarak her zaman adımı başarısız kılar. |
-| `version` | `latest` | Kurulacak Leakwatch sürümü: `latest` veya belirli bir sürümü sabitlemek için `v1.8.1` gibi bir etiket. |
+| `version` | `latest` | Kurulacak Leakwatch sürümü: `latest` veya belirli bir sürümü sabitlemek için `v1.8.2` gibi bir etiket. |
 | `release-repo` | `HodeTech/Leakwatch` | Sürüm ikilisinin indirileceği depo (`owner/name`). Yalnızca fork veya kendi sunucunuzdaki aynalar için değiştirin. |
 
 ## Çıktılar
@@ -119,7 +119,7 @@ CI'da doğrulamayı etkinleştirmek, Leakwatch'ın her aday bulgu için sağlay�
 `sarif-upload: "true"` ve `format: sarif` olduğunda action:
 
 1. Leakwatch'a çıktıyı `results.sarif` dosyasına yazmasını söyler.
-2. Taramanın ardından `category: leakwatch` ile `github/codeql-action/upload-sarif@v3`'ü çağırır.
+2. Taramanın ardından `category: leakwatch` ile `github/codeql-action/upload-sarif@v4`'ü çağırır.
 3. GitHub dosyayı işler ve bulguları deponun **Security** sekmesinde **Code Scanning uyarıları** olarak gösterir.
 
 Yükleme adımı `if: always()` ile çalışır; dolayısıyla `fail-on-findings: "true"` tarama adımını başarısız kılsa bile sonuçlar yüklenir.
@@ -144,10 +144,10 @@ Yeniden üretilebilir derlemeler için `version` değerini belirli bir etikete s
 ```yaml
 - uses: HodeTech/Leakwatch@v1
   with:
-    version: "v1.8.1"
+    version: "v1.8.2"
 ```
 
-Bu, önceden derlenmiş `v1.8.1` ikilisini [Leakwatch sürümlerinden](https://github.com/HodeTech/Leakwatch/releases) indirir ve çalıştırmadan önce SHA-256 sağlama toplamını doğrular. En yüksek tedarik zinciri güvenliği için action'ın kendisini de bir commit SHA'sına sabitleyebilirsiniz: `uses: HodeTech/Leakwatch@<sha>`.
+Bu, önceden derlenmiş `v1.8.2` ikilisini [Leakwatch sürümlerinden](https://github.com/HodeTech/Leakwatch/releases) indirir ve çalıştırmadan önce SHA-256 sağlama toplamını doğrular. En yüksek tedarik zinciri güvenliği için action'ın kendisini de bir commit SHA'sına sabitleyebilirsiniz: `uses: HodeTech/Leakwatch@<sha>`.
 
 ## Yalnızca değişen kodu tarama (pull-request diff)
 

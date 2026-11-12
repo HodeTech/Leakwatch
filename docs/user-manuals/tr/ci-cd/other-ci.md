@@ -22,7 +22,7 @@ go install github.com/HodeTech/leakwatch@latest
 Yeniden üretilebilir derlemeler için belirli bir sürüme sabitleyin:
 
 ```bash
-go install github.com/HodeTech/leakwatch@v1.8.1
+go install github.com/HodeTech/leakwatch@v1.8.2
 ```
 
 ### Docker imajı aracılığıyla (Go gerekmez)
@@ -78,7 +78,7 @@ leakwatch:
   stage: test
   image: golang:1.27-alpine
   script:
-    - go install github.com/HodeTech/leakwatch@v1.8.1
+    - go install github.com/HodeTech/leakwatch@v1.8.2
     - leakwatch scan fs . --format json -o leakwatch.json --no-verify
   artifacts:
     when: always
@@ -110,7 +110,7 @@ leakwatch scan fs . --no-verify --format sarif -o results.sarif
 
 ```yaml
 - script: |
-    go install github.com/HodeTech/leakwatch@v1.8.1
+    go install github.com/HodeTech/leakwatch@v1.8.2
     leakwatch scan fs . --format sarif -o $(Build.ArtifactStagingDirectory)/leakwatch.sarif --no-verify
   displayName: "Leakwatch sır taraması"
 
@@ -126,7 +126,7 @@ leakwatch scan fs . --no-verify --format sarif -o results.sarif
 stage('Sır taraması') {
     steps {
         sh '''
-            go install github.com/HodeTech/leakwatch@v1.8.1
+            go install github.com/HodeTech/leakwatch@v1.8.2
             leakwatch scan fs . --format json -o leakwatch.json --no-verify
         '''
         archiveArtifacts artifacts: 'leakwatch.json', allowEmptyArchive: true

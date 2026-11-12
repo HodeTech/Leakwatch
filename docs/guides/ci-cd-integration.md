@@ -1,7 +1,7 @@
 # Leakwatch - CI/CD Integration Guide
 
-> **Document Version:** 1.3
-> **Date:** 2026-11-06
+> **Document Version:** 1.4
+> **Date:** 2026-11-12
 > **Status:** Approved
 
 ---
@@ -77,7 +77,7 @@ Leakwatch provides a ready-to-use GitHub Action (root `action.yml`, published on
 | `working-directory` | `.` | Directory to run the scan from |
 | `sarif-upload` | `false` | Upload SARIF results to GitHub Code Scanning. Requires `format: sarif` and `permissions: security-events: write` |
 | `fail-on-findings` | `true` | Fail the workflow step when Leakwatch reports findings (exit code 1). When `false`, a `::warning::` annotation is emitted instead so the scan does not block the pipeline. Hard errors (exit code >= 2) always fail the step regardless of this setting |
-| `version` | `latest` | Leakwatch version to install: `latest` or the current release tag, `v1.8.1` |
+| `version` | `latest` | Leakwatch version to install: `latest` or the current release tag, `v1.8.2` |
 | `release-repo` | `HodeTech/Leakwatch` | GitHub repository (`owner/name`) to download the release binary from. Override only for forks or self-hosted mirrors |
 
 **Outputs:**
@@ -214,7 +214,7 @@ jobs:
 
       - name: Upload SARIF
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: results.sarif
           category: leakwatch
@@ -287,7 +287,7 @@ permissions:
   pull-requests: read
 
 env:
-  LEAKWATCH_VERSION: 'v1.8.1'
+  LEAKWATCH_VERSION: 'v1.8.2'
 
 jobs:
   # On PRs, scan only the changed files
@@ -320,7 +320,7 @@ jobs:
 
       - name: Upload SARIF
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: results.sarif
           category: leakwatch-pr
@@ -588,7 +588,7 @@ Create a `.pre-commit-config.yaml` file in your project root:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/HodeTech/Leakwatch
-    rev: v1.8.1
+    rev: v1.8.2
     hooks:
       - id: leakwatch
 ```

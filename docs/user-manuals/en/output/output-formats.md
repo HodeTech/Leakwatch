@@ -75,7 +75,7 @@ leakwatch scan fs . --format sarif --output results.sarif
 ```yaml
 # In a GitHub Actions workflow step:
 - name: Upload SARIF results
-  uses: github/codeql-action/upload-sarif@v3
+  uses: github/codeql-action/upload-sarif@v4
   with:
     sarif_file: results.sarif
 ```

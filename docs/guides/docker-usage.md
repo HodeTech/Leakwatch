@@ -1,7 +1,7 @@
 # Leakwatch - Docker Usage Guide
 
-> **Document Version:** 1.3
-> **Date:** 2026-11-06
+> **Document Version:** 1.4
+> **Date:** 2026-11-12
 > **Status:** Approved
 
 ---
@@ -372,7 +372,7 @@ jobs:
 
       - name: Upload SARIF
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: results.sarif
 ```

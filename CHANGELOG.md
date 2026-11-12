@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [v1.8.2] - 2026-11-12
+
+### Changed
+
+- **GitHub Action uploads SARIF with CodeQL Action v4** — with
+  `sarif-upload: true`, the action now calls
+  `github/codeql-action/upload-sarif` v4.39.3 instead of v3.36.0 (CodeQL Action
+  v3 is scheduled for deprecation in December 2026). The inputs the action
+  passes (`sarif_file` and `category: leakwatch`) are unchanged. v4 runs on
+  Node.js 24, which GitHub-hosted runners already provide; self-hosted runners
+  need Actions runner 2.327.1 or newer.
+- **Dependency updates** — AWS SDK for Go v2 (`aws-sdk-go-v2` v1.47.8,
+  `config` v1.33.16, `credentials` v1.20.16, `service/s3` v1.114.9,
+  `service/sts` v1.51.9, `smithy-go` v1.28.8), `google.golang.org/api` v0.311.0
+  with gRPC v1.85.0, and `github.com/slack-go/slack` v0.35.0, which includes the
+  fix for GHSA-pj2x-fjjr-q84c in `InteractionCallbackParse` (not used by
+  Leakwatch). `github.com/spf13/pflag` stays at v1.0.10 because v1.1.0 renders
+  every boolean flag as `--flag[=true|false]` in `--help` output.
+- **Release and CI pipeline actions** — `goreleaser/goreleaser-action` v7.3.0
+  (verifies the downloaded GoReleaser checksum and cosign signature),
+  `actions/upload-artifact` v7.0.2, `actions/setup-node` v7.1.0,
+  `docker/login-action` v4.8.0, `sigstore/cosign-installer` v4.1.3 (cosign
+  v3.1.4), `anchore/sbom-action/download-syft` v0.24.3, and
+  `actions/deploy-pages` v5.0.1.
+
 ### Security
 
 - **Go toolchain moved to 1.27.4** — Go 1.27.4 fixes GO-2026-6859 (an HTTP/1
