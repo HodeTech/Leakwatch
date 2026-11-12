@@ -14,7 +14,7 @@ import (
 
 // changelogReleaseHeading matches a released section heading such as
 // "## [v1.8.3] - 2026-11-12". "## [Unreleased]" and the "###" subsections do
-// not match.
+// not match. It is applied line by line, outside fenced code blocks.
 var changelogReleaseHeading = regexp.MustCompile(`(?m)^##[[:space:]]+\[(` + releaseVersionTokenPattern + `)\]`)
 
 // TestDocumentation_PreviousReleaseMentionsAreBumpedOrExplicitlyHistorical
@@ -50,7 +50,7 @@ func TestDocumentation_PreviousReleaseMentionsAreBumpedOrExplicitlyHistorical(t 
 	}
 }
 
-func TestPreviousReleaseVersion_ChangelogMatrix(t *testing.T) {
+func TestPreviousReleaseVersion_ChangelogHeadings_ReturnsReleaseBelowCurrentOrError(t *testing.T) {
 	const changelog = "# Changelog\n\n## [Unreleased]\n\n## [v1.8.3] - 2026-11-12\n\n### Fixed\n\n- [v9.9.9] in a list item is not a heading\n\n## [v1.8.2] - 2026-11-12\n\n## [v1.8.1] - 2026-11-06\n"
 	tests := []struct {
 		name    string
@@ -62,6 +62,7 @@ func TestPreviousReleaseVersion_ChangelogMatrix(t *testing.T) {
 		{name: "release below the current one", input: changelog, current: "v1.8.3", want: "v1.8.2"},
 		{name: "skips unreleased and subsections", input: changelog, current: "v1.8.2", want: "v1.8.1"},
 		{name: "pre-release is the previous heading", input: "## [v1.9.0] - d\n\n## [v1.9.0-rc.1] - d\n", current: "v1.9.0", want: "v1.9.0-rc.1"},
+		{name: "heading-shaped line in a fenced example is not a release", input: "## [v1.8.3] - d\n\n```md\n## [v9.9.9] - example\n```\n\n## [v1.8.2] - d\n", current: "v1.8.3", want: "v1.8.2"},
 		{name: "current release is not in the changelog", input: changelog, current: "v1.8.4", wantErr: "no heading for v1.8.4"},
 		{name: "current release is the oldest entry", input: changelog, current: "v1.8.1", wantErr: "no release below v1.8.1"},
 		{name: "unreleased only", input: "## [Unreleased]\n", current: "v1.8.3", wantErr: "no heading for v1.8.3"},
@@ -80,7 +81,7 @@ func TestPreviousReleaseVersion_ChangelogMatrix(t *testing.T) {
 	}
 }
 
-func TestStalePreviousReleaseLines_MentionAndMarkerMatrix(t *testing.T) {
+func TestStalePreviousReleaseLines_MentionBoundariesAndMarkers_ReportsOnlyUnmarkedWholeVersionMentions(t *testing.T) {
 	const version = "v1.8.2"
 	tests := []struct {
 		name     string
@@ -96,6 +97,7 @@ func TestStalePreviousReleaseLines_MentionAndMarkerMatrix(t *testing.T) {
 		{name: "sentence end", contents: "It shipped in v1.8.2.", want: []int{1}},
 		{name: "two mentions on one line count once", contents: "v1.8.2, 1.8.2 and `1.8.2`", want: []int{1}},
 		{name: "mentions on separate lines", contents: "a\nv1.8.2\n\nb 1.8.2", want: []int{2, 4}},
+		{name: "pre-release of the previous release is flagged too", contents: "Try v1.8.2-rc.1.", want: []int{1}},
 		{name: "current release is fine", contents: "leakwatch 1.8.3 (commit: abc1234, built: x)"},
 		{name: "longer patch number", contents: "v1.8.20 and 1.8.21"},
 		{name: "longer dotted version", contents: "v1.8.2.1 and 1.8.2.10"},
@@ -104,6 +106,8 @@ func TestStalePreviousReleaseLines_MentionAndMarkerMatrix(t *testing.T) {
 		{name: "glued to a word", contents: "dev1.8.2 and 1.8.2beta"},
 		{name: "marker exempts its paragraph", contents: "<!-- leakwatch-version: historical v1.8.2 -->\n\nReleases up to v1.8.2 signed only per-arch images (`:1.8.2-amd64`)."},
 		{name: "marker exempts a fenced example", contents: "<!-- leakwatch-version: historical v1.8.2 -->\n\n```text\nleakwatch_1.8.2_linux_amd64.tar.gz\n```"},
+		{name: "marker covers a whole contiguous list", contents: "<!-- leakwatch-version: historical v1.8.2 -->\n\n- Up to v1.8.2.\n- Also v1.8.2."},
+		{name: "blank line ends the marked list item", contents: "<!-- leakwatch-version: historical v1.8.2 -->\n\n- Up to v1.8.2.\n\n- Also v1.8.2.", want: []int{5}},
 		{name: "marker does not exempt a later block", contents: "<!-- leakwatch-version: historical v1.8.2 -->\n\nUp to v1.8.2.\n\nUnrelated paragraph.\n\nSee v1.8.2.", want: []int{7}},
 		{name: "marker for another version does not exempt", contents: "<!-- leakwatch-version: historical v1.8.1 -->\n\nUp to v1.8.2.", want: []int{3}},
 		{name: "CRLF line endings", contents: "a\r\n\r\nv1.8.2\r\n", want: []int{3}},
@@ -115,18 +119,39 @@ func TestStalePreviousReleaseLines_MentionAndMarkerMatrix(t *testing.T) {
 	}
 }
 
+// changelogReleaseVersions returns the released versions in the order their
+// headings appear. A heading-shaped line inside a fenced code block is example
+// text, not a release.
+func changelogReleaseVersions(changelog string) []string {
+	var versions []string
+	inFence := false
+	for _, line := range strings.Split(strings.ReplaceAll(changelog, "\r\n", "\n"), "\n") {
+		if startsMarkdownFence(line) {
+			inFence = !inFence
+			continue
+		}
+		if inFence {
+			continue
+		}
+		if match := changelogReleaseHeading.FindStringSubmatch(line); match != nil {
+			versions = append(versions, match[1])
+		}
+	}
+	return versions
+}
+
 // previousReleaseVersion returns the release listed directly below current in
 // the changelog, which is the version that was current until current shipped.
 func previousReleaseVersion(changelog, current string) (string, error) {
-	headings := changelogReleaseHeading.FindAllStringSubmatch(changelog, -1)
-	for index, heading := range headings {
-		if heading[1] != current {
+	versions := changelogReleaseVersions(changelog)
+	for index, version := range versions {
+		if version != current {
 			continue
 		}
-		if index+1 >= len(headings) {
+		if index+1 >= len(versions) {
 			return "", fmt.Errorf("CHANGELOG.md has no release below %s to compare the documentation against", current)
 		}
-		return headings[index+1][1], nil
+		return versions[index+1], nil
 	}
 	return "", fmt.Errorf("CHANGELOG.md has no heading for %s; cut its section before bumping ReleaseVersion", current)
 }
@@ -185,6 +210,11 @@ func versionMentionBoundaryBefore(text string, start int) bool {
 	return previous != '.' && !isASCIIAlphanumeric(previous)
 }
 
+// versionMentionBoundaryAfter treats a hyphen as a boundary on purpose: an image
+// tag such as "1.8.2-amd64" is a mention of 1.8.2, and a pre-release suffix
+// cannot be told apart from an architecture suffix. A real pre-release of the
+// previous release is reported too and takes the historical marker; a loud
+// false positive is cheaper than a stale version slipping through.
 func versionMentionBoundaryAfter(text string, end int) bool {
 	if end >= len(text) {
 		return true
