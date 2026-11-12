@@ -22,7 +22,7 @@ go install github.com/HodeTech/leakwatch@latest
 Pin to a specific version for reproducible builds:
 
 ```bash
-go install github.com/HodeTech/leakwatch@v1.8.1
+go install github.com/HodeTech/leakwatch@v1.8.2
 ```
 
 ### via the Docker image (no Go required)
@@ -78,7 +78,7 @@ leakwatch:
   stage: test
   image: golang:1.27-alpine
   script:
-    - go install github.com/HodeTech/leakwatch@v1.8.1
+    - go install github.com/HodeTech/leakwatch@v1.8.2
     - leakwatch scan fs . --format json -o leakwatch.json --no-verify
   artifacts:
     when: always
@@ -110,7 +110,7 @@ leakwatch scan fs . --no-verify --format sarif -o results.sarif
 
 ```yaml
 - script: |
-    go install github.com/HodeTech/leakwatch@v1.8.1
+    go install github.com/HodeTech/leakwatch@v1.8.2
     leakwatch scan fs . --format sarif -o $(Build.ArtifactStagingDirectory)/leakwatch.sarif --no-verify
   displayName: "Leakwatch secret scan"
 
@@ -126,7 +126,7 @@ leakwatch scan fs . --no-verify --format sarif -o results.sarif
 stage('Secret scan') {
     steps {
         sh '''
-            go install github.com/HodeTech/leakwatch@v1.8.1
+            go install github.com/HodeTech/leakwatch@v1.8.2
             leakwatch scan fs . --format json -o leakwatch.json --no-verify
         '''
         archiveArtifacts artifacts: 'leakwatch.json', allowEmptyArchive: true

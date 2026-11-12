@@ -1,9 +1,9 @@
 # Leakwatch - Phased Development Roadmap
 
-> **Document Version:** 7.3
+> **Document Version:** 7.4
 > **Date:** 2026-04-09
 > **Status:** Approved
-> **Last Updated:** 2026-11-06
+> **Last Updated:** 2026-11-12
 
 ---
 
@@ -26,7 +26,7 @@
 | Phase 8.5 — GitHub Marketplace Action & Distribution | Completed | `v1.6.0` | 2026-05-25 |
 | Review Remediation Release | Released | `v1.7.0` | 2026-07-20 |
 | Phase 9 — Detection Accuracy & FP Reduction | Completed | `v1.8.0` | 2026-08-11 |
-| Security Maintenance Release | Released | `v1.8.1` | 2026-11-06 |
+| Security Maintenance Release | Released | `v1.8.2` | 2026-11-12 |
 | Phase 10 — Detector Library Expansion | Planned | `v1.9.0` | — |
 | Phase 11 — Verification Depth & Credential Impact | Planned | `v1.10.0` | — |
 | Phase 12 — Source Expansion (Confluence/Jira, org-scale) | Planned | `v1.11.0` | — |
@@ -34,6 +34,13 @@
 | Phase 14 — Honeytokens | Planned | `v1.13.0` | — |
 
 > **Prioritization note (v7.0):** the planned sequence is re-ordered so the work that most strengthens the core promise — accurate, verified, low-noise findings — comes first. Detection accuracy and false-positive reduction (Phase 9, completed in `v1.8.0`), broader coverage of high-blast-radius credential types (Phase 10), and deeper verification with credential-impact insight (Phase 11) precede new scan sources (Phase 12) and the inventory/honeytoken platform features (Phases 13–14). Rationale is detailed in [Planned Work — Prioritization](#planned-work--prioritization).
+
+### v1.8.2 Highlights
+
+- **Patched Go toolchain and zstd decoder** — builds, CI, release binaries, and the Docker image use Go 1.27.4 (GO-2026-6859), and `klauspost/compress` v1.20.2 fixes a zstd panic reachable through container-layer decompression (GO-2026-6865). Building from source requires Go 1.27.4 or later
+- **Current dependencies** — AWS SDK for Go v2, `google.golang.org/api` with gRPC v1.85.0, and `slack-go/slack` v0.35.0
+- **CodeQL Action v4 for SARIF upload** — the GitHub Action no longer depends on the CodeQL Action v3 line that is being deprecated
+- **Verified release pipeline** — GoReleaser, cosign, syft, and the artifact actions moved to current majors after a snapshot dry run
 
 ### v1.8.1 Highlights
 
@@ -811,6 +818,7 @@ Source packages (no formal standard, but visible gaps):
 | `v1.7.0` | Review Remediation | Full-project review remediation, correctness, security, and CI hardening | 2026-07-20 |
 | `v1.8.0` | Phase 9 | Detection accuracy & false-positive reduction | 2026-08-11 |
 | `v1.8.1` | Maintenance | Go 1.27.3 toolchain, patched dependencies, release-pipeline hardening | 2026-11-06 |
+| `v1.8.2` | Maintenance | Go 1.27.4 toolchain, zstd decoder fix, current dependencies and release-pipeline actions | 2026-11-12 |
 | `v1.9.0` | Phase 10 | Detector library expansion | — |
 | `v1.10.0` | Phase 11 | Verification depth & credential impact | — |
 | `v1.11.0` | Phase 12 | Source expansion (Confluence/Jira, org-scale) | — |

@@ -88,7 +88,7 @@ SARIF upload requires the job to declare `permissions: security-events: write`. 
 | `working-directory` | `.` | Directory to run the scan from. |
 | `sarif-upload` | `false` | Upload SARIF results to GitHub Code Scanning after the scan. |
 | `fail-on-findings` | `true` | Fail the workflow step when findings are reported (exit code 1). When `false`, a `::warning::` annotation is emitted instead so the scan does not block the pipeline. Hard errors (exit code ≥ 2) always fail the step regardless of this setting. |
-| `version` | `latest` | Leakwatch version to install: `latest`, or a release tag such as `v1.8.1` to pin a specific release. |
+| `version` | `latest` | Leakwatch version to install: `latest`, or a release tag such as `v1.8.2` to pin a specific release. |
 | `release-repo` | `HodeTech/Leakwatch` | Repository (`owner/name`) to download the release binary from. Override only for forks or self-hosted mirrors. |
 
 ## Outputs
@@ -119,7 +119,7 @@ Enabling verification in CI causes Leakwatch to make authenticated API calls to 
 When `sarif-upload: "true"` and `format: sarif`, the action:
 
 1. Tells Leakwatch to write output to `results.sarif`.
-2. After the scan, calls `github/codeql-action/upload-sarif@v3` with `category: leakwatch`.
+2. After the scan, calls `github/codeql-action/upload-sarif@v4` with `category: leakwatch`.
 3. GitHub processes the file and surfaces findings as **Code Scanning alerts** under the repository's **Security** tab.
 
 The upload step runs with `if: always()`, so results are uploaded even when `fail-on-findings: "true"` causes the scan step to set a failure.
@@ -144,10 +144,10 @@ For reproducible builds, pin `version` to a specific tag:
 ```yaml
 - uses: HodeTech/Leakwatch@v1
   with:
-    version: "v1.8.1"
+    version: "v1.8.2"
 ```
 
-This downloads the prebuilt `v1.8.1` binary from the [Leakwatch releases](https://github.com/HodeTech/Leakwatch/releases) and verifies its SHA-256 checksum before running. For maximum supply-chain safety you can also pin the action itself to a commit SHA, e.g. `uses: HodeTech/Leakwatch@<sha>`.
+This downloads the prebuilt `v1.8.2` binary from the [Leakwatch releases](https://github.com/HodeTech/Leakwatch/releases) and verifies its SHA-256 checksum before running. For maximum supply-chain safety you can also pin the action itself to a commit SHA, e.g. `uses: HodeTech/Leakwatch@<sha>`.
 
 ## Scanning only changed code (pull-request diff)
 

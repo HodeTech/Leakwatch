@@ -1,6 +1,6 @@
 # Leakwatch - Development Standards and Infrastructure
 
-> **Document Version:** 1.4
+> **Document Version:** 1.5
 > **Date:** 2026-11-12
 > **Status:** Approved
 
@@ -304,7 +304,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.27'
-      - uses: goreleaser/goreleaser-action@v6
+      - uses: goreleaser/goreleaser-action@v7
         with:
           version: '~> v2'
           args: release --clean

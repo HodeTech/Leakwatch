@@ -1,7 +1,7 @@
 # Leakwatch - Cloud Storage Scanning Guide
 
-> **Document Version:** 1.1
-> **Date:** 2026-08-11
+> **Document Version:** 1.2
+> **Date:** 2026-11-12
 > **Status:** Approved
 
 ---
@@ -506,7 +506,7 @@ SARIF (Static Analysis Results Interchange Format) is an industry-standard forma
 leakwatch scan s3 my-bucket --format sarif --output s3-results.sarif
 
 # Upload to GitHub (within GitHub Actions)
-# uses: github/codeql-action/upload-sarif@v3
+# uses: github/codeql-action/upload-sarif@v4
 # with:
 #   sarif_file: s3-results.sarif
 ```
