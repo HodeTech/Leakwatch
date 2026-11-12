@@ -79,12 +79,12 @@ args:
 ```
 
 :::note
-Kanca tanımında `pass_filenames: false` ayarlandığından kanca, yalnızca mevcut commit için staged dosyaları değil her zaman tam çalışma ağacını tarar. Bu, staged olmayan dosyalarda halihazırda bulunan sırların da tespit edileceğini garanti eder.
+Kanca tanımı pre-commit'in varsayılan `pass_filenames: true` ayarını korur; bu yüzden pre-commit, mevcut commit için staged edilen dosyaları `leakwatch scan fs` komutuna iletir ve yalnızca bu dosyalar taranır. Staged olmayan veya değişmemiş bir dosyada halihazırda bulunan bir sır kanca tarafından tespit edilmez. Takip edilen tüm dosyaları taramak için `pre-commit run leakwatch --all-files`, tüm çalışma dizinini taramak için `leakwatch scan fs` çalıştırın.
 :::
 
 ## Kancanın taradıkları
 
-Kanca, depo çalışma dizinine karşı `leakwatch scan fs` çalıştırır. CLI ile aynı tespit hattını kullanır: Aho-Corasick ön filtreleme, regex doğrulama, entropi hesaplama ve (`--no-verify` ayarlanmadıkça) canlı doğrulama.
+Kanca, commit için staged edilen dosyalar üzerinde `leakwatch scan fs` çalıştırır. CLI ile aynı tespit hattını kullanır: Aho-Corasick ön filtreleme, regex doğrulama, entropi hesaplama ve (`--no-verify` ayarlanmadıkça) canlı doğrulama.
 
 `.leakwatch.yaml`'daki yapılandırma otomatik olarak uygulanır — dışlama kalıpları, entropi eşikleri ve doğrulama ayarları, herhangi bir ek kanca yapılandırması olmadan geçerli olur.
 

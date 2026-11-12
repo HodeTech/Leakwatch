@@ -79,12 +79,12 @@ args:
 ```
 
 :::note
-`pass_filenames: false` is set in the hook definition, which means the hook always scans the full working tree rather than only the files staged for the current commit. This guarantees that secrets already present in unstaged files are also detected.
+The hook definition keeps pre-commit's default `pass_filenames: true`, so pre-commit passes the files staged for the current commit to `leakwatch scan fs`, and only those files are scanned. A secret that already sits in an unstaged or untouched file is not detected by the hook. To scan every tracked file, run `pre-commit run leakwatch --all-files`; to scan the whole working directory, run `leakwatch scan fs`.
 :::
 
 ## What the hook scans
 
-The hook runs `leakwatch scan fs` against the repository working directory. It uses the same detection pipeline as the CLI: Aho-Corasick pre-filtering, regex validation, entropy calculation, and (unless `--no-verify` is set) live verification.
+The hook runs `leakwatch scan fs` on the files staged for the commit. It uses the same detection pipeline as the CLI: Aho-Corasick pre-filtering, regex validation, entropy calculation, and (unless `--no-verify` is set) live verification.
 
 Configuration in `.leakwatch.yaml` is respected automatically — exclusion patterns, entropy thresholds, and verification settings all apply without any extra hook configuration.
 

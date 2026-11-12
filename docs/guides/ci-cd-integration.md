@@ -1,6 +1,6 @@
 # Leakwatch - CI/CD Integration Guide
 
-> **Document Version:** 1.5
+> **Document Version:** 1.6
 > **Date:** 2026-11-12
 > **Status:** Approved
 
@@ -605,7 +605,7 @@ pre-commit run leakwatch --all-files
 
 ### 5.2 How Does It Work?
 
-The Leakwatch pre-commit hook runs the `leakwatch scan fs` command. The bundled hook sets `pass_filenames: false`, so it scans the entire working tree on each commit rather than only the staged files.
+The Leakwatch pre-commit hook runs the `leakwatch scan fs` command. The bundled hook keeps pre-commit's default `pass_filenames: true`, so pre-commit passes the staged files to `leakwatch scan fs` and only those files are scanned on each commit (use `pre-commit run leakwatch --all-files` to scan every tracked file).
 
 ```mermaid
 flowchart TD

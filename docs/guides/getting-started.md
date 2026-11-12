@@ -1,6 +1,6 @@
 # Leakwatch - Getting Started Guide
 
-> **Document Version:** 1.6
+> **Document Version:** 1.7
 > **Date:** 2026-11-12
 > **Status:** Approved
 
@@ -94,7 +94,10 @@ You can download the binary suitable for your platform from the GitHub Releases 
 #
 # Example for Linux amd64. The release tag keeps its "v"; the archive name does not.
 LEAKWATCH_VERSION=v1.8.3
-curl -sSfL "https://github.com/HodeTech/Leakwatch/releases/download/${LEAKWATCH_VERSION}/leakwatch_${LEAKWATCH_VERSION#v}_linux_amd64.tar.gz" | tar xz
+ARCHIVE="leakwatch_${LEAKWATCH_VERSION#v}_linux_amd64.tar.gz"
+curl -sSfLO "https://github.com/HodeTech/Leakwatch/releases/download/${LEAKWATCH_VERSION}/${ARCHIVE}"
+# (verify "${ARCHIVE}" here, as described in the installation manual)
+tar xzf "${ARCHIVE}"
 
 # Move binary to PATH
 sudo mv leakwatch /usr/local/bin/
