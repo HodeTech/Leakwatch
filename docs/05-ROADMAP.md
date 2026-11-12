@@ -37,7 +37,7 @@
 
 ### v1.8.3 Highlights
 
-- **Signed multi-arch container images** — the manifest lists behind `:latest`, `:X.Y.Z`, and `:vX.Y` now carry a keyless cosign signature, and every image is signed by digest, so `cosign verify ghcr.io/hodetech/leakwatch:latest` works. Earlier releases signed only the per-architecture images
+- **Signed multi-arch container images** — the manifest lists behind `:latest`, `:X.Y.Z`, and `:vX.Y` now carry a keyless cosign signature, and every image is signed by digest, so keyless `cosign verify` against `ghcr.io/hodetech/leakwatch:latest` works (the exact command is in the installation manual). Earlier releases signed only the per-architecture images
 - **Working install instructions** — the prebuilt-binary commands in the manuals pointed at assets that returned HTTP 404; they now follow a download → verify → install flow with tested `cosign verify-blob` and checksum commands, and the documented `leakwatch version` output matches the binary
 - **Node 24 pipeline** — the site deployment and VS Code release workflows no longer run Node.js 20 actions
 - **Documented release recovery** — the release standards describe what to do if a release fails after the images are pushed

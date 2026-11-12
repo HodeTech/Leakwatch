@@ -105,7 +105,7 @@ Using `SKIP=leakwatch` bypasses all secret scanning for that commit. Use it only
 Pin `rev:` to a specific tag rather than a branch name. This ensures all developers on the team use the same detector set and the hook does not silently upgrade mid-sprint:
 
 ```yaml
-rev: v1.8.2   # pin; do not use 'main' or 'HEAD'
+rev: v1.8.3   # pin; do not use 'main' or 'HEAD'
 ```
 
 Update by running:

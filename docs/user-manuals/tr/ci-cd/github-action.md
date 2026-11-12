@@ -147,7 +147,7 @@ Yeniden üretilebilir derlemeler için `version` değerini belirli bir etikete s
     version: "v1.8.3"
 ```
 
-Bu, önceden derlenmiş `v1.8.2` ikilisini [Leakwatch sürümlerinden](https://github.com/HodeTech/Leakwatch/releases) indirir ve çalıştırmadan önce SHA-256 sağlama toplamını doğrular. En yüksek tedarik zinciri güvenliği için action'ın kendisini de bir commit SHA'sına sabitleyebilirsiniz: `uses: HodeTech/Leakwatch@<sha>`.
+Bu, önceden derlenmiş `v1.8.3` ikilisini [Leakwatch sürümlerinden](https://github.com/HodeTech/Leakwatch/releases) indirir ve çalıştırmadan önce SHA-256 sağlama toplamını doğrular. En yüksek tedarik zinciri güvenliği için action'ın kendisini de bir commit SHA'sına sabitleyebilirsiniz: `uses: HodeTech/Leakwatch@<sha>`.
 
 ## Yalnızca değişen kodu tarama (pull-request diff)
 

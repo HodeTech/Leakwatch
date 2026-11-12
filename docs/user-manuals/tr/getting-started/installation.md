@@ -28,7 +28,7 @@ go install github.com/HodeTech/leakwatch@latest
 İkili dosya `$(go env GOPATH)/bin` dizinine yerleştirilir. Bu dizinin `PATH` değişkeninde olduğundan emin olun.
 
 :::note
-`go install` her zaman en son etiketli sürümü getirir. Belirli bir sürüme sabitlemek için `@latest` yerine güncel sürüm etiketi olan `@v1.8.2` değerini kullanın.
+`go install` her zaman en son etiketli sürümü getirir. Belirli bir sürüme sabitlemek için `@latest` yerine güncel sürüm etiketi olan `@v1.8.3` değerini kullanın.
 :::
 
 ## Docker

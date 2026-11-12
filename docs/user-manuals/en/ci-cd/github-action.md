@@ -147,7 +147,7 @@ For reproducible builds, pin `version` to a specific tag:
     version: "v1.8.3"
 ```
 
-This downloads the prebuilt `v1.8.2` binary from the [Leakwatch releases](https://github.com/HodeTech/Leakwatch/releases) and verifies its SHA-256 checksum before running. For maximum supply-chain safety you can also pin the action itself to a commit SHA, e.g. `uses: HodeTech/Leakwatch@<sha>`.
+This downloads the prebuilt `v1.8.3` binary from the [Leakwatch releases](https://github.com/HodeTech/Leakwatch/releases) and verifies its SHA-256 checksum before running. For maximum supply-chain safety you can also pin the action itself to a commit SHA, e.g. `uses: HodeTech/Leakwatch@<sha>`.
 
 ## Scanning only changed code (pull-request diff)
 

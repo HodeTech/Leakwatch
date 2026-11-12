@@ -105,7 +105,7 @@ SKIP=leakwatch git commit -m "chore: test sabiti ekle"
 `rev:` değerini dal adı yerine belirli bir etikete sabitleyin. Bu, ekipteki tüm geliştiricilerin aynı dedektör setini kullandığını ve kancanın sprint ortasında sessizce yükseltilmediğini garantiler:
 
 ```yaml
-rev: v1.8.2   # sabitle; 'main' veya 'HEAD' kullanmayın
+rev: v1.8.3   # sabitle; 'main' veya 'HEAD' kullanmayın
 ```
 
 Güncellemek için:
