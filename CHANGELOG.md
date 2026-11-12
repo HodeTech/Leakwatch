@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Security
+
+- **Multi-arch container image manifests are now signed** — releases through
+  v1.8.2 signed only the per-architecture images (`:X.Y.Z-amd64`,
+  `:X.Y.Z-arm64`), so `cosign verify ghcr.io/hodetech/leakwatch:latest` — the
+  reference `docker pull` actually resolves — found no signature. The release
+  pipeline now also signs the multi-arch manifest lists (`:X.Y.Z`, `:vX.Y`,
+  `:latest`) and signs every image by digest instead of by bare tag, which
+  removes cosign's "uses a tag, not a digest" warning. Images and the manifest
+  list from v1.8.3 onwards verify with the command in the installation manual.
+
+### Fixed
+
+- **Prebuilt-binary install instructions** — the manuals (EN/TR installation
+  and "other CI"), the getting-started guide, and the release standards pointed
+  at `leakwatch_Linux_amd64.tar.gz` / `leakwatch_$(uname -s)_$(uname -m)`
+  assets that do not exist (HTTP 404); release archives are named
+  `leakwatch_<version>_<os>_<arch>.tar.gz` with a lowercase OS and no `v`. The
+  examples now pin the version explicitly, and the installation manual walks
+  through download → verify → install (verification happens before the archive
+  is extracted, and a failed signature check stops the sequence). It documents
+  the real signature files (`checksums.txt.bundle`, not
+  `checksums.txt.sig`/`.pem`) with `cosign verify-blob` and checksum commands
+  that were run against a real release, plus image-signature verification. The
+  release standards gain a recovery procedure for a release workflow that fails
+  after the images are pushed.
+- **`leakwatch version` output in the docs** — the manuals and the getting-started
+  guide showed `leakwatch v1.8.2 (…)` or a stale `leakwatch 1.6.0 (…)`; the
+  binary prints the bare version (`leakwatch 1.8.2 (…)`). The examples now match,
+  and a documentation contract test keeps them tied to the current release and
+  rejects a `v`-prefixed example.
+
+### Changed
+
+- **Site and VS Code release workflows run on Node 24** —
+  `actions/upload-pages-artifact` v5.0.0 (it bundles `upload-artifact` v7
+  instead of v4, which triggered GitHub's Node.js 20 deprecation warning on
+  every site deployment; `include-hidden-files: true` keeps `site/.nojekyll`
+  in the artifact) and `actions/download-artifact` v8.0.2.
+- **Dependabot holds `github.com/spf13/pflag` at v1.0.10** — the v1.1.x line
+  renders every boolean flag as `--flag[=true|false]` in `--help`; the rule is
+  documented in `.github/dependabot.yml` together with how to adopt it.
+
 ## [v1.8.2] - 2026-11-12
 
 ### Changed

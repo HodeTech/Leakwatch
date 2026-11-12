@@ -1,7 +1,7 @@
 # Leakwatch - Release and Distribution Standards
 
-> **Document Version:** 1.0
-> **Date:** 2026-03-24
+> **Document Version:** 1.1
+> **Date:** 2026-11-12
 > **Status:** Approved
 
 ---
@@ -263,7 +263,10 @@ brew install HodeTech/tap/leakwatch
 docker run --rm -v $(pwd):/scan ghcr.io/hodetech/leakwatch:latest scan fs /scan
 
 # Binary download
-curl -sSfL https://github.com/HodeTech/Leakwatch/releases/latest/download/leakwatch_$(uname -s)_$(uname -m).tar.gz | tar xz
+# Archive names are leakwatch_<version>_<os>_<arch>.tar.gz (no "v" in the version,
+# lowercase os, Go-style arch such as amd64/arm64), e.g. for Linux amd64:
+LEAKWATCH_VERSION=v1.8.2
+curl -sSfL "https://github.com/HodeTech/Leakwatch/releases/download/${LEAKWATCH_VERSION}/leakwatch_${LEAKWATCH_VERSION#v}_linux_amd64.tar.gz" | tar xz
 ```
 
 ---
@@ -305,6 +308,32 @@ git push origin v0.2.1
 | Time to open hotfix PR | < 2 hours |
 | Hotfix release time | < 4 hours |
 | Time to flag problematic release | < 30 minutes |
+
+### 7.4 Release workflow fails after the images are pushed
+
+GoReleaser publishes in a fixed order: container images, then the multi-arch manifests (`:X.Y.Z`, `:vX.Y`, `:latest`), then cosign signatures for both, and only then the GitHub Release, the Homebrew formula, and the floating major tag. A failure while signing therefore leaves the registry tags already moved but signed incompletely, while no GitHub Release, Homebrew formula, or major-tag move has happened yet.
+
+1. Do not announce the release and do not delete the tag. The moving tags `:latest`, `:X.Y.Z`, and `:vX.Y` may already resolve to an unsigned manifest list, so do not direct anyone to pull them until step 4 passes.
+2. Check that no newer release has been published since this tag. If one has, **do not re-run**: the re-run would move `:latest`, `:vX.Y`, and the floating `v1` tag back to the older release. Publish the next PATCH version instead, as described in 7.2.
+3. Re-run the failed `Release` workflow run for the same tag. Nothing downstream of signing has run, so the re-run repeats the image push and the signing and then continues to the release.
+4. Before announcing, verify the recovered release itself (not `:latest`, which could belong to another release) from a clean machine, with the exact workflow identity of its tag:
+
+```bash
+VERSION=X.Y.Z   # the recovered release, without the leading v
+cosign verify "ghcr.io/hodetech/leakwatch:${VERSION}" \
+  --certificate-identity "https://github.com/HodeTech/Leakwatch/.github/workflows/release.yml@refs/tags/v${VERSION}" \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+Then confirm that both floating tags resolve to the digest of the recovered release; the three digests must be identical:
+
+```bash
+for tag in "${VERSION}" latest "v${VERSION%.*}"; do
+  printf '%-8s %s\n' "$tag" "$(docker buildx imagetools inspect "ghcr.io/hodetech/leakwatch:${tag}" --format '{{.Manifest.Digest}}')"
+done
+```
+
+If the re-run keeps failing, treat the release as faulty and publish the next PATCH version as described in 7.2.
 
 ---
 

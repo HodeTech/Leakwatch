@@ -41,9 +41,13 @@ jobs:
         run: go run . -strict
 
       - name: Upload site artifact
-        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: site
+          # v4+ drops dotfiles by default; site/.nojekyll must keep shipping
+          # exactly as it did under v3 (and v5 bundles upload-artifact v7 on
+          # Node 24 instead of v4 on the deprecated Node 20).
+          include-hidden-files: true
 
   deploy:
     needs: build

@@ -34,8 +34,9 @@ go install github.com/HodeTech/leakwatch@v1.8.2
 Uygun tar arşivini [GitHub Releases](https://github.com/HodeTech/Leakwatch/releases) sayfasından indirin, çıkarın ve `PATH`'e ekleyin:
 
 ```bash
-curl -LO https://github.com/HodeTech/Leakwatch/releases/latest/download/leakwatch_Linux_amd64.tar.gz
-tar -xzf leakwatch_Linux_amd64.tar.gz
+LEAKWATCH_VERSION=v1.8.2
+curl -LO "https://github.com/HodeTech/Leakwatch/releases/download/${LEAKWATCH_VERSION}/leakwatch_${LEAKWATCH_VERSION#v}_linux_amd64.tar.gz"
+tar -xzf "leakwatch_${LEAKWATCH_VERSION#v}_linux_amd64.tar.gz"
 sudo mv leakwatch /usr/local/bin/leakwatch
 ```
 

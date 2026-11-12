@@ -34,8 +34,9 @@ Use `ghcr.io/hodetech/leakwatch:latest` as a job image or run it with `docker ru
 Download the appropriate tarball from [GitHub Releases](https://github.com/HodeTech/Leakwatch/releases), extract, and place on `PATH`:
 
 ```bash
-curl -LO https://github.com/HodeTech/Leakwatch/releases/latest/download/leakwatch_Linux_amd64.tar.gz
-tar -xzf leakwatch_Linux_amd64.tar.gz
+LEAKWATCH_VERSION=v1.8.2
+curl -LO "https://github.com/HodeTech/Leakwatch/releases/download/${LEAKWATCH_VERSION}/leakwatch_${LEAKWATCH_VERSION#v}_linux_amd64.tar.gz"
+tar -xzf "leakwatch_${LEAKWATCH_VERSION#v}_linux_amd64.tar.gz"
 sudo mv leakwatch /usr/local/bin/leakwatch
 ```
 

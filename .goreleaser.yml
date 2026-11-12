@@ -145,17 +145,24 @@ docker_manifests:
       - ghcr.io/hodetech/leakwatch:{{ .Version }}-amd64
       - ghcr.io/hodetech/leakwatch:{{ .Version }}-arm64
 
-# Keyless-sign each pushed per-arch image (not just the manifest list) so
-# `cosign verify` works against any of the digests consumers might pull.
+# Keyless-sign every pushed Docker artifact: the per-arch images AND the
+# multi-arch manifest lists (:X.Y.Z, :vX.Y, :latest), so `cosign verify` works
+# against whichever reference a consumer pulls. The manifest list is the one
+# that matters most: `docker pull ghcr.io/hodetech/leakwatch:latest` resolves
+# to it, and the per-arch signatures alone do not cover that reference.
+# Each reference is signed by digest (`${artifact}@${digest}`), never by bare
+# tag, so cosign can only sign the exact image GoReleaser just pushed. The
+# three manifest lists share one digest, so they add signatures to the same
+# digest rather than to different ones.
 # Skipped automatically alongside the images themselves on a prerelease tag.
 docker_signs:
   - cmd: cosign
-    artifacts: images
+    artifacts: all
     output: true
     args:
       - sign
       - "--yes"
-      - "${artifact}"
+      - "${artifact}@${digest}"
 
 changelog:
   sort: asc
