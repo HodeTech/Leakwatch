@@ -66,6 +66,8 @@ cosign verify ghcr.io/hodetech/leakwatch:latest \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
 
+<!-- leakwatch-version: historical v1.8.2 -->
+
 v1.8.2 dahil önceki sürümlerde yalnızca mimariye özgü imajlar imzalanmıştı; bu sürümler için bunun yerine `:<sürüm>-amd64` veya `:<sürüm>-arm64` etiketini doğrulayın (örneğin `:1.8.2-amd64`).
 
 ## Hazır ikili dosya
@@ -74,7 +76,7 @@ Her sürüm, desteklenen tüm platformlar için [GitHub Releases](https://github
 
 **Desteklenen platformlar:** amd64 ve arm64 mimarilerinde Linux, macOS ve Windows.
 
-Arşiv adları `leakwatch_<SÜRÜM>_<OS>_<ARCH>.tar.gz` kalıbını izler (Windows'ta `.zip`); `<SÜRÜM>` başında `v` olmadan yazılır (örneğin `1.8.2`), `<OS>` değeri `linux`, `darwin` veya `windows`, `<ARCH>` değeri ise `amd64` veya `arm64` olabilir. Sürüm varlıklarının adında her zaman sürüm numarası bulunur; bu yüzden `latest/download/...` biçimli bir URL'de de güncel sürümü açıkça yazmanız gerekir. Aşağıdaki komutlar sürümü açıkça sabitler.
+Arşiv adları `leakwatch_<SÜRÜM>_<OS>_<ARCH>.tar.gz` kalıbını izler (Windows'ta `.zip`); `<SÜRÜM>` başında `v` olmadan yazılır (örneğin `1.8.3`), `<OS>` değeri `linux`, `darwin` veya `windows`, `<ARCH>` değeri ise `amd64` veya `arm64` olabilir. Sürüm varlıklarının adında her zaman sürüm numarası bulunur; bu yüzden `latest/download/...` biçimli bir URL'de de güncel sürümü açıkça yazmanız gerekir. Aşağıdaki komutlar sürümü açıkça sabitler.
 
 Aşağıdaki komutlar Linux ve macOS içindir ve kabuk değişkenlerini paylaşır; bu yüzden aynı terminal oturumunda çalıştırın. Windows'ta `.zip` arşivini (`leakwatch_<SÜRÜM>_windows_<ARCH>.zip`) Releases sayfasından indirin ve `checksums.txt` ile `checksums.txt.bundle` dosyalarına karşı aynı şekilde doğrulayın.
 
