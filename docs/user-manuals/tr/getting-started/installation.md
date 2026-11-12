@@ -76,7 +76,7 @@ Her sürüm, desteklenen tüm platformlar için [GitHub Releases](https://github
 
 Arşiv adları `leakwatch_<SÜRÜM>_<OS>_<ARCH>.tar.gz` kalıbını izler (Windows'ta `.zip`); `<SÜRÜM>` başında `v` olmadan yazılır (örneğin `1.8.2`), `<OS>` değeri `linux`, `darwin` veya `windows`, `<ARCH>` değeri ise `amd64` veya `arm64` olabilir. Sürüm varlıklarının adında her zaman sürüm numarası bulunur; bu yüzden `latest/download/...` biçimli bir URL'de de güncel sürümü açıkça yazmanız gerekir. Aşağıdaki komutlar sürümü açıkça sabitler.
 
-Aşağıdaki üç adım kabuk değişkenlerini paylaşır; bu yüzden aynı terminal oturumunda çalıştırın.
+Aşağıdaki komutlar Linux ve macOS içindir ve kabuk değişkenlerini paylaşır; bu yüzden aynı terminal oturumunda çalıştırın. Windows'ta `.zip` arşivini (`leakwatch_<SÜRÜM>_windows_<ARCH>.zip`) Releases sayfasından indirin ve `checksums.txt` ile `checksums.txt.bundle` dosyalarına karşı aynı şekilde doğrulayın.
 
 ### 1. İndirme
 
@@ -84,7 +84,7 @@ Aşağıdaki üç adım kabuk değişkenlerini paylaşır; bu yüzden aynı term
 
 ```bash
 LEAKWATCH_VERSION=v1.8.2
-OS=linux      # linux veya darwin (Windows .zip arşivi kullanır: Releases sayfasından indirin)
+OS=linux      # linux veya darwin
 ARCH=amd64    # amd64 veya arm64
 ARCHIVE="leakwatch_${LEAKWATCH_VERSION#v}_${OS}_${ARCH}.tar.gz"
 BASE_URL="https://github.com/HodeTech/Leakwatch/releases/download/${LEAKWATCH_VERSION}"
@@ -109,6 +109,8 @@ grep " ${ARCHIVE}\$" checksums.txt | sha256sum --check
 macOS'ta `sha256sum --check` yerine `shasum -a 256 --check` kullanın. Eksik veya uyuşmayan bir sağlama toplamı kaydı, son komutun sıfırdan farklı bir kodla çıkmasına neden olur.
 
 ### 3. Kurulum
+
+Bu komutları yalnızca 2. adım `${ARCHIVE}` için hata vermeden tamamlandıysa (veya o adımı bilerek atladıysanız) çalıştırın.
 
 ```bash
 tar -xzf "${ARCHIVE}"

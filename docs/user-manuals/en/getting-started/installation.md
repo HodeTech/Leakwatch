@@ -76,7 +76,7 @@ Every release publishes archives for all supported platforms on the [GitHub Rele
 
 Archive names follow the pattern `leakwatch_<VERSION>_<OS>_<ARCH>.tar.gz` (`.zip` on Windows), where `<VERSION>` has no leading `v` (for example `1.8.2`), `<OS>` is `linux`, `darwin`, or `windows`, and `<ARCH>` is `amd64` or `arm64`. Release assets always carry the version in their name, so a `latest/download/...` URL needs the current version spelled out too; the commands below pin it explicitly.
 
-The three steps below share shell variables, so run them in the same terminal session.
+The commands below cover Linux and macOS and share shell variables, so run them in the same terminal session. On Windows, download the `.zip` archive (`leakwatch_<VERSION>_windows_<ARCH>.zip`) from the Releases page and verify it against `checksums.txt` and `checksums.txt.bundle` in the same way.
 
 ### 1. Download
 
@@ -84,7 +84,7 @@ Set `OS` and `ARCH` to match your platform (the example is Linux amd64):
 
 ```bash
 LEAKWATCH_VERSION=v1.8.2
-OS=linux      # linux or darwin (Windows ships .zip archives: download one from the Releases page)
+OS=linux      # linux or darwin
 ARCH=amd64    # amd64 or arm64
 ARCHIVE="leakwatch_${LEAKWATCH_VERSION#v}_${OS}_${ARCH}.tar.gz"
 BASE_URL="https://github.com/HodeTech/Leakwatch/releases/download/${LEAKWATCH_VERSION}"
@@ -109,6 +109,8 @@ grep " ${ARCHIVE}\$" checksums.txt | sha256sum --check
 On macOS, replace `sha256sum --check` with `shasum -a 256 --check`. A missing or mismatching checksum entry makes the last command exit non-zero.
 
 ### 3. Install
+
+Run these commands only if step 2 completed without an error for `${ARCHIVE}` (or you deliberately skipped it).
 
 ```bash
 tar -xzf "${ARCHIVE}"

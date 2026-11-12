@@ -313,17 +313,19 @@ git push origin v0.2.1
 
 GoReleaser publishes in a fixed order: container images, then the multi-arch manifests (`:X.Y.Z`, `:vX.Y`, `:latest`), then cosign signatures for both, and only then the GitHub Release, the Homebrew formula, and the floating major tag. A failure while signing therefore leaves the registry tags already moved but signed incompletely, while no GitHub Release, Homebrew formula, or major-tag move has happened yet.
 
-1. Do not announce the release and do not delete the tag.
-2. Re-run the failed `Release` workflow run for the same tag. Nothing downstream of signing has run, so the re-run repeats the image push and the signing and then continues to the release.
-3. Before announcing, confirm the signatures from a clean machine:
+1. Do not announce the release and do not delete the tag. The moving tags `:latest`, `:X.Y.Z`, and `:vX.Y` may already resolve to an unsigned manifest list, so do not direct anyone to pull them until step 4 passes.
+2. Check that no newer release has been published since this tag. If one has, **do not re-run**: the re-run would move `:latest`, `:vX.Y`, and the floating `v1` tag back to the older release. Publish the next PATCH version instead, as described in 7.2.
+3. Re-run the failed `Release` workflow run for the same tag. Nothing downstream of signing has run, so the re-run repeats the image push and the signing and then continues to the release.
+4. Before announcing, verify the recovered release itself (not `:latest`, which could belong to another release) from a clean machine, with the exact workflow identity of its tag:
 
 ```bash
-cosign verify ghcr.io/hodetech/leakwatch:latest \
-  --certificate-identity-regexp '^https://github\.com/HodeTech/Leakwatch/\.github/workflows/release\.yml@refs/tags/v' \
+VERSION=X.Y.Z   # the recovered release, without the leading v
+cosign verify "ghcr.io/hodetech/leakwatch:${VERSION}" \
+  --certificate-identity "https://github.com/HodeTech/Leakwatch/.github/workflows/release.yml@refs/tags/v${VERSION}" \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
 
-If the re-run keeps failing, treat the release as faulty and publish the next PATCH version as described in 7.2.
+Then confirm that `:latest` and `:vX.Y` resolve to the same digest (`docker buildx imagetools inspect ghcr.io/hodetech/leakwatch:latest`). If the re-run keeps failing, treat the release as faulty and publish the next PATCH version as described in 7.2.
 
 ---
 
