@@ -22,7 +22,7 @@ go install github.com/HodeTech/leakwatch@latest
 Pin to a specific version for reproducible builds:
 
 ```bash
-go install github.com/HodeTech/leakwatch@v1.8.2
+go install github.com/HodeTech/leakwatch@v1.8.3
 ```
 
 ### via the Docker image (no Go required)
@@ -34,7 +34,7 @@ Use `ghcr.io/hodetech/leakwatch:latest` as a job image or run it with `docker ru
 Download the appropriate tarball from [GitHub Releases](https://github.com/HodeTech/Leakwatch/releases), extract, and place on `PATH`:
 
 ```bash
-LEAKWATCH_VERSION=v1.8.2
+LEAKWATCH_VERSION=v1.8.3
 curl -LO "https://github.com/HodeTech/Leakwatch/releases/download/${LEAKWATCH_VERSION}/leakwatch_${LEAKWATCH_VERSION#v}_linux_amd64.tar.gz"
 tar -xzf "leakwatch_${LEAKWATCH_VERSION#v}_linux_amd64.tar.gz"
 sudo mv leakwatch /usr/local/bin/leakwatch
@@ -79,7 +79,7 @@ leakwatch:
   stage: test
   image: golang:1.27-alpine
   script:
-    - go install github.com/HodeTech/leakwatch@v1.8.2
+    - go install github.com/HodeTech/leakwatch@v1.8.3
     - leakwatch scan fs . --format json -o leakwatch.json --no-verify
   artifacts:
     when: always
@@ -111,7 +111,7 @@ leakwatch scan fs . --no-verify --format sarif -o results.sarif
 
 ```yaml
 - script: |
-    go install github.com/HodeTech/leakwatch@v1.8.2
+    go install github.com/HodeTech/leakwatch@v1.8.3
     leakwatch scan fs . --format sarif -o $(Build.ArtifactStagingDirectory)/leakwatch.sarif --no-verify
   displayName: "Leakwatch secret scan"
 
@@ -127,7 +127,7 @@ leakwatch scan fs . --no-verify --format sarif -o results.sarif
 stage('Secret scan') {
     steps {
         sh '''
-            go install github.com/HodeTech/leakwatch@v1.8.2
+            go install github.com/HodeTech/leakwatch@v1.8.3
             leakwatch scan fs . --format json -o leakwatch.json --no-verify
         '''
         archiveArtifacts artifacts: 'leakwatch.json', allowEmptyArchive: true

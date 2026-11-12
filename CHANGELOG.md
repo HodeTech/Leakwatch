@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [v1.8.3] - 2026-11-12
+
 ### Security
 
 - **Multi-arch container image manifests are now signed** — releases through
@@ -33,6 +35,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   that were run against a real release, plus image-signature verification. The
   release standards gain a recovery procedure for a release workflow that fails
   after the images are pushed.
+- **Pre-commit hook scope** — the pre-commit manual (EN/TR) and the CI/CD
+  guide said the bundled hook sets `pass_filenames: false` and scans the whole
+  working tree, including unstaged files. The hook keeps pre-commit's default
+  `pass_filenames: true`: it scans only the files staged for the commit (use
+  `pre-commit run leakwatch --all-files` or `leakwatch scan fs` for a wider
+  scan). The hook itself is unchanged; only the documentation was wrong.
 - **`leakwatch version` output in the docs** — the manuals and the getting-started
   guide showed `leakwatch v1.8.2 (…)` or a stale `leakwatch 1.6.0 (…)`; the
   binary prints the bare version (`leakwatch 1.8.2 (…)`). The examples now match,

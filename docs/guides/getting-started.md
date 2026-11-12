@@ -1,6 +1,6 @@
 # Leakwatch - Getting Started Guide
 
-> **Document Version:** 1.5
+> **Document Version:** 1.7
 > **Date:** 2026-11-12
 > **Status:** Approved
 
@@ -81,17 +81,23 @@ You can download the binary suitable for your platform from the GitHub Releases 
 ```bash
 # Release archives follow the naming pattern (no "v" prefix, lowercase OS/arch):
 #   leakwatch_<version>_<os>_<arch>.tar.gz
-# Examples (for release v1.8.2):
-#   leakwatch_1.8.2_linux_amd64.tar.gz
-#   leakwatch_1.8.2_darwin_arm64.tar.gz
-#   leakwatch_1.8.2_windows_amd64.zip
+# Examples (for release v1.8.3):
+#   leakwatch_1.8.3_linux_amd64.tar.gz
+#   leakwatch_1.8.3_darwin_arm64.tar.gz
+#   leakwatch_1.8.3_windows_amd64.zip
 #
 # Download the archive for your platform from the Releases page:
 # https://github.com/HodeTech/Leakwatch/releases/latest
 #
+# To verify the signature and checksum before extracting, follow the "Prebuilt binary"
+# steps in the installation manual instead of piping the download straight into tar.
+#
 # Example for Linux amd64. The release tag keeps its "v"; the archive name does not.
-LEAKWATCH_VERSION=v1.8.2
-curl -sSfL "https://github.com/HodeTech/Leakwatch/releases/download/${LEAKWATCH_VERSION}/leakwatch_${LEAKWATCH_VERSION#v}_linux_amd64.tar.gz" | tar xz
+LEAKWATCH_VERSION=v1.8.3
+ARCHIVE="leakwatch_${LEAKWATCH_VERSION#v}_linux_amd64.tar.gz"
+curl -sSfLO "https://github.com/HodeTech/Leakwatch/releases/download/${LEAKWATCH_VERSION}/${ARCHIVE}"
+# (verify "${ARCHIVE}" here, as described in the installation manual)
+tar xzf "${ARCHIVE}"
 
 # Move binary to PATH
 sudo mv leakwatch /usr/local/bin/
@@ -118,7 +124,7 @@ leakwatch version
 Expected output:
 
 ```
-leakwatch 1.8.2 (commit: 1a2b3c4, built: 2026-11-12T12:00:00Z)
+leakwatch 1.8.3 (commit: 1a2b3c4, built: 2026-11-12T12:00:00Z)
 ```
 
 ---

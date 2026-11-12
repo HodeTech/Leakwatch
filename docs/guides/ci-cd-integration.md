@@ -1,6 +1,6 @@
 # Leakwatch - CI/CD Integration Guide
 
-> **Document Version:** 1.4
+> **Document Version:** 1.6
 > **Date:** 2026-11-12
 > **Status:** Approved
 
@@ -77,7 +77,7 @@ Leakwatch provides a ready-to-use GitHub Action (root `action.yml`, published on
 | `working-directory` | `.` | Directory to run the scan from |
 | `sarif-upload` | `false` | Upload SARIF results to GitHub Code Scanning. Requires `format: sarif` and `permissions: security-events: write` |
 | `fail-on-findings` | `true` | Fail the workflow step when Leakwatch reports findings (exit code 1). When `false`, a `::warning::` annotation is emitted instead so the scan does not block the pipeline. Hard errors (exit code >= 2) always fail the step regardless of this setting |
-| `version` | `latest` | Leakwatch version to install: `latest` or the current release tag, `v1.8.2` |
+| `version` | `latest` | Leakwatch version to install: `latest` or the current release tag, `v1.8.3` |
 | `release-repo` | `HodeTech/Leakwatch` | GitHub repository (`owner/name`) to download the release binary from. Override only for forks or self-hosted mirrors |
 
 **Outputs:**
@@ -287,7 +287,7 @@ permissions:
   pull-requests: read
 
 env:
-  LEAKWATCH_VERSION: 'v1.8.2'
+  LEAKWATCH_VERSION: 'v1.8.3'
 
 jobs:
   # On PRs, scan only the changed files
@@ -588,7 +588,7 @@ Create a `.pre-commit-config.yaml` file in your project root:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/HodeTech/Leakwatch
-    rev: v1.8.2
+    rev: v1.8.3
     hooks:
       - id: leakwatch
 ```
@@ -605,7 +605,7 @@ pre-commit run leakwatch --all-files
 
 ### 5.2 How Does It Work?
 
-The Leakwatch pre-commit hook runs the `leakwatch scan fs` command. The bundled hook sets `pass_filenames: false`, so it scans the entire working tree on each commit rather than only the staged files.
+The Leakwatch pre-commit hook runs the `leakwatch scan fs` command. The bundled hook keeps pre-commit's default `pass_filenames: true`, so pre-commit passes the staged files to `leakwatch scan fs` and only those files are scanned on each commit (use `pre-commit run leakwatch --all-files` to scan every tracked file).
 
 ```mermaid
 flowchart TD

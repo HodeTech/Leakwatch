@@ -22,7 +22,7 @@ Add a `.pre-commit-config.yaml` file to the root of your repository (or extend a
 ```yaml
 repos:
   - repo: https://github.com/HodeTech/Leakwatch
-    rev: v1.8.2
+    rev: v1.8.3
     hooks:
       - id: leakwatch
 ```
@@ -56,7 +56,7 @@ The hook's default behavior matches `leakwatch scan fs` with no additional flags
 ```yaml
 repos:
   - repo: https://github.com/HodeTech/Leakwatch
-    rev: v1.8.2
+    rev: v1.8.3
     hooks:
       - id: leakwatch
         args:
@@ -79,12 +79,12 @@ args:
 ```
 
 :::note
-`pass_filenames: false` is set in the hook definition, which means the hook always scans the full working tree rather than only the files staged for the current commit. This guarantees that secrets already present in unstaged files are also detected.
+The hook definition keeps pre-commit's default `pass_filenames: true`, so pre-commit passes the files staged for the current commit to `leakwatch scan fs`, and only those files are scanned. A secret that already sits in an unstaged or untouched file is not detected by the hook. To scan every tracked file, run `pre-commit run leakwatch --all-files`; to scan the whole working directory, run `leakwatch scan fs`.
 :::
 
 ## What the hook scans
 
-The hook runs `leakwatch scan fs` against the repository working directory. It uses the same detection pipeline as the CLI: Aho-Corasick pre-filtering, regex validation, entropy calculation, and (unless `--no-verify` is set) live verification.
+The hook runs `leakwatch scan fs` on the files staged for the commit. It uses the same detection pipeline as the CLI: Aho-Corasick pre-filtering, regex validation, entropy calculation, and (unless `--no-verify` is set) live verification.
 
 Configuration in `.leakwatch.yaml` is respected automatically — exclusion patterns, entropy thresholds, and verification settings all apply without any extra hook configuration.
 
@@ -105,7 +105,7 @@ Using `SKIP=leakwatch` bypasses all secret scanning for that commit. Use it only
 Pin `rev:` to a specific tag rather than a branch name. This ensures all developers on the team use the same detector set and the hook does not silently upgrade mid-sprint:
 
 ```yaml
-rev: v1.8.2   # pin; do not use 'main' or 'HEAD'
+rev: v1.8.3   # pin; do not use 'main' or 'HEAD'
 ```
 
 Update by running:
