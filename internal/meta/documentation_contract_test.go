@@ -17,6 +17,11 @@ import (
 
 const releaseVersionTokenPattern = `v[0-9]+\.[0-9]+\.[0-9]+(?:[-_][0-9A-Za-z]+(?:[._-][0-9A-Za-z]+)*)?`
 
+// bareReleaseVersionPattern is releaseVersionTokenPattern without the leading
+// "v": the form `leakwatch version` prints, because GoReleaser's {{ .Version }}
+// (injected via -X main.version) strips the tag's "v".
+const bareReleaseVersionPattern = `[0-9]+\.[0-9]+\.[0-9]+(?:[-_][0-9A-Za-z]+(?:[._-][0-9A-Za-z]+)*)?`
+
 var (
 	releaseVersionToken        = regexp.MustCompile(`\b(` + releaseVersionTokenPattern + `)(?:[^0-9A-Za-z._-]|$)`)
 	releaseVersionTokenExact   = regexp.MustCompile(`^` + releaseVersionTokenPattern + `$`)
@@ -28,6 +33,12 @@ var (
 		regexp.MustCompile(`(?i)leakwatch[[:space:]]+(` + releaseVersionTokenPattern + `)(?:[^0-9A-Za-z._-]|$)`),
 		regexp.MustCompile(`(?i)leakwatch[[:space:]]+(?:version|sürümü).*?(` + releaseVersionTokenPattern + `)(?:[^0-9A-Za-z._-]|$)`),
 	}
+	// versionOutputLine matches the first line of `leakwatch version` output as
+	// cmd/version.go formats it: `leakwatch <version> (commit: ..., built: ...)`.
+	versionOutputLine = regexp.MustCompile(`(?m)^leakwatch[[:space:]]+(` + bareReleaseVersionPattern + `)[[:space:]]+\(commit:`)
+	// versionOutputLineWithV is the same line with a leading "v" on the
+	// version, which the binary never prints.
+	versionOutputLineWithV  = regexp.MustCompile(`(?m)^leakwatch[[:space:]]+(` + releaseVersionTokenPattern + `)[[:space:]]+\(commit:`)
 	historicalVersionMarker = regexp.MustCompile(`(?i)<!--[[:space:]]*leakwatch-version:[[:space:]]*historical[[:space:]]+(` + releaseVersionTokenPattern + `)[[:space:]]*-->`)
 	// leakwatchImageTagCell matches a backtick-quoted image tag cell such as `:1.8.1`.
 	leakwatchImageTagCell = regexp.MustCompile("`:([0-9A-Za-z][0-9A-Za-z._-]*)`")
@@ -101,6 +112,7 @@ func TestLeakwatchReleasePins_ContextAndHistoricalMarkerMatrix(t *testing.T) {
 		{name: "suffix cannot hide behind current stable prefix", contents: "LEAKWATCH_VERSION=v1.7.0-typo", wantPins: []string{"v1.7.0-typo"}, wantLines: []int{1}},
 		{name: "contextual image tag table", contents: "```text\nghcr.io/hodetech/leakwatch\n```\n\nAvailable tags:\n\n| Tag | Description |\n|---|---|\n| `:v1.6.0` | stale |", wantPins: []string{"v1.6.0"}, wantLines: []int{9}},
 		{name: "bare tag for unrelated image is ignored", contents: "Available tags:\n\n| Tag | Description |\n|---|---|\n| `:v9.8.7` | unrelated |"},
+		{name: "binary version output has no leading v", contents: "```text\nleakwatch 1.6.0 (commit: abc1234, built: 2026-05-25T12:00:00Z)\n```", wantPins: []string{"v1.6.0"}, wantLines: []int{2}},
 		{name: "exact historical marker", contents: "<!-- leakwatch-version: historical v1.6.0 -->\n\n```bash\nleakwatch v1.6.0\n```", wantPins: []string{"v1.6.0"}, wantLines: []int{4}, wantExempt: true},
 		{name: "marker cannot exempt different pin", contents: "<!-- leakwatch-version: historical v1.5.0 -->\n\nleakwatch v1.6.0", wantPins: []string{"v1.6.0"}, wantLines: []int{3}},
 		{name: "marker cannot exempt later block", contents: "<!-- leakwatch-version: historical v1.6.0 -->\n\nleakwatch v1.6.0\n\nUnrelated paragraph.\n\nleakwatch v1.6.0", wantPins: []string{"v1.6.0", "v1.6.0"}, wantLines: []int{3, 7}},
@@ -126,6 +138,52 @@ func TestLeakwatchReleasePins_ContextAndHistoricalMarkerMatrix(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDocumentation_VersionOutputExamplesMatchBinaryFormat(t *testing.T) {
+	root := filepath.Join("..", "..")
+	paths, err := currentDocumentationMarkdownPaths(root)
+	require.NoError(t, err)
+	require.NotEmpty(t, paths)
+
+	for _, path := range paths {
+		contents, readErr := os.ReadFile(path)
+		require.NoError(t, readErr)
+		for _, line := range versionOutputLinesWithLeadingV(string(contents)) {
+			t.Errorf("%s:%d shows `leakwatch version` output with a leading \"v\"; the binary prints the bare version (for example `leakwatch %s (commit: ...)`)",
+				filepath.ToSlash(path), line, strings.TrimPrefix(ReleaseVersion, "v"))
+		}
+	}
+}
+
+func TestVersionOutputLinesWithLeadingV_Matrix(t *testing.T) {
+	tests := []struct {
+		name     string
+		contents string
+		want     []int
+	}{
+		{name: "bare version is the real binary format", contents: "leakwatch 1.8.2 (commit: abc1234, built: 2026-11-12T12:00:00Z)"},
+		{name: "leading v is rejected", contents: "intro\nleakwatch v1.8.2 (commit: abc1234, built: 2026-11-12T12:00:00Z)", want: []int{2}},
+		{name: "prerelease with v is rejected", contents: "leakwatch v1.9.0-rc.1 (commit: abc1234, built: x)", want: []int{1}},
+		{name: "prose mentioning a version is not output", contents: "Install leakwatch v1.8.2 from the releases page."},
+		{name: "unrelated binary is ignored", contents: "other v1.8.2 (commit: abc1234, built: x)"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.ElementsMatch(t, tc.want, versionOutputLinesWithLeadingV(tc.contents))
+		})
+	}
+}
+
+// versionOutputLinesWithLeadingV returns the 1-based lines of contents that
+// look like `leakwatch version` output but carry a "v" the binary never prints.
+func versionOutputLinesWithLeadingV(contents string) []int {
+	matches := versionOutputLineWithV.FindAllStringSubmatchIndex(contents, -1)
+	lines := make([]int, 0, len(matches))
+	for _, match := range matches {
+		lines = append(lines, 1+strings.Count(contents[:match[2]], "\n"))
+	}
+	return lines
 }
 
 func TestEntropyPolicyDocs_MatchEngineContract(t *testing.T) {
@@ -356,6 +414,15 @@ func leakwatchReleasePins(_ string, block documentationBlock) []versionPin {
 	}
 	for _, pattern := range directLeakwatchPinPatterns {
 		collect(pattern)
+	}
+	// `leakwatch version` prints the version without its "v", so the example
+	// output is normalized to the "v"-prefixed form the release pins use.
+	for _, match := range versionOutputLine.FindAllStringSubmatchIndex(block.text, -1) {
+		if len(match) < 4 || match[2] < 0 {
+			continue
+		}
+		line := block.startLine + strings.Count(block.text[:match[2]], "\n")
+		byVersionAndLine[versionPin{line: line, version: "v" + block.text[match[2]:match[3]]}] = struct{}{}
 	}
 	for _, pin := range leakwatchYAMLPins(block) {
 		byVersionAndLine[pin] = struct{}{}

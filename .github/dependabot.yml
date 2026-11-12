@@ -25,6 +25,18 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: "chore(deps)"
+    # spf13/pflag v1.1.x renders every boolean flag in --help as
+    # `--flag[=true|false]` (including `-h, --help[=true|false]` on every
+    # command) and widens the flag column. It fixes nothing Leakwatch uses and
+    # cobra v1.10.2 still requires only pflag v1.0.9, so nothing forces it.
+    # It is held back deliberately; because pflag sits in the catch-all
+    # `go-dependencies` group, an unignored bump would also break the
+    # TestRootCommand_HelpMatchesGolden golden test and stall the whole group.
+    # To adopt it: drop this rule, regenerate cmd/testdata/root-help.golden and
+    # review every `--help` excerpt in the manuals.
+    ignore:
+      - dependency-name: "github.com/spf13/pflag"
+        versions: ["1.1.x"]
     groups:
       aws-sdk:
         patterns:

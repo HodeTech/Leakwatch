@@ -56,24 +56,52 @@ Mount the directory you want to scan to `/scan` inside the container. Flags and 
 For Docker-specific usage patterns, including scanning remote Git repositories and passing credentials securely, see [Using Docker](#/ci-cd/docker-usage).
 :::
 
+### Verifying the image signature
+
+Release images are signed keyless with [Sigstore/cosign](https://github.com/sigstore/cosign). From v1.8.3 onwards the signature covers the multi-arch manifest list that `:latest`, the exact-version tag, and the minor-version tag all resolve to, so you can verify the reference you actually pull:
+
+```bash
+cosign verify ghcr.io/hodetech/leakwatch:latest \
+  --certificate-identity-regexp '^https://github\.com/HodeTech/Leakwatch/\.github/workflows/release\.yml@refs/tags/v' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+Releases up to and including v1.8.2 signed only the per-architecture images, so for those versions verify `:<version>-amd64` or `:<version>-arm64` instead (for example `:1.8.2-amd64`).
+
 ## Prebuilt binary
 
-Every release publishes tarballs for all supported platforms on the [GitHub Releases](https://github.com/HodeTech/Leakwatch/releases) page. Download the archive for your platform, extract it, and place the binary on your `PATH`.
+Every release publishes archives for all supported platforms on the [GitHub Releases](https://github.com/HodeTech/Leakwatch/releases) page. Download the archive for your platform, extract it, and place the binary on your `PATH`.
 
 **Supported platforms:** Linux, macOS, and Windows on amd64 and arm64.
 
 ```bash
-# Example for Linux amd64 — replace OS and ARCH to match your platform
-curl -LO https://github.com/HodeTech/Leakwatch/releases/latest/download/leakwatch_Linux_amd64.tar.gz
-tar -xzf leakwatch_Linux_amd64.tar.gz
+# Example for Linux amd64 — replace the OS and ARCH to match your platform
+LEAKWATCH_VERSION=v1.8.2
+curl -LO "https://github.com/HodeTech/Leakwatch/releases/download/${LEAKWATCH_VERSION}/leakwatch_${LEAKWATCH_VERSION#v}_linux_amd64.tar.gz"
+tar -xzf "leakwatch_${LEAKWATCH_VERSION#v}_linux_amd64.tar.gz"
 sudo mv leakwatch /usr/local/bin/leakwatch
 ```
 
-Platform naming follows the pattern `leakwatch_<OS>_<ARCH>.tar.gz` where `<OS>` is `Linux`, `Darwin`, or `Windows` and `<ARCH>` is `amd64` or `arm64`.
+Archive names follow the pattern `leakwatch_<VERSION>_<OS>_<ARCH>.tar.gz` (`.zip` on Windows), where `<VERSION>` has no leading `v` (for example `1.8.2`), `<OS>` is `linux`, `darwin`, or `windows`, and `<ARCH>` is `amd64` or `arm64`. Release assets always carry the version in their name, so a `latest/download/...` URL needs the current version spelled out too; the example above pins it explicitly.
 
-:::tip
-Every release also publishes a Software Bill of Materials (SBOM) for each archive and a [Sigstore/cosign](https://github.com/sigstore/cosign) keyless signature (`checksums.txt.sig` / `checksums.txt.pem`) over the release's checksums file, so the provenance of a downloaded binary can be verified in supply-chain-sensitive environments.
-:::
+### Verifying a download
+
+Every release also publishes a Software Bill of Materials (SBOM) for each archive (`<archive>.sbom.json`), a `checksums.txt` file, and a [Sigstore/cosign](https://github.com/sigstore/cosign) keyless signature bundle (`checksums.txt.bundle`) over that checksums file. In supply-chain-sensitive environments, verify the signature on `checksums.txt` first, then check your archive against it:
+
+```bash
+curl -LO "https://github.com/HodeTech/Leakwatch/releases/download/${LEAKWATCH_VERSION}/checksums.txt"
+curl -LO "https://github.com/HodeTech/Leakwatch/releases/download/${LEAKWATCH_VERSION}/checksums.txt.bundle"
+
+cosign verify-blob \
+  --bundle checksums.txt.bundle \
+  --certificate-identity-regexp '^https://github\.com/HodeTech/Leakwatch/\.github/workflows/release\.yml@refs/tags/v' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  checksums.txt
+
+grep " leakwatch_${LEAKWATCH_VERSION#v}_linux_amd64.tar.gz\$" checksums.txt | sha256sum --check
+```
+
+On macOS, replace `sha256sum --check` with `shasum -a 256 --check`.
 
 ## Verifying your installation
 
@@ -86,7 +114,7 @@ leakwatch version
 Expected output:
 
 ```text
-leakwatch v1.8.2 (commit: 1a2b3c4, built: 2026-11-12T12:00:00Z)
+leakwatch 1.8.2 (commit: 1a2b3c4, built: 2026-11-12T12:00:00Z)
 ```
 
 If the command is not found, check that the install directory is on your `PATH`.

@@ -56,24 +56,52 @@ Taramak istediğiniz dizini konteyner içindeki `/scan` dizinine bağlayın. Bay
 Uzak Git depolarını tarama ve kimlik bilgilerini güvenli biçimde geçirme dahil Docker'a özgü kullanım kalıpları için [Docker Kullanımı](#/ci-cd/docker-usage) sayfasına bakın.
 :::
 
+### İmaj imzasını doğrulama
+
+Sürüm imajları [Sigstore/cosign](https://github.com/sigstore/cosign) ile anahtarsız imzalanır. v1.8.3 ve sonrasında imza; `:latest`, tam sürüm etiketi ve küçük sürüm etiketinin hepsinin çözümlendiği çok mimarili manifest listesini kapsar; böylece gerçekten çektiğiniz referansı doğrulayabilirsiniz:
+
+```bash
+cosign verify ghcr.io/hodetech/leakwatch:latest \
+  --certificate-identity-regexp '^https://github\.com/HodeTech/Leakwatch/\.github/workflows/release\.yml@refs/tags/v' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+v1.8.2 dahil önceki sürümlerde yalnızca mimariye özgü imajlar imzalanmıştı; bu sürümler için bunun yerine `:<sürüm>-amd64` veya `:<sürüm>-arm64` etiketini doğrulayın (örneğin `:1.8.2-amd64`).
+
 ## Hazır ikili dosya
 
-Her sürüm, desteklenen tüm platformlar için [GitHub Releases](https://github.com/HodeTech/Leakwatch/releases) sayfasında tar arşivleri yayımlar. Platformunuza ait arşivi indirin, açın ve ikili dosyayı `PATH` değişkeninizdeki bir dizine taşıyın.
+Her sürüm, desteklenen tüm platformlar için [GitHub Releases](https://github.com/HodeTech/Leakwatch/releases) sayfasında arşivler yayımlar. Platformunuza ait arşivi indirin, açın ve ikili dosyayı `PATH` değişkeninizdeki bir dizine taşıyın.
 
 **Desteklenen platformlar:** amd64 ve arm64 mimarilerinde Linux, macOS ve Windows.
 
 ```bash
 # Linux amd64 örneği — OS ve ARCH değerlerini platformunuza göre değiştirin
-curl -LO https://github.com/HodeTech/Leakwatch/releases/latest/download/leakwatch_Linux_amd64.tar.gz
-tar -xzf leakwatch_Linux_amd64.tar.gz
+LEAKWATCH_VERSION=v1.8.2
+curl -LO "https://github.com/HodeTech/Leakwatch/releases/download/${LEAKWATCH_VERSION}/leakwatch_${LEAKWATCH_VERSION#v}_linux_amd64.tar.gz"
+tar -xzf "leakwatch_${LEAKWATCH_VERSION#v}_linux_amd64.tar.gz"
 sudo mv leakwatch /usr/local/bin/leakwatch
 ```
 
-Platform adlandırması `leakwatch_<OS>_<ARCH>.tar.gz` kalıbını izler; `<OS>` değeri `Linux`, `Darwin` veya `Windows`, `<ARCH>` değeri ise `amd64` veya `arm64` olabilir.
+Arşiv adları `leakwatch_<SÜRÜM>_<OS>_<ARCH>.tar.gz` kalıbını izler (Windows'ta `.zip`); `<SÜRÜM>` başında `v` olmadan yazılır (örneğin `1.8.2`), `<OS>` değeri `linux`, `darwin` veya `windows`, `<ARCH>` değeri ise `amd64` veya `arm64` olabilir. Sürüm varlıklarının adında her zaman sürüm numarası bulunur; bu yüzden `latest/download/...` biçimli bir URL'de de güncel sürümü açıkça yazmanız gerekir. Yukarıdaki örnek sürümü açıkça sabitler.
 
-:::tip
-Her sürüm ayrıca her arşiv için bir Yazılım Malzeme Listesi (SBOM) ve sürümün sağlama toplamları dosyası üzerinde bir [Sigstore/cosign](https://github.com/sigstore/cosign) anahtarsız imza (`checksums.txt.sig` / `checksums.txt.pem`) yayımlar; böylece indirilen bir ikili dosyanın kökeni, tedarik zinciri açısından hassas ortamlarda doğrulanabilir.
-:::
+### İndirmeyi doğrulama
+
+Her sürüm ayrıca her arşiv için bir Yazılım Malzeme Listesi (SBOM, `<arşiv>.sbom.json`), bir `checksums.txt` dosyası ve bu sağlama toplamları dosyası üzerinde bir [Sigstore/cosign](https://github.com/sigstore/cosign) anahtarsız imza paketi (`checksums.txt.bundle`) yayımlar. Tedarik zinciri açısından hassas ortamlarda önce `checksums.txt` imzasını doğrulayın, ardından arşivinizi bu dosyaya göre kontrol edin:
+
+```bash
+curl -LO "https://github.com/HodeTech/Leakwatch/releases/download/${LEAKWATCH_VERSION}/checksums.txt"
+curl -LO "https://github.com/HodeTech/Leakwatch/releases/download/${LEAKWATCH_VERSION}/checksums.txt.bundle"
+
+cosign verify-blob \
+  --bundle checksums.txt.bundle \
+  --certificate-identity-regexp '^https://github\.com/HodeTech/Leakwatch/\.github/workflows/release\.yml@refs/tags/v' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  checksums.txt
+
+grep " leakwatch_${LEAKWATCH_VERSION#v}_linux_amd64.tar.gz\$" checksums.txt | sha256sum --check
+```
+
+macOS'ta `sha256sum --check` yerine `shasum -a 256 --check` kullanın.
 
 ## Kurulumu doğrulama
 
@@ -86,7 +114,7 @@ leakwatch version
 Beklenen çıktı:
 
 ```text
-leakwatch v1.8.2 (commit: 1a2b3c4, built: 2026-11-12T12:00:00Z)
+leakwatch 1.8.2 (commit: 1a2b3c4, built: 2026-11-12T12:00:00Z)
 ```
 
 Komut bulunamazsa kurulum dizininin `PATH` değişkeninde olup olmadığını kontrol edin.
