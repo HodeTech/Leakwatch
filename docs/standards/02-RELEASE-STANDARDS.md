@@ -325,7 +325,15 @@ cosign verify "ghcr.io/hodetech/leakwatch:${VERSION}" \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
 
-Then confirm that `:latest` and `:vX.Y` resolve to the same digest (`docker buildx imagetools inspect ghcr.io/hodetech/leakwatch:latest`). If the re-run keeps failing, treat the release as faulty and publish the next PATCH version as described in 7.2.
+Then confirm that both floating tags resolve to the digest of the recovered release; the three digests must be identical:
+
+```bash
+for tag in "${VERSION}" latest "v${VERSION%.*}"; do
+  printf '%-8s %s\n' "$tag" "$(docker buildx imagetools inspect "ghcr.io/hodetech/leakwatch:${tag}" --format '{{.Manifest.Digest}}')"
+done
+```
+
+If the re-run keeps failing, treat the release as faulty and publish the next PATCH version as described in 7.2.
 
 ---
 
