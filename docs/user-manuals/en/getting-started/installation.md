@@ -66,6 +66,8 @@ cosign verify ghcr.io/hodetech/leakwatch:latest \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
 
+<!-- leakwatch-version: historical v1.8.2 -->
+
 Releases up to and including v1.8.2 signed only the per-architecture images, so for those versions verify `:<version>-amd64` or `:<version>-arm64` instead (for example `:1.8.2-amd64`).
 
 ## Prebuilt binary
@@ -74,7 +76,7 @@ Every release publishes archives for all supported platforms on the [GitHub Rele
 
 **Supported platforms:** Linux, macOS, and Windows on amd64 and arm64.
 
-Archive names follow the pattern `leakwatch_<VERSION>_<OS>_<ARCH>.tar.gz` (`.zip` on Windows), where `<VERSION>` has no leading `v` (for example `1.8.2`), `<OS>` is `linux`, `darwin`, or `windows`, and `<ARCH>` is `amd64` or `arm64`. Release assets always carry the version in their name, so a `latest/download/...` URL needs the current version spelled out too; the commands below pin it explicitly.
+Archive names follow the pattern `leakwatch_<VERSION>_<OS>_<ARCH>.tar.gz` (`.zip` on Windows), where `<VERSION>` has no leading `v` (for example `1.8.3`), `<OS>` is `linux`, `darwin`, or `windows`, and `<ARCH>` is `amd64` or `arm64`. Release assets always carry the version in their name, so a `latest/download/...` URL needs the current version spelled out too; the commands below pin it explicitly.
 
 The commands below cover Linux and macOS and share shell variables, so run them in the same terminal session. On Windows, download the `.zip` archive (`leakwatch_<VERSION>_windows_<ARCH>.zip`) from the Releases page and verify it against `checksums.txt` and `checksums.txt.bundle` in the same way.
 

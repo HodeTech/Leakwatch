@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Installation manual (EN/TR)** — the archive-name example still showed the
+  previous release (`1.8.2`) as its example version after v1.8.3.
+
+### Changed
+
+- **Documentation contract test catches stale previous-release mentions** —
+  the release-pin test only recognizes pins in known contexts (an action
+  input, a pre-commit `rev`, an image tag), so a stale version in free prose or
+  a snippet (an archive-name example, a "downloads the prebuilt `vX` binary"
+  sentence, a `go install ...@vX` note) survived a version bump and had to be
+  found by hand. A second check now takes the release listed below
+  `ReleaseVersion` in this changelog and fails on every mention of it, with or
+  without the `v`, in the current documentation unless the paragraph carries
+  the existing `<!-- leakwatch-version: historical vX.Y.Z -->` marker. Run
+  against the v1.8.3 preparation commit it reports every mention that was
+  fixed by hand afterwards.
+
 ## [v1.8.3] - 2026-11-12
 
 ### Security

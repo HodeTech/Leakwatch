@@ -1,7 +1,7 @@
 # Leakwatch - Documentation Standards
 
-> **Document Version:** 2.0
-> **Date:** 2026-08-11
+> **Document Version:** 2.1
+> **Date:** 2026-11-12
 > **Status:** Approved
 
 ---
@@ -84,6 +84,7 @@ flowchart LR
 - An example advertised as current must use `internal/meta.ReleaseVersion` (or a floating supported pin such as `@v1` or `:latest`).
 - An intentionally historical example must be associated with `<!-- leakwatch-version: historical vX.Y.Z -->` in the same paragraph, table block, or fenced example and explain why that exact older value matters.
 - CI scans Leakwatch-specific full-version pins across current Markdown surfaces, including root policies, contributor material, architecture, ADRs, guides, user manuals, site documentation, editor documentation, and workflow documentation. Inherently historical inventories such as the changelog and roadmap are excluded. An unmarked stale pin fails the documentation contract test.
+- Pin detection is context-based, so it cannot see a stale version in free prose or a snippet (an archive-name example, a "downloads the prebuilt `vX` binary" sentence, a `go install ...@vX` note, a bare "for example `X.Y.Z`"). A second check covers that gap from the other side: it takes the release listed directly below `internal/meta.ReleaseVersion` in the changelog (the version that was current until now) and fails on **every** mention of it, with or without the `v`, anywhere in the same Markdown surfaces. Bump the mention to the current release, or mark the same paragraph, table block, or fenced example with `<!-- leakwatch-version: historical vX.Y.Z -->` when that exact older version is the point (for example "releases up to and including vX.Y.Z behave differently"). Only the previous release is checked; older versions that appear as feature-introduction versions or as unrelated example values need no marker.
 
 ---
 

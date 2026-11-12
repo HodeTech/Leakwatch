@@ -1,6 +1,6 @@
 # Leakwatch - Release and Distribution Standards
 
-> **Document Version:** 1.2
+> **Document Version:** 1.3
 > **Date:** 2026-11-12
 > **Status:** Approved
 
@@ -161,6 +161,7 @@ flowchart LR
 - [ ] `govulncheck` is clean
 - [ ] Test coverage >= 70%
 - [ ] CHANGELOG.md updated
+- [ ] Documentation no longer presents the previous release as current: after `internal/meta.ReleaseVersion` is bumped, `go test ./internal/meta` lists every pin and every mention of the previous version that is still unbumped and unmarked as historical (see the documentation standards, section 2.3)
 - [ ] README.md updated (if new features)
 - [ ] Breaking changes documented if applicable
 - [ ] New detectors tested (false positive rate acceptable)
