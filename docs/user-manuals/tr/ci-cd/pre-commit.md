@@ -22,7 +22,7 @@ Deponuzun köküne bir `.pre-commit-config.yaml` dosyası ekleyin (veya mevcut o
 ```yaml
 repos:
   - repo: https://github.com/HodeTech/Leakwatch
-    rev: v1.8.2
+    rev: v1.8.3
     hooks:
       - id: leakwatch
 ```
@@ -56,7 +56,7 @@ Kancanın varsayılan davranışı, ek bayrak olmadan `leakwatch scan fs`'e kar�
 ```yaml
 repos:
   - repo: https://github.com/HodeTech/Leakwatch
-    rev: v1.8.2
+    rev: v1.8.3
     hooks:
       - id: leakwatch
         args:

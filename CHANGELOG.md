@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [v1.8.3] - 2026-11-12
+
 ### Security
 
 - **Multi-arch container image manifests are now signed** — releases through

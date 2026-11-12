@@ -47,7 +47,7 @@ Available tags:
 | Tag | Description |
 |-----|-------------|
 | `:latest` | Most recent release |
-| `:1.8.2` | Exact current-release pin |
+| `:1.8.3` | Exact current-release pin |
 | `:v1.8` | Current minor-version pin (tracks patch releases) |
 
 Mount the directory you want to scan to `/scan` inside the container. Flags and options work identically to the native binary — see [CLI Reference](#/reference/cli-reference) for the full list.
@@ -83,7 +83,7 @@ The commands below cover Linux and macOS and share shell variables, so run them 
 Set `OS` and `ARCH` to match your platform (the example is Linux amd64):
 
 ```bash
-LEAKWATCH_VERSION=v1.8.2
+LEAKWATCH_VERSION=v1.8.3
 OS=linux      # linux or darwin
 ARCH=amd64    # amd64 or arm64
 ARCHIVE="leakwatch_${LEAKWATCH_VERSION#v}_${OS}_${ARCH}.tar.gz"
@@ -128,7 +128,7 @@ leakwatch version
 Expected output:
 
 ```text
-leakwatch 1.8.2 (commit: 1a2b3c4, built: 2026-11-12T12:00:00Z)
+leakwatch 1.8.3 (commit: 1a2b3c4, built: 2026-11-12T12:00:00Z)
 ```
 
 If the command is not found, check that the install directory is on your `PATH`.

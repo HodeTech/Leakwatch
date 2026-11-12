@@ -1,6 +1,6 @@
 # Leakwatch - Phased Development Roadmap
 
-> **Document Version:** 7.4
+> **Document Version:** 7.5
 > **Date:** 2026-04-09
 > **Status:** Approved
 > **Last Updated:** 2026-11-12
@@ -26,7 +26,7 @@
 | Phase 8.5 — GitHub Marketplace Action & Distribution | Completed | `v1.6.0` | 2026-05-25 |
 | Review Remediation Release | Released | `v1.7.0` | 2026-07-20 |
 | Phase 9 — Detection Accuracy & FP Reduction | Completed | `v1.8.0` | 2026-08-11 |
-| Security Maintenance Release | Released | `v1.8.2` | 2026-11-12 |
+| Security Maintenance Release | Released | `v1.8.3` | 2026-11-12 |
 | Phase 10 — Detector Library Expansion | Planned | `v1.9.0` | — |
 | Phase 11 — Verification Depth & Credential Impact | Planned | `v1.10.0` | — |
 | Phase 12 — Source Expansion (Confluence/Jira, org-scale) | Planned | `v1.11.0` | — |
@@ -34,6 +34,13 @@
 | Phase 14 — Honeytokens | Planned | `v1.13.0` | — |
 
 > **Prioritization note (v7.0):** the planned sequence is re-ordered so the work that most strengthens the core promise — accurate, verified, low-noise findings — comes first. Detection accuracy and false-positive reduction (Phase 9, completed in `v1.8.0`), broader coverage of high-blast-radius credential types (Phase 10), and deeper verification with credential-impact insight (Phase 11) precede new scan sources (Phase 12) and the inventory/honeytoken platform features (Phases 13–14). Rationale is detailed in [Planned Work — Prioritization](#planned-work--prioritization).
+
+### v1.8.3 Highlights
+
+- **Signed multi-arch container images** — the manifest lists behind `:latest`, `:X.Y.Z`, and `:vX.Y` now carry a keyless cosign signature, and every image is signed by digest, so `cosign verify ghcr.io/hodetech/leakwatch:latest` works. Earlier releases signed only the per-architecture images
+- **Working install instructions** — the prebuilt-binary commands in the manuals pointed at assets that returned HTTP 404; they now follow a download → verify → install flow with tested `cosign verify-blob` and checksum commands, and the documented `leakwatch version` output matches the binary
+- **Node 24 pipeline** — the site deployment and VS Code release workflows no longer run Node.js 20 actions
+- **Documented release recovery** — the release standards describe what to do if a release fails after the images are pushed
 
 ### v1.8.2 Highlights
 
@@ -819,6 +826,7 @@ Source packages (no formal standard, but visible gaps):
 | `v1.8.0` | Phase 9 | Detection accuracy & false-positive reduction | 2026-08-11 |
 | `v1.8.1` | Maintenance | Go 1.27.3 toolchain, patched dependencies, release-pipeline hardening | 2026-11-06 |
 | `v1.8.2` | Maintenance | Go 1.27.4 toolchain, zstd decoder fix, current dependencies and release-pipeline actions | 2026-11-12 |
+| `v1.8.3` | Maintenance | Signed multi-arch images, corrected install instructions, Node 24 artifact actions | 2026-11-12 |
 | `v1.9.0` | Phase 10 | Detector library expansion | — |
 | `v1.10.0` | Phase 11 | Verification depth & credential impact | — |
 | `v1.11.0` | Phase 12 | Source expansion (Confluence/Jira, org-scale) | — |

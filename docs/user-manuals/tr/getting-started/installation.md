@@ -47,7 +47,7 @@ Kullanılabilir etiketler:
 | Etiket | Açıklama |
 |--------|----------|
 | `:latest` | En son sürüm |
-| `:1.8.2` | Güncel sürüme tam sabitleme |
+| `:1.8.3` | Güncel sürüme tam sabitleme |
 | `:v1.8` | Güncel küçük sürüme sabitleme (yama sürümlerini takip eder) |
 
 Taramak istediğiniz dizini konteyner içindeki `/scan` dizinine bağlayın. Bayraklar ve seçenekler yerel ikili dosyayla tamamen aynı şekilde çalışır — tam liste için [CLI Referansı](#/reference/cli-reference) sayfasına bakın.
@@ -83,7 +83,7 @@ Aşağıdaki komutlar Linux ve macOS içindir ve kabuk değişkenlerini paylaş�
 `OS` ve `ARCH` değerlerini platformunuza göre ayarlayın (örnek Linux amd64'tür):
 
 ```bash
-LEAKWATCH_VERSION=v1.8.2
+LEAKWATCH_VERSION=v1.8.3
 OS=linux      # linux veya darwin
 ARCH=amd64    # amd64 veya arm64
 ARCHIVE="leakwatch_${LEAKWATCH_VERSION#v}_${OS}_${ARCH}.tar.gz"
@@ -128,7 +128,7 @@ leakwatch version
 Beklenen çıktı:
 
 ```text
-leakwatch 1.8.2 (commit: 1a2b3c4, built: 2026-11-12T12:00:00Z)
+leakwatch 1.8.3 (commit: 1a2b3c4, built: 2026-11-12T12:00:00Z)
 ```
 
 Komut bulunamazsa kurulum dizininin `PATH` değişkeninde olup olmadığını kontrol edin.

@@ -1,6 +1,6 @@
 # Leakwatch - Release and Distribution Standards
 
-> **Document Version:** 1.1
+> **Document Version:** 1.2
 > **Date:** 2026-11-12
 > **Status:** Approved
 
@@ -265,7 +265,7 @@ docker run --rm -v $(pwd):/scan ghcr.io/hodetech/leakwatch:latest scan fs /scan
 # Binary download
 # Archive names are leakwatch_<version>_<os>_<arch>.tar.gz (no "v" in the version,
 # lowercase os, Go-style arch such as amd64/arm64), e.g. for Linux amd64:
-LEAKWATCH_VERSION=v1.8.2
+LEAKWATCH_VERSION=v1.8.3
 curl -sSfL "https://github.com/HodeTech/Leakwatch/releases/download/${LEAKWATCH_VERSION}/leakwatch_${LEAKWATCH_VERSION#v}_linux_amd64.tar.gz" | tar xz
 ```
 

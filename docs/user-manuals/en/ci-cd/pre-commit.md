@@ -22,7 +22,7 @@ Add a `.pre-commit-config.yaml` file to the root of your repository (or extend a
 ```yaml
 repos:
   - repo: https://github.com/HodeTech/Leakwatch
-    rev: v1.8.2
+    rev: v1.8.3
     hooks:
       - id: leakwatch
 ```
@@ -56,7 +56,7 @@ The hook's default behavior matches `leakwatch scan fs` with no additional flags
 ```yaml
 repos:
   - repo: https://github.com/HodeTech/Leakwatch
-    rev: v1.8.2
+    rev: v1.8.3
     hooks:
       - id: leakwatch
         args:
